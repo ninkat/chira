@@ -174,13 +174,15 @@ const NodeLink: React.FC = () => {
   // constants for dimensions and styling
   const width = 1920;
   const height = 1080;
-  const hoverNodeColor = 'rgba(255,165,0,0.5)';
-  const selectedNodeColor = 'rgba(137,207,240,0.5)';
+  const hoverNodeColor = '#ff7f50'; // Coral - a vibrant orange shade
+  const selectedNodeColor = '#87ceeb'; // Sky blue - keeping this as is
+  const defaultNodeStrokeColor = '#fff'; // White border by default
+  const defaultNodeStrokeWidth = 2; // Default border width
   const defaultLinkColor = '#999';
   const defaultLinkOpacity = 0.6;
-  const highlightedLinkColor = '#ff6347'; // tomato color for highlighted links
+  const highlightedLinkColor = '#ffa500'; // Orange - warm and visible highlight
   const highlightedLinkOpacity = 0.9;
-  const baseNodeRadius = 20;
+  const baseNodeRadius = 25;
 
   // constants for visualization bounding box
   // create a centered 1280 x 720 box within the 1920 x 1080 canvas
@@ -220,6 +222,36 @@ const NodeLink: React.FC = () => {
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
+    // define drop shadow filter
+    const defs = svg.append('defs');
+    const filter = defs
+      .append('filter')
+      .attr('id', 'drop-shadow')
+      .attr('height', '130%');
+
+    filter
+      .append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', 3)
+      .attr('result', 'blur');
+
+    filter
+      .append('feOffset')
+      .attr('in', 'blur')
+      .attr('dx', 2)
+      .attr('dy', 2)
+      .attr('result', 'offsetBlur');
+
+    filter
+      .append('feComponentTransfer')
+      .append('feFuncA')
+      .attr('type', 'linear')
+      .attr('slope', 0.5);
+
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'offsetBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
     // Create a separate group for the bounding box that won't be transformed
     const boundingBoxGroup = svg
       .append('g')
@@ -230,7 +262,7 @@ const NodeLink: React.FC = () => {
     gRef.current = g;
 
     // load graph data
-    d3.json<GraphData>('./src/assets/fdg.json')
+    d3.json<GraphData>('./src/assets/fdg2.json')
       .then((data) => {
         if (!data) return;
 
@@ -263,7 +295,7 @@ const NodeLink: React.FC = () => {
           )
           .force(
             'collision',
-            d3.forceCollide<Node>().radius(baseNodeRadius * 1.5)
+            d3.forceCollide<Node>().radius(baseNodeRadius * 1.8)
           );
 
         // create a boundary force function that uses the current transform
@@ -438,8 +470,10 @@ const NodeLink: React.FC = () => {
           .attr('cx', (d) => d.x)
           .attr('cy', (d) => d.y)
           .attr('fill', (d) => colorScale(String(d.group)))
-          .attr('stroke', '#fff')
-          .attr('stroke-width', 1.5)
+          .attr('fill-opacity', 0.85)
+          .attr('stroke', defaultNodeStrokeColor)
+          .attr('stroke-width', defaultNodeStrokeWidth)
+          .style('filter', 'url(#drop-shadow)')
           .style('cursor', 'pointer')
           .style('touch-action', 'none')
           .style('pointer-events', 'all');
@@ -463,7 +497,7 @@ const NodeLink: React.FC = () => {
           .join('line')
           .attr('stroke', defaultLinkColor)
           .attr('stroke-opacity', defaultLinkOpacity)
-          .attr('stroke-width', (d) => Math.sqrt(d.value));
+          .attr('stroke-width', (d) => Math.sqrt(d.value) * 2);
 
         g.append('g')
           .attr('class', 'nodes')
@@ -472,8 +506,10 @@ const NodeLink: React.FC = () => {
           .join('circle')
           .attr('r', baseNodeRadius)
           .attr('fill', (d) => colorScale(String(d.group)))
-          .attr('stroke', '#fff')
-          .attr('stroke-width', 1.5)
+          .attr('fill-opacity', 0.85)
+          .attr('stroke', defaultNodeStrokeColor)
+          .attr('stroke-width', defaultNodeStrokeWidth)
+          .style('filter', 'url(#drop-shadow)')
           .style('cursor', 'pointer')
           .style('touch-action', 'none')
           .style('pointer-events', 'all');
@@ -579,7 +615,8 @@ const NodeLink: React.FC = () => {
                   .filter(function () {
                     return !d3.select(this).classed('selected');
                   })
-                  .attr('fill', hoverNodeColor);
+                  .attr('stroke', hoverNodeColor)
+                  .attr('stroke-width', defaultNodeStrokeWidth * 1.5);
 
                 // highlight links based on hovered nodes immediately
                 updateLinkHighlighting();
@@ -613,9 +650,8 @@ const NodeLink: React.FC = () => {
                     .filter(function () {
                       return !d3.select(this).classed('selected');
                     })
-                    .attr('fill', function (d: unknown) {
-                      return colorScale(String((d as Node).group));
-                    });
+                    .attr('stroke', defaultNodeStrokeColor)
+                    .attr('stroke-width', defaultNodeStrokeWidth);
 
                   // remove from the set of all hovered nodes
                   if (hoveredElement instanceof SVGCircleElement) {
@@ -678,8 +714,10 @@ const NodeLink: React.FC = () => {
                         .join('circle')
                         .attr('r', baseNodeRadius)
                         .attr('fill', (d) => colorScale(String(d.group)))
-                        .attr('stroke', '#fff')
-                        .attr('stroke-width', 1.5)
+                        .attr('fill-opacity', 0.85)
+                        .attr('stroke', defaultNodeStrokeColor)
+                        .attr('stroke-width', defaultNodeStrokeWidth)
+                        .style('filter', 'url(#drop-shadow)')
                         .style('cursor', 'pointer')
                         .style('touch-action', 'none')
                         .style('pointer-events', 'all');
@@ -793,7 +831,7 @@ const NodeLink: React.FC = () => {
                             .join('line')
                             .attr('stroke', defaultLinkColor)
                             .attr('stroke-opacity', defaultLinkOpacity)
-                            .attr('stroke-width', (d) => Math.sqrt(d.value))
+                            .attr('stroke-width', (d) => Math.sqrt(d.value) * 2)
                             .attr('x1', (d) => (d.source as Node).x ?? 0)
                             .attr('y1', (d) => (d.source as Node).y ?? 0)
                             .attr('x2', (d) => (d.target as Node).x ?? 0)
@@ -899,8 +937,10 @@ const NodeLink: React.FC = () => {
                         .join('circle')
                         .attr('r', baseNodeRadius)
                         .attr('fill', (d) => colorScale(String(d.group)))
-                        .attr('stroke', '#fff')
-                        .attr('stroke-width', 1.5)
+                        .attr('fill-opacity', 0.85)
+                        .attr('stroke', defaultNodeStrokeColor)
+                        .attr('stroke-width', defaultNodeStrokeWidth)
+                        .style('filter', 'url(#drop-shadow)')
                         .style('cursor', 'pointer')
                         .style('touch-action', 'none')
                         .style('pointer-events', 'all');
@@ -911,7 +951,7 @@ const NodeLink: React.FC = () => {
                         .join('line')
                         .attr('stroke', defaultLinkColor)
                         .attr('stroke-opacity', defaultLinkOpacity)
-                        .attr('stroke-width', (d) => Math.sqrt(d.value));
+                        .attr('stroke-width', (d) => Math.sqrt(d.value) * 2);
 
                       // restart the simulation
                       simulation.alpha(0.3).restart();
@@ -943,7 +983,8 @@ const NodeLink: React.FC = () => {
                             .filter(function () {
                               return !d3.select(this).classed('selected');
                             })
-                            .attr('fill', hoverNodeColor);
+                            .attr('stroke', hoverNodeColor)
+                            .attr('stroke-width', defaultNodeStrokeWidth * 1.5);
 
                           // update link highlighting
                           updateLinkHighlighting();
@@ -981,11 +1022,13 @@ const NodeLink: React.FC = () => {
 
                 // Then update the fill color
                 if (!isSelected) {
-                  selection.style('fill', selectedNodeColor);
+                  selection
+                    .attr('stroke', selectedNodeColor)
+                    .attr('stroke-width', defaultNodeStrokeWidth * 1.5);
                 } else {
-                  selection.style('fill', (d) => {
-                    return colorScale(String(d.group));
-                  });
+                  selection
+                    .attr('stroke', defaultNodeStrokeColor)
+                    .attr('stroke-width', defaultNodeStrokeWidth);
                 }
 
                 // Clear hover states for this element
@@ -1085,7 +1128,7 @@ const NodeLink: React.FC = () => {
             .selectAll<SVGLineElement, Link>('line')
             .attr('stroke', defaultLinkColor)
             .attr('stroke-opacity', defaultLinkOpacity)
-            .attr('stroke-width', (d) => Math.sqrt(d.value));
+            .attr('stroke-width', (d) => Math.sqrt(d.value) * 2);
 
           // get currently hovered nodes from the set
           const hoveredElements = Array.from(hoveredNodesRef.current);
@@ -1144,7 +1187,7 @@ const NodeLink: React.FC = () => {
             .filter((link) => linksToHighlight.includes(link))
             .attr('stroke', highlightedLinkColor)
             .attr('stroke-opacity', highlightedLinkOpacity)
-            .attr('stroke-width', (d) => Math.sqrt(d.value) * 2); // make highlighted links thicker
+            .attr('stroke-width', (d) => Math.sqrt(d.value) * 2);
         };
 
         // set up interaction event listener

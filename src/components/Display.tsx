@@ -477,6 +477,7 @@ const Display: React.FC = () => {
                 ? 'visible'
                 : 'hidden',
             transform: 'scaleX(-1)', // mirror the feed
+            filter: 'grayscale(100%)', // convert to grayscale
           }}
           playsInline
           muted
@@ -497,6 +498,7 @@ const Display: React.FC = () => {
                 ? 'visible'
                 : 'hidden',
             transform: 'scaleX(-1)', // mirror the feed
+            filter: 'grayscale(100%)', // convert to grayscale
           }}
           playsInline
           autoPlay

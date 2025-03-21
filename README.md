@@ -1,4 +1,4 @@
-# GestAR-Multi
+# GestAR-M
 
 A collaborative gesture-based visualization system that allows two users to interact with the same visualization simultaneously using hand gestures.
 
