@@ -19,12 +19,12 @@ export function drawHandLandmarks(
   const drawingUtils = new window.DrawingUtils(canvasCtx);
 
   // colors for local hands (green)
-  const localConnectorColor = '#00FF00'; // bright green
-  const localLandmarkColor = '#FFFFFF'; // white
+  const localConnectorColor = 'rgba(0, 255, 0, 0.4)'; // muted green with transparency
+  const localLandmarkColor = 'rgba(255, 255, 255, 0.6)'; // semi-transparent white
 
   // colors for remote hands (blue/purple)
-  const remoteConnectorColor = '#9966FF'; // purple
-  const remoteLandmarkColor = '#66CCFF'; // light blue
+  const remoteConnectorColor = 'rgba(153, 102, 255, 0.4)'; // muted purple with transparency
+  const remoteLandmarkColor = 'rgba(102, 204, 255, 0.6)'; // muted light blue with transparency
 
   // select colors based on whether these are remote hands
   const connectorColor = isRemote ? remoteConnectorColor : localConnectorColor;
@@ -40,24 +40,24 @@ export function drawHandLandmarks(
         drawingUtils.drawConnectors(
           results.landmarks[i],
           GestureRecognizer.HAND_CONNECTIONS,
-          { color: connectorColor, lineWidth: 3 }
+          { color: connectorColor, lineWidth: 2 }
         );
         drawingUtils.drawLandmarks(results.landmarks[i], {
           color: landmarkColor,
-          lineWidth: 1,
-          radius: 5,
+          lineWidth: 0.5,
+          radius: 3,
         });
         leftDrawn = true;
       } else if (handLabel === 'right' && !rightDrawn) {
         drawingUtils.drawConnectors(
           results.landmarks[i],
           GestureRecognizer.HAND_CONNECTIONS,
-          { color: connectorColor, lineWidth: 3 }
+          { color: connectorColor, lineWidth: 2 }
         );
         drawingUtils.drawLandmarks(results.landmarks[i], {
           color: landmarkColor,
-          lineWidth: 1,
-          radius: 5,
+          lineWidth: 0.5,
+          radius: 3,
         });
         rightDrawn = true;
       }

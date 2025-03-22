@@ -211,10 +211,11 @@ export function handleOne(
       }
     }
 
-    // draw visual feedback for each hand's hover point
+    // draw visual feedback for each hand's hover point (index fingertip)
     ctx.beginPath();
-    ctx.arc(point.x, point.y, 15, 0, 2 * Math.PI);
-    ctx.fillStyle = handLabel === 'right' ? 'rgb(0, 0, 255)' : 'rgb(0, 0, 255)';
+    ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
+    ctx.fillStyle =
+      handLabel === 'right' ? 'rgb(64, 224, 208)' : 'rgb(64, 224, 208)'; // solid turquoise
     ctx.fill();
   });
 }
@@ -291,9 +292,18 @@ export function handleGrabbing(
       ctx.beginPath();
       ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
       ctx.strokeStyle =
-        handLabel === 'right' ? 'rgba(0, 0, 255, 0.5)' : 'rgba(0, 0, 255, 0.5)';
-      ctx.lineWidth = 3;
+        handLabel === 'right'
+          ? 'rgba(255, 140, 0, 0.3)'
+          : 'rgba(255, 140, 0, 0.3)'; // dark orange
+      ctx.lineWidth = 1.5;
       ctx.stroke();
+
+      // add a subtle fill to the circle
+      ctx.fillStyle =
+        handLabel === 'right'
+          ? 'rgba(255, 140, 0, 0.1)'
+          : 'rgba(255, 140, 0, 0.1)';
+      ctx.fill();
 
       // find all elements within the circle
       const elementsInCircle = new Set<Element>();
@@ -320,13 +330,13 @@ export function handleGrabbing(
             if (element && isInteractableElement(element)) {
               elementsInCircle.add(element);
 
-              // draw hover point feedback
+              // draw hover point feedback with smaller, more subtle dots
               ctx.beginPath();
-              ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+              ctx.arc(point.x, point.y, 1, 0, 2 * Math.PI);
               ctx.fillStyle =
                 handLabel === 'right'
-                  ? 'rgba(255, 0, 0, 0.2)'
-                  : 'rgba(0, 0, 255, 0.2)';
+                  ? 'rgba(255, 140, 0, 0.15)'
+                  : 'rgba(255, 140, 0, 0.15)';
               ctx.fill();
             }
           }
@@ -466,8 +476,9 @@ export function handleThumbIndex(
 
     // draw visual indicator for index fingertip (landmark 8)
     ctx.beginPath();
-    ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgb(0, 0, 255)';
+    ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
+    ctx.fillStyle =
+      handLabel === 'right' ? 'rgb(147, 112, 219)' : 'rgb(147, 112, 219)'; // solid medium purple
     ctx.fill();
 
     // handle selection
@@ -562,6 +573,36 @@ export function handleDrag(
     twoHandedZoomState.startedInsideBox = false;
     return;
   }
+
+  // Draw orange points for any hand doing "ok" gesture
+  results.handedness.forEach((hand, index) => {
+    const gesture = results.gestures![index][0].categoryName;
+    if (gesture === 'ok') {
+      const landmarks = results.landmarks![index];
+
+      // Draw index fingertip (landmark 8)
+      const indexTip = landmarkToInteractionPoint(
+        landmarks[8],
+        dimensions,
+        rect
+      );
+      ctx.beginPath();
+      ctx.arc(indexTip.x, indexTip.y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
+      ctx.fill();
+
+      // Draw thumb tip (landmark 4)
+      const thumbTip = landmarkToInteractionPoint(
+        landmarks[4],
+        dimensions,
+        rect
+      );
+      ctx.beginPath();
+      ctx.arc(thumbTip.x, thumbTip.y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
+      ctx.fill();
+    }
+  });
 
   // get current hand states and update gesture start locations
   const currentHands = results.handedness.map((hand, idx) => ({
@@ -680,19 +721,6 @@ export function handleDrag(
     const landmarks = results.landmarks![hand.index];
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
-
-    // Draw visual indicators
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgb(255, 165, 0)';
-    ctx.fill();
-
-    const thumbTip = landmarks[4];
-    const thumbPoint = landmarkToInteractionPoint(thumbTip, dimensions, rect);
-    ctx.beginPath();
-    ctx.arc(thumbPoint.x, thumbPoint.y, 8, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgb(255, 165, 0)';
-    ctx.fill();
 
     const isInsideVis = isPointInsideVisualization(point, rect);
     const startedInside = gestureStartLocation[handLabel].startedInside;
@@ -821,22 +849,29 @@ function handleTwoHandedZoom(
   lastZoomCenter = { ...center };
 
   // draw visual feedback for zoom operation
-  // draw line between hands
+  // draw line between hands with gradient
+  const gradient = ctx.createLinearGradient(
+    point1.x,
+    point1.y,
+    point2.x,
+    point2.y
+  );
+  gradient.addColorStop(0, 'rgba(50, 205, 50, 0.3)'); // limegreen
+  gradient.addColorStop(0.5, 'rgba(50, 205, 50, 0.5)');
+  gradient.addColorStop(1, 'rgba(50, 205, 50, 0.3)');
+
   ctx.beginPath();
   ctx.moveTo(point1.x, point1.y);
   ctx.lineTo(point2.x, point2.y);
-  ctx.strokeStyle = 'yellow';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 1;
   ctx.stroke();
 
-  // draw zoom center point
+  // draw zoom center point (solid color without rings)
   ctx.beginPath();
-  ctx.arc(dimensions.width - center.x, center.y, 8, 0, 2 * Math.PI);
-  ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+  ctx.arc(dimensions.width - center.x, center.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(50, 205, 50)'; // solid lime green
   ctx.fill();
-  ctx.strokeStyle = 'white';
-  ctx.lineWidth = 2;
-  ctx.stroke();
 
   // calculate and dispatch zoom transform
   if (zoomState.lastDistance) {
