@@ -37,8 +37,10 @@ interface DebugDashboardProps {
   currentPing: number | null;
   pingHistory: number[];
   // visualization selection props
-  selectedVisualization: 'nodelink' | 'usmap';
-  onVisualizationSelect: (visualization: 'nodelink' | 'usmap') => void;
+  selectedVisualization: 'nodelink' | 'usmap' | 'ustile';
+  onVisualizationSelect: (
+    visualization: 'nodelink' | 'usmap' | 'ustile'
+  ) => void;
 }
 
 // helper function to render gesture data
@@ -245,15 +247,17 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
         left: 0,
         backgroundColor: 'rgba(17, 17, 17, 0.95)',
         color: '#e0e0e0',
-        padding: '12px',
-        borderTopRightRadius: '8px',
+        padding: '8px 16px',
+        borderTopRightRadius: '12px',
         fontFamily: 'monospace',
         zIndex: 4,
         width: '280px',
-        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow:
+          '0 -4px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 0, 0, 0.2)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
         borderLeft: 'none',
         borderBottom: 'none',
+        backdropFilter: 'blur(8px)',
       }}
     >
       <div style={{ position: 'relative' }}>
@@ -262,12 +266,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
           onClick={onToggleDebug}
           style={{
             position: 'absolute',
-            top: '-32px',
+            top: '-36px',
             right: 0,
-            padding: '6px 12px',
-            borderTopRightRadius: '8px',
-            borderTopLeftRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '8px 14px',
+            borderTopRightRadius: '12px',
+            borderTopLeftRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             borderBottom: 'none',
             backgroundColor: 'rgba(17, 17, 17, 0.95)',
             cursor: 'pointer',
@@ -276,8 +280,10 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
             transition: 'all 0.2s ease',
+            boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.3)',
+            backdropFilter: 'blur(8px)',
           }}
         >
           <span>{showDebug ? '🔍' : '👁️'}</span>
@@ -289,10 +295,14 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* visualization selection section */}
             <div
               style={{
-                marginBottom: '8px',
-                padding: '4px 8px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '16px',
+                marginTop: '8px',
+                padding: '8px 12px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                 minHeight: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
@@ -306,7 +316,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                   value={selectedVisualization}
                   onChange={(e) =>
                     onVisualizationSelect(
-                      e.target.value as 'nodelink' | 'usmap'
+                      e.target.value as 'nodelink' | 'usmap' | 'ustile'
                     )
                   }
                   style={{
@@ -314,14 +324,18 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     background: 'rgba(0, 0, 0, 0.3)',
                     color: '#e0e0e0',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    padding: '5px',
-                    borderRadius: '3px',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
                     fontSize: '12px',
                     fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <option value='nodelink'>node link diagram</option>
                   <option value='usmap'>us map</option>
+                  <option value='ustile'>us tilemap</option>
                 </select>
               </div>
             </div>
@@ -329,10 +343,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* camera selection section */}
             <div
               style={{
-                marginBottom: '8px',
-                padding: '4px 8px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '16px',
+                padding: '8px 12px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                 minHeight: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
@@ -350,10 +367,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     background: 'rgba(0, 0, 0, 0.3)',
                     color: '#e0e0e0',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    padding: '5px',
-                    borderRadius: '3px',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
                     fontSize: '12px',
                     fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   {devices.map((device) => (
@@ -380,10 +400,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* memory section */}
             <div
               style={{
-                marginBottom: '8px',
-                padding: '4px 8px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '16px',
+                padding: '8px 12px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                 minHeight: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
@@ -412,10 +435,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* gesture section */}
             <div
               style={{
-                marginBottom: '8px',
-                padding: '4px 8px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '16px',
+                padding: '8px 12px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                 minHeight: '80px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
@@ -437,10 +463,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {rtcConnected && (
               <div
                 style={{
-                  marginBottom: '8px',
-                  padding: '4px 8px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                  marginBottom: '16px',
+                  padding: '8px 12px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                   minHeight: '80px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '8px',
+                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                 }}
               >
                 <h3
@@ -466,10 +495,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* connection section */}
             <div
               style={{
-                padding: '4px 8px',
+                padding: '8px 12px',
                 minHeight: '40px',
-                marginBottom: '8px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '16px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <div
@@ -490,11 +522,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     gap: '4px',
                     fontSize: '12px',
                     backgroundColor: isConnected
-                      ? 'rgba(76, 175, 80, 0.2)'
-                      : 'rgba(244, 67, 54, 0.2)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                      ? 'rgba(76, 175, 80, 0.15)'
+                      : 'rgba(244, 67, 54, 0.15)',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
                     border: `1px solid ${isConnected ? '#4CAF50' : '#F44336'}`,
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <div
@@ -517,9 +550,10 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     color: '#F44336',
                     fontSize: '11px',
                     marginBottom: '6px',
-                    padding: '4px 6px',
+                    padding: '6px 8px',
                     backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                    borderRadius: '4px',
+                    borderRadius: '6px',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   {connectionError}
@@ -539,9 +573,9 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     <span style={{ color: '#888' }}>users online:</span>
                     <span
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
                         padding: '0 4px',
-                        borderRadius: '3px',
+                        borderRadius: '4px',
                         fontSize: '11px',
                       }}
                     >
@@ -560,13 +594,14 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                       <span
                         key={user.id}
                         style={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          padding: '1px 5px',
-                          borderRadius: '3px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
                           color:
                             currentUser && user.id === currentUser.id
                               ? '#4CAF50'
                               : '#e0e0e0',
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                         }}
                       >
                         {user.username}
@@ -578,7 +613,18 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               )}
             </div>
 
-            <div style={{ padding: '4px 8px', minHeight: '40px' }}>
+            {/* webrtc section */}
+            <div
+              style={{
+                marginBottom: '16px',
+                padding: '8px 12px 4px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                minHeight: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+              }}
+            >
               <div
                 style={{
                   display: 'flex',
@@ -597,11 +643,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     gap: '4px',
                     fontSize: '12px',
                     backgroundColor: rtcConnected
-                      ? 'rgba(33, 150, 243, 0.2)'
-                      : 'rgba(158, 158, 158, 0.2)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                      ? 'rgba(33, 150, 243, 0.15)'
+                      : 'rgba(158, 158, 158, 0.15)',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
                     border: `1px solid ${rtcConnected ? '#2196F3' : '#9E9E9E'}`,
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <div
@@ -626,11 +673,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                       gap: '4px',
                       fontSize: '12px',
                       backgroundColor: isLeader
-                        ? 'rgba(255, 215, 0, 0.2)'
-                        : 'rgba(158, 158, 158, 0.2)',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
+                        ? 'rgba(255, 215, 0, 0.15)'
+                        : 'rgba(158, 158, 158, 0.15)',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
                       border: `1px solid ${isLeader ? '#FFD700' : '#9E9E9E'}`,
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                     }}
                   >
                     <div
@@ -649,7 +697,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               </div>
 
               {rtcConnectionState && (
-                <div style={{ fontSize: '12px', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', marginBottom: '2px' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -660,10 +708,11 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     <span style={{ color: '#888' }}>state:</span>
                     <span
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        padding: '1px 5px',
-                        borderRadius: '3px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
                         fontSize: '11px',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                         color:
                           rtcConnectionState === 'connected'
                             ? '#2196F3'
@@ -685,60 +734,59 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               )}
 
               {/* feed toggle button */}
-              <div style={{ fontSize: '12px', marginTop: '8px' }}>
+              {rtcConnected && (
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    marginBottom: '4px',
+                    fontSize: '12px',
+                    marginTop: '6px',
+                    marginBottom: '2px',
                   }}
                 >
-                  <span style={{ color: '#888' }}>active feed:</span>
-                  <span
+                  <div
                     style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      padding: '1px 5px',
-                      borderRadius: '3px',
-                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginBottom: '4px',
                     }}
                   >
-                    {rtcConnected && !showLocalFeed ? 'remote' : 'local'}
-                  </span>
-                </div>
-                <button
-                  onClick={onToggleFeed}
-                  disabled={!rtcConnected}
-                  style={{
-                    width: '100%',
-                    background: rtcConnected
-                      ? 'rgba(33, 150, 243, 0.2)'
-                      : 'rgba(158, 158, 158, 0.1)',
-                    border: `1px solid ${rtcConnected ? '#2196F3' : '#9E9E9E'}`,
-                    color: rtcConnected ? '#e0e0e0' : '#9E9E9E',
-                    padding: '4px 8px',
-                    borderRadius: '3px',
-                    cursor: rtcConnected ? 'pointer' : 'not-allowed',
-                    fontSize: '11px',
-                    fontFamily: 'monospace',
-                    marginTop: '2px',
-                  }}
-                >
-                  switch to {showLocalFeed ? 'remote' : 'local'} feed
-                </button>
-              </div>
-
-              {rtcConnected && connectedUsers.length === 2 && (
-                <div
-                  style={{
-                    fontSize: '11px',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    padding: '4px 6px',
-                    borderRadius: '4px',
-                    marginTop: '4px',
-                  }}
-                >
-                  <span>peer-to-peer connection established</span>
+                    <span style={{ color: '#888' }}>active feed:</span>
+                    <span
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      }}
+                    >
+                      {rtcConnected && !showLocalFeed ? 'remote' : 'local'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={onToggleFeed}
+                    disabled={!rtcConnected}
+                    style={{
+                      width: '100%',
+                      background: rtcConnected
+                        ? 'rgba(33, 150, 243, 0.15)'
+                        : 'rgba(158, 158, 158, 0.08)',
+                      border: `1px solid ${rtcConnected ? '#2196F3' : '#9E9E9E'}`,
+                      color: rtcConnected ? '#e0e0e0' : '#9E9E9E',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      cursor: rtcConnected ? 'pointer' : 'not-allowed',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                      marginTop: '4px',
+                      boxShadow: rtcConnected
+                        ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                        : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    switch to {showLocalFeed ? 'remote' : 'local'} feed
+                  </button>
                 </div>
               )}
 
@@ -747,54 +795,53 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                   style={{
                     fontSize: '11px',
                     backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                    padding: '4px 6px',
-                    borderRadius: '4px',
-                    marginTop: '4px',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    marginTop: '6px',
+                    marginBottom: '2px',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <span>establishing peer connection...</span>
                 </div>
               )}
 
-              {!rtcConnected && connectedUsers.length < 2 && (
+              {/* ping display - only show when rtc is connected */}
+              {rtcConnected && (
                 <div
                   style={{
-                    fontSize: '11px',
-                    opacity: 0.7,
-                    marginTop: '4px',
+                    fontSize: '12px',
+                    marginTop: '6px',
+                    marginBottom: '2px',
                   }}
                 >
-                  <span>waiting for another user to connect</span>
-                </div>
-              )}
-
-              {/* ping display */}
-              <div style={{ fontSize: '12px', marginTop: '8px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <span style={{ color: '#888' }}>ping:</span>
-                  <span
+                  <div
                     style={{
-                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                      padding: '1px 5px',
-                      borderRadius: '3px',
-                      fontSize: '11px',
-                      color: currentPing === null ? '#9E9E9E' : '#2196F3',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '4px',
                     }}
                   >
-                    {currentPing === null ? 'n/a' : `${currentPing}ms`}
-                  </span>
-                  <div style={{ marginLeft: 'auto' }}>
-                    {renderPingChart(pingHistory)}
+                    <span style={{ color: '#888' }}>ping:</span>
+                    <span
+                      style={{
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        color: currentPing === null ? '#9E9E9E' : '#2196F3',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      }}
+                    >
+                      {currentPing === null ? 'n/a' : `${currentPing}ms`}
+                    </span>
+                    <div style={{ marginLeft: 'auto' }}>
+                      {renderPingChart(pingHistory)}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </>
         )}

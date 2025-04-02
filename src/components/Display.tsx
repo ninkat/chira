@@ -25,13 +25,14 @@ import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import NodeLink from '@/components/vis/NodeLink';
 import USMap from '@/components/vis/USMap';
+import USTile from '@/components/vis/USTile';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
 // get the dynamic websocket url
 const WS_URL = getWebsocketUrl();
 
 // available visualizations
-type VisualizationType = 'nodelink' | 'usmap';
+type VisualizationType = 'nodelink' | 'usmap' | 'ustile';
 
 // main display component that:
 // - manages webcam feed
@@ -113,7 +114,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [selectedVisualization, setSelectedVisualization] =
-    useState<VisualizationType>('usmap');
+    useState<VisualizationType>('ustile');
 
   // handle camera selection
   const handleCameraSelect = useCallback((deviceId: string) => {
@@ -449,7 +450,13 @@ const Display: React.FC = () => {
       >
         {/* render visualization based on selection */}
         {(!rtcConnectedRef.current || isLeaderRef.current) &&
-          (selectedVisualization === 'nodelink' ? <NodeLink /> : <USMap />)}
+          (selectedVisualization === 'nodelink' ? (
+            <NodeLink />
+          ) : selectedVisualization === 'usmap' ? (
+            <USMap />
+          ) : (
+            <USTile />
+          ))}
 
         {/* For follower: render the received SVG directly */}
         {!isLeaderRef.current && rtcConnectedRef.current && receivedSvgData && (
