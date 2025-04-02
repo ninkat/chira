@@ -9,6 +9,14 @@ import {
   InteractionEventHandler,
   InteractionPoint,
 } from '@/types/interactionTypes';
+import {
+  drawOneGestureFeedback,
+  drawGrabbingGestureFeedback,
+  drawGrabbingHoverPoint,
+  drawThumbIndexGestureFeedback,
+  drawOkGestureFeedback,
+  drawZoomFeedback,
+} from '@/utils/drawingUtils';
 
 // converts a mediapipe landmark to our interaction point format
 // this handles the coordinate space conversion from normalized (0-1) to pixel space
@@ -122,7 +130,8 @@ export function handleOne(
   results: GestureRecognizerResult,
   rect: DOMRect,
   dimensions: CanvasDimensions,
-  onInteraction: InteractionEventHandler
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
 ): void {
   if (
     !results.landmarks?.length ||
@@ -146,87 +155,75 @@ export function handleOne(
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    // get element at current position
-    const currentElement = document.elementFromPoint(
-      point.clientX,
-      point.clientY
-    );
+    // handle hover state based on hand if not in drawOnly mode
+    if (!drawOnly) {
+      // get element at current position
+      const currentElement = document.elementFromPoint(
+        point.clientX,
+        point.clientY
+      );
 
-    // handle hover state based on hand
-    if (handLabel === 'right') {
-      // handle right hand hover
-      if (currentElement !== lastHoveredElementRight) {
-        // send pointerout to previous element
-        if (lastHoveredElementRight) {
-          onInteraction({
-            type: 'pointerout',
-            point,
-            timestamp: Date.now(),
-            sourceType: 'gesture',
-            handedness: 'right',
-          });
+      if (handLabel === 'right') {
+        // handle right hand hover
+        if (currentElement !== lastHoveredElementRight) {
+          // send pointerout to previous element
+          if (lastHoveredElementRight) {
+            onInteraction({
+              type: 'pointerout',
+              point,
+              timestamp: Date.now(),
+              sourceType: 'gesture',
+              handedness: 'right',
+            });
+          }
+
+          // send pointerover to new element
+          if (isInteractableElement(currentElement)) {
+            onInteraction({
+              type: 'pointerover',
+              point,
+              timestamp: Date.now(),
+              sourceType: 'gesture',
+              handedness: 'right',
+            });
+          }
+
+          // update right hand hover state
+          lastHoveredElementRight = currentElement;
         }
+      } else {
+        // handle left hand hover
+        if (currentElement !== lastHoveredElementLeft) {
+          // send pointerout to previous element
+          if (lastHoveredElementLeft) {
+            onInteraction({
+              type: 'pointerout',
+              point,
+              timestamp: Date.now(),
+              sourceType: 'gesture',
+              handedness: 'left',
+            });
+          }
 
-        // send pointerover to new element
-        if (isInteractableElement(currentElement)) {
-          onInteraction({
-            type: 'pointerover',
-            point,
-            timestamp: Date.now(),
-            sourceType: 'gesture',
-            handedness: 'right',
-          });
+          // send pointerover to new element
+          if (isInteractableElement(currentElement)) {
+            onInteraction({
+              type: 'pointerover',
+              point,
+              timestamp: Date.now(),
+              sourceType: 'gesture',
+              handedness: 'left',
+            });
+          }
+
+          // update left hand hover state
+          lastHoveredElementLeft = currentElement;
         }
-
-        // update right hand hover state
-        lastHoveredElementRight = currentElement;
-      }
-    } else {
-      // handle left hand hover
-      if (currentElement !== lastHoveredElementLeft) {
-        // send pointerout to previous element
-        if (lastHoveredElementLeft) {
-          onInteraction({
-            type: 'pointerout',
-            point,
-            timestamp: Date.now(),
-            sourceType: 'gesture',
-            handedness: 'left',
-          });
-        }
-
-        // send pointerover to new element
-        if (isInteractableElement(currentElement)) {
-          onInteraction({
-            type: 'pointerover',
-            point,
-            timestamp: Date.now(),
-            sourceType: 'gesture',
-            handedness: 'left',
-          });
-        }
-
-        // update left hand hover state
-        lastHoveredElementLeft = currentElement;
       }
     }
 
-    // draw visual feedback for each hand's hover point (index fingertip)
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
-    ctx.fillStyle =
-      handLabel === 'right' ? 'rgb(64, 224, 208)' : 'rgb(64, 224, 208)'; // solid turquoise
-    ctx.fill();
-
-    // draw a small ring around the point for better visibility
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 14, 0, 2 * Math.PI);
-    ctx.strokeStyle =
-      handLabel === 'right'
-        ? 'rgba(64, 224, 208, 0.2)'
-        : 'rgba(64, 224, 208, 0.2)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
+    // Use drawing utility for visual feedback
+    drawOneGestureFeedback(ctx, point);
   });
 }
 
@@ -238,7 +235,8 @@ export function handleGrabbing(
   results: GestureRecognizerResult,
   rect: DOMRect,
   dimensions: CanvasDimensions,
-  onInteraction: InteractionEventHandler
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
 ): void {
   if (
     !results.landmarks?.length ||
@@ -256,31 +254,33 @@ export function handleGrabbing(
     // only process if gesture is "grabbing"
     if (gesture !== 'grabbing') {
       // if the gesture is no longer grabbing, clear all hover states for this hand
-      const currentlyHovered = hoveredElementsByHand[handLabel];
-      if (currentlyHovered.size > 0) {
-        // send pointerout for each element
-        Array.from(currentlyHovered).forEach((element) => {
-          if (isInteractableElement(element)) {
-            // use the center of the element as the pointer position
-            const elementRect = element.getBoundingClientRect();
-            const point: InteractionPoint = {
-              x: 0,
-              y: 0,
-              clientX: elementRect.left + elementRect.width / 2,
-              clientY: elementRect.top + elementRect.height / 2,
-            };
+      if (!drawOnly) {
+        const currentlyHovered = hoveredElementsByHand[handLabel];
+        if (currentlyHovered.size > 0) {
+          // send pointerout for each element
+          Array.from(currentlyHovered).forEach((element) => {
+            if (isInteractableElement(element)) {
+              // use the center of the element as the pointer position
+              const elementRect = element.getBoundingClientRect();
+              const point: InteractionPoint = {
+                x: 0,
+                y: 0,
+                clientX: elementRect.left + elementRect.width / 2,
+                clientY: elementRect.top + elementRect.height / 2,
+              };
 
-            onInteraction({
-              type: 'pointerout',
-              point,
-              timestamp: Date.now(),
-              sourceType: 'gesture',
-              handedness: handLabel,
-              element, // explicitly pass the element to ensure proper cleanup
-            });
-          }
-        });
-        currentlyHovered.clear();
+              onInteraction({
+                type: 'pointerout',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: handLabel,
+                element, // explicitly pass the element to ensure proper cleanup
+              });
+            }
+          });
+          currentlyHovered.clear();
+        }
       }
       return;
     }
@@ -298,134 +298,116 @@ export function handleGrabbing(
     const circle = minEnclosingCircle(tipPoints);
 
     if (circle && circle.radius > 0) {
-      // draw visual feedback for the hover area
-      ctx.beginPath();
-      ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
-      ctx.strokeStyle =
-        handLabel === 'right'
-          ? 'rgba(255, 140, 0, 0.3)'
-          : 'rgba(255, 140, 0, 0.3)'; // dark orange
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      // Use drawing utility to draw circle
+      drawGrabbingGestureFeedback(ctx, circle);
 
-      // add a subtle fill to the circle
-      ctx.fillStyle =
-        handLabel === 'right'
-          ? 'rgba(255, 140, 0, 0.1)'
-          : 'rgba(255, 140, 0, 0.1)';
-      ctx.fill();
+      if (!drawOnly) {
+        // find all elements within the circle
+        const elementsInCircle = new Set<Element>();
+        // increase sampling density by using a smaller grid size
+        // original: const gridSize = Math.max(5, Math.floor(circle.radius / 20));
+        const gridSize = Math.max(10, Math.floor(circle.radius / 10)); // doubled grid size for more points
+        const step = (circle.radius * 2) / gridSize; // smaller step size
 
-      // find all elements within the circle
-      const elementsInCircle = new Set<Element>();
-      // increase sampling density by using a smaller grid size
-      // original: const gridSize = Math.max(5, Math.floor(circle.radius / 20));
-      const gridSize = Math.max(10, Math.floor(circle.radius / 10)); // doubled grid size for more points
-      const step = (circle.radius * 2) / gridSize; // smaller step size
+        // add additional sampling points by using a denser grid
+        for (let x = -circle.radius; x <= circle.radius; x += step) {
+          for (let y = -circle.radius; y <= circle.radius; y += step) {
+            if (x * x + y * y <= circle.radius * circle.radius) {
+              const point: InteractionPoint = {
+                x: circle.center.x + x,
+                y: circle.center.y + y,
+                clientX: rect.left + (dimensions.width - (circle.center.x + x)),
+                clientY: rect.top + (circle.center.y + y),
+              };
 
-      // add additional sampling points by using a denser grid
-      for (let x = -circle.radius; x <= circle.radius; x += step) {
-        for (let y = -circle.radius; y <= circle.radius; y += step) {
-          if (x * x + y * y <= circle.radius * circle.radius) {
-            const point: InteractionPoint = {
-              x: circle.center.x + x,
-              y: circle.center.y + y,
-              clientX: rect.left + (dimensions.width - (circle.center.x + x)),
-              clientY: rect.top + (circle.center.y + y),
-            };
+              const element = document.elementFromPoint(
+                point.clientX,
+                point.clientY
+              );
+              if (element && isInteractableElement(element)) {
+                elementsInCircle.add(element);
 
-            const element = document.elementFromPoint(
-              point.clientX,
-              point.clientY
-            );
-            if (element && isInteractableElement(element)) {
-              elementsInCircle.add(element);
-
-              // draw hover point feedback with smaller, more subtle dots
-              ctx.beginPath();
-              ctx.arc(point.x, point.y, 1, 0, 2 * Math.PI);
-              ctx.fillStyle =
-                handLabel === 'right'
-                  ? 'rgba(255, 140, 0, 0.15)'
-                  : 'rgba(255, 140, 0, 0.15)';
-              ctx.fill();
+                // Use drawing utility to draw hover point
+                drawGrabbingHoverPoint(ctx, point);
+              }
             }
           }
         }
-      }
 
-      // get arrays of elements to start and end hovering
-      const currentlyHovered = hoveredElementsByHand[handLabel];
-      const elementsToStartHovering = Array.from(elementsInCircle).filter(
-        (element) => !currentlyHovered.has(element)
-      );
-      const elementsToStopHovering = Array.from(currentlyHovered).filter(
-        (element) => !elementsInCircle.has(element)
-      );
-
-      // send hover events (using pointerover/pointerout for simplicity)
-      if (elementsToStartHovering.length > 0) {
-        // Only dispatch if there are interactable elements
-        const interactableElements = elementsToStartHovering.filter(
-          isInteractableElement
+        // get arrays of elements to start and end hovering
+        const currentlyHovered = hoveredElementsByHand[handLabel];
+        const elementsToStartHovering = Array.from(elementsInCircle).filter(
+          (element) => !currentlyHovered.has(element)
         );
-        if (interactableElements.length > 0) {
-          // send pointerover for each element instead of coarsehoverstart
-          interactableElements.forEach((element) => {
-            // use the center of the element as the pointer position
-            const elementRect = element.getBoundingClientRect();
-            const point: InteractionPoint = {
-              x: circle.center.x, // use circle center for x
-              y: circle.center.y, // use circle center for y
-              clientX: elementRect.left + elementRect.width / 2,
-              clientY: elementRect.top + elementRect.height / 2,
-            };
-
-            onInteraction({
-              type: 'pointerover',
-              point,
-              timestamp: Date.now(),
-              sourceType: 'gesture',
-              handedness: handLabel,
-              element, // explicitly pass the element for better tracking
-            });
-          });
-        }
-      }
-
-      if (elementsToStopHovering.length > 0) {
-        // Only dispatch if there are interactable elements
-        const interactableElements = elementsToStopHovering.filter(
-          isInteractableElement
+        const elementsToStopHovering = Array.from(currentlyHovered).filter(
+          (element) => !elementsInCircle.has(element)
         );
-        if (interactableElements.length > 0) {
-          // send pointerout for each element instead of coarsehoverend
-          interactableElements.forEach((element) => {
-            // use the center of the element as the pointer position
-            const elementRect = element.getBoundingClientRect();
-            const point: InteractionPoint = {
-              x: circle.center.x, // use circle center for x
-              y: circle.center.y, // use circle center for y
-              clientX: elementRect.left + elementRect.width / 2,
-              clientY: elementRect.top + elementRect.height / 2,
-            };
 
-            onInteraction({
-              type: 'pointerout',
-              point,
-              timestamp: Date.now(),
-              sourceType: 'gesture',
-              handedness: handLabel,
-              element, // explicitly pass the element to ensure proper cleanup
+        // send hover events (using pointerover/pointerout for simplicity)
+        if (elementsToStartHovering.length > 0) {
+          // Only dispatch if there are interactable elements
+          const interactableElements = elementsToStartHovering.filter(
+            isInteractableElement
+          );
+          if (interactableElements.length > 0) {
+            // send pointerover for each element instead of coarsehoverstart
+            interactableElements.forEach((element) => {
+              // use the center of the element as the pointer position
+              const elementRect = element.getBoundingClientRect();
+              const point: InteractionPoint = {
+                x: circle.center.x, // use circle center for x
+                y: circle.center.y, // use circle center for y
+                clientX: elementRect.left + elementRect.width / 2,
+                clientY: elementRect.top + elementRect.height / 2,
+              };
+
+              onInteraction({
+                type: 'pointerover',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: handLabel,
+                element, // explicitly pass the element for better tracking
+              });
             });
-          });
+          }
         }
-      }
 
-      // update hover state with only interactable elements
-      hoveredElementsByHand[handLabel] = new Set(
-        Array.from(elementsInCircle).filter(isInteractableElement)
-      );
-    } else {
+        if (elementsToStopHovering.length > 0) {
+          // Only dispatch if there are interactable elements
+          const interactableElements = elementsToStopHovering.filter(
+            isInteractableElement
+          );
+          if (interactableElements.length > 0) {
+            // send pointerout for each element instead of coarsehoverend
+            interactableElements.forEach((element) => {
+              // use the center of the element as the pointer position
+              const elementRect = element.getBoundingClientRect();
+              const point: InteractionPoint = {
+                x: circle.center.x, // use circle center for x
+                y: circle.center.y, // use circle center for y
+                clientX: elementRect.left + elementRect.width / 2,
+                clientY: elementRect.top + elementRect.height / 2,
+              };
+
+              onInteraction({
+                type: 'pointerout',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: handLabel,
+                element, // explicitly pass the element to ensure proper cleanup
+              });
+            });
+          }
+        }
+
+        // update hover state with only interactable elements
+        hoveredElementsByHand[handLabel] = new Set(
+          Array.from(elementsInCircle).filter(isInteractableElement)
+        );
+      }
+    } else if (!drawOnly) {
       const currentlyHovered = hoveredElementsByHand[handLabel];
       if (currentlyHovered.size > 0) {
         // send pointerout for each element instead of coarsehoverend
@@ -462,7 +444,8 @@ export function handleThumbIndex(
   results: GestureRecognizerResult,
   rect: DOMRect,
   dimensions: CanvasDimensions,
-  onInteraction: InteractionEventHandler
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
 ): void {
   if (
     !results.landmarks?.length ||
@@ -484,25 +467,23 @@ export function handleThumbIndex(
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    // draw visual indicator for index fingertip (landmark 8)
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
-    ctx.fillStyle =
-      handLabel === 'right' ? 'rgb(147, 112, 219)' : 'rgb(147, 112, 219)'; // solid medium purple
-    ctx.fill();
+    // Use drawing utility for visual indicator
+    drawThumbIndexGestureFeedback(ctx, point);
 
-    // handle selection
-    const element = document.elementFromPoint(point.clientX, point.clientY);
-    if (element !== lastSelectedElement && isInteractableElement(element)) {
-      onInteraction({
-        type: 'pointerselect',
-        point,
-        timestamp: Date.now(),
-        sourceType: 'gesture',
-        handedness: handLabel,
-        element: element as Element,
-      });
-      lastSelectedElement = element;
+    // handle selection if not in drawOnly mode
+    if (!drawOnly) {
+      const element = document.elementFromPoint(point.clientX, point.clientY);
+      if (element !== lastSelectedElement && isInteractableElement(element)) {
+        onInteraction({
+          type: 'pointerselect',
+          point,
+          timestamp: Date.now(),
+          sourceType: 'gesture',
+          handedness: handLabel,
+          element: element as Element,
+        });
+        lastSelectedElement = element;
+      }
     }
   });
 }
@@ -544,43 +525,49 @@ export function handleDrag(
   results: GestureRecognizerResult,
   rect: DOMRect,
   dimensions: CanvasDimensions,
-  onInteraction: InteractionEventHandler
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
 ): void {
   if (
     !results.landmarks?.length ||
     !results.handedness?.length ||
     !results.gestures?.length
   ) {
-    // reset all states when no hands are detected
-    for (const handLabel of ['left', 'right'] as const) {
-      const dragState = fineSelectDragState[handLabel];
-      if (dragState.active && dragState.element) {
-        onInteraction({
-          type: 'pointerup',
-          point: {
-            x: 0,
-            y: 0,
-            clientX: 0,
-            clientY: 0,
-          },
-          element: dragState.element,
-          timestamp: Date.now(),
-          sourceType: 'gesture',
-          handedness: handLabel,
-        });
-        dragState.active = false;
-        dragState.element = null;
+    // reset all states when no hands are detected (only if not in drawOnly mode)
+    if (!drawOnly) {
+      for (const handLabel of ['left', 'right'] as const) {
+        const dragState = fineSelectDragState[handLabel];
+        if (dragState.active && dragState.element) {
+          onInteraction({
+            type: 'pointerup',
+            point: {
+              x: 0,
+              y: 0,
+              clientX: 0,
+              clientY: 0,
+            },
+            element: dragState.element,
+            timestamp: Date.now(),
+            sourceType: 'gesture',
+            handedness: handLabel,
+          });
+          dragState.active = false;
+          dragState.element = null;
+        }
+        // reset gesture start location state
+        gestureStartLocation[handLabel] = {
+          active: false,
+          startedInside: false,
+        };
       }
-      // reset gesture start location state
-      gestureStartLocation[handLabel] = { active: false, startedInside: false };
-    }
 
-    if (!wasZooming) {
-      resetZoomState();
-    }
+      if (!wasZooming) {
+        resetZoomState();
+      }
 
-    twoHandedZoomState.active = false;
-    twoHandedZoomState.startedInsideBox = false;
+      twoHandedZoomState.active = false;
+      twoHandedZoomState.startedInsideBox = false;
+    }
     return;
   }
 
@@ -590,29 +577,25 @@ export function handleDrag(
     if (gesture === 'ok') {
       const landmarks = results.landmarks![index];
 
-      // Draw index fingertip (landmark 8)
+      // Get fingertip positions
       const indexTip = landmarkToInteractionPoint(
         landmarks[8],
         dimensions,
         rect
       );
-      ctx.beginPath();
-      ctx.arc(indexTip.x, indexTip.y, 10, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
-      ctx.fill();
-
-      // Draw thumb tip (landmark 4)
       const thumbTip = landmarkToInteractionPoint(
         landmarks[4],
         dimensions,
         rect
       );
-      ctx.beginPath();
-      ctx.arc(thumbTip.x, thumbTip.y, 10, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
-      ctx.fill();
+
+      // Use drawing utility for fingertips
+      drawOkGestureFeedback(ctx, indexTip, thumbTip);
     }
   });
+
+  // Skip all interaction logic if in drawOnly mode
+  if (drawOnly) return;
 
   // get current hand states and update gesture start locations
   const currentHands = results.handedness.map((hand, idx) => ({
@@ -696,7 +679,13 @@ export function handleDrag(
       !hand1Inside &&
       !hand2Inside
     ) {
-      handleTwoHandedZoom(ctx, handLandmarks, dimensions, onInteraction);
+      handleTwoHandedZoom(
+        ctx,
+        handLandmarks,
+        dimensions,
+        onInteraction,
+        drawOnly
+      );
     } else {
       // handle each hand based on where it started
       if (hand1StartedInside || hand1Inside) {
@@ -815,12 +804,15 @@ function handleTwoHandedZoom(
   ctx: CanvasRenderingContext2D,
   hands: NormalizedLandmark[][],
   dimensions: CanvasDimensions,
-  onInteraction: InteractionEventHandler
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
 ): void {
   // mark that we are zooming to help with transition to dragging
-  wasZooming = true;
-  initialDragPosition = null; // reset initial drag position when zooming
-  transitionInProgress = false; // not in transition while actively zooming
+  if (!drawOnly) {
+    wasZooming = true;
+    initialDragPosition = null; // reset initial drag position when zooming
+    transitionInProgress = false; // not in transition while actively zooming
+  }
 
   // get index fingertip positions for both hands
   const point1 = getLandmarkPosition(
@@ -846,7 +838,7 @@ function handleTwoHandedZoom(
   };
 
   // store initial zoom center if this is the start of a zoom
-  if (!zoomState.lastDistance) {
+  if (!drawOnly && !zoomState.lastDistance) {
     zoomState.startCenter = center;
     zoomState.fixedPoint = {
       x: (center.x - currentTransform.x) / currentTransform.scale,
@@ -856,46 +848,15 @@ function handleTwoHandedZoom(
 
   // always update lastZoomCenter with the current center
   // this ensures we have the most recent position for transition to drag
-  lastZoomCenter = { ...center };
+  if (!drawOnly) {
+    lastZoomCenter = { ...center };
+  }
 
-  // draw visual feedback for zoom operation
-  // draw line between hands with gradient
-  const gradient = ctx.createLinearGradient(
-    point1.x,
-    point1.y,
-    point2.x,
-    point2.y
-  );
-  gradient.addColorStop(0, 'rgba(50, 205, 50, 0.3)'); // limegreen
-  gradient.addColorStop(0.5, 'rgba(50, 205, 50, 0.5)');
-  gradient.addColorStop(1, 'rgba(50, 205, 50, 0.3)');
+  // Use drawing utility for zoom feedback
+  drawZoomFeedback(ctx, point1, point2, center, dimensions);
 
-  ctx.beginPath();
-  ctx.moveTo(point1.x, point1.y);
-  ctx.lineTo(point2.x, point2.y);
-  ctx.strokeStyle = gradient;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // draw zoom center point with rings
-  ctx.beginPath();
-  ctx.arc(dimensions.width - center.x, center.y, 10, 0, 2 * Math.PI);
-  ctx.fillStyle = 'rgba(50, 205, 50, 0.3)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(50, 205, 50, 0.6)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // add outer ring with pulse effect
-  const pulseRadius = 14 + Math.sin(Date.now() / 200) * 2;
-  ctx.beginPath();
-  ctx.arc(dimensions.width - center.x, center.y, pulseRadius, 0, 2 * Math.PI);
-  ctx.strokeStyle = 'rgba(50, 205, 50, 0.2)';
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
-
-  // calculate and dispatch zoom transform
-  if (zoomState.lastDistance) {
+  // calculate and dispatch zoom transform - only if not in drawOnly mode
+  if (!drawOnly && zoomState.lastDistance) {
     const scale = currentDistance / zoomState.lastDistance;
     const newScale = Math.max(0.5, Math.min(8, currentTransform.scale * scale));
 
@@ -916,7 +877,9 @@ function handleTwoHandedZoom(
     });
   }
 
-  zoomState.lastDistance = currentDistance;
+  if (!drawOnly) {
+    zoomState.lastDistance = currentDistance;
+  }
 }
 
 // handles single-handed drag operation

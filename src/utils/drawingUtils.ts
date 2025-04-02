@@ -1,4 +1,7 @@
 import { GestureRecognizer } from '@mediapipe/tasks-vision';
+import { Point, CanvasDimensions } from '@/types/types';
+import { InteractionPoint } from '@/types/interactionTypes';
+import { NormalizedLandmark } from '@mediapipe/tasks-vision';
 
 /**
  * draws hand landmarks and connections for both hands
@@ -64,4 +67,143 @@ export function drawHandLandmarks(
       if (leftDrawn && rightDrawn) break;
     }
   }
+}
+
+/**
+ * draws a hover indicator for "one" gesture
+ * @param ctx canvas context
+ * @param point interaction point location
+ */
+export function drawOneGestureFeedback(
+  ctx: CanvasRenderingContext2D,
+  point: InteractionPoint
+): void {
+  // draw visual feedback for each hand's hover point (index fingertip)
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(64, 224, 208)'; // solid turquoise for both hands
+  ctx.fill();
+
+  // draw a small ring around the point for better visibility
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 14, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(64, 224, 208, 0.2)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+}
+
+/**
+ * draws circle hover area for "grabbing" gesture
+ * @param ctx canvas context
+ * @param circle circle definition with center and radius
+ */
+export function drawGrabbingGestureFeedback(
+  ctx: CanvasRenderingContext2D,
+  circle: { center: Point; radius: number }
+): void {
+  // draw visual feedback for the hover area
+  ctx.beginPath();
+  ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 140, 0, 0.3)'; // dark orange for both hands
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // add a subtle fill to the circle
+  ctx.fillStyle = 'rgba(255, 140, 0, 0.1)';
+  ctx.fill();
+}
+
+/**
+ * draws hover point within grabbing circle
+ * @param ctx canvas context
+ * @param point point to draw
+ */
+export function drawGrabbingHoverPoint(
+  ctx: CanvasRenderingContext2D,
+  point: Point
+): void {
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 1, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(255, 140, 0, 0.15)'; // same color for both hands
+  ctx.fill();
+}
+
+/**
+ * draws selection indicator for thumb_index gesture
+ * @param ctx canvas context
+ * @param point interaction point location
+ */
+export function drawThumbIndexGestureFeedback(
+  ctx: CanvasRenderingContext2D,
+  point: InteractionPoint
+): void {
+  // draw visual indicator for index fingertip (landmark 8)
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(147, 112, 219)'; // solid medium purple for both hands
+  ctx.fill();
+}
+
+/**
+ * draws fingertip indicators for "ok" gesture
+ * @param ctx canvas context
+ * @param indexTip index fingertip point
+ * @param thumbTip thumb fingertip point
+ */
+export function drawOkGestureFeedback(
+  ctx: CanvasRenderingContext2D,
+  indexTip: InteractionPoint,
+  thumbTip: InteractionPoint
+): void {
+  // draw index fingertip (landmark 8)
+  ctx.beginPath();
+  ctx.arc(indexTip.x, indexTip.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
+  ctx.fill();
+
+  // draw thumb tip (landmark 4)
+  ctx.beginPath();
+  ctx.arc(thumbTip.x, thumbTip.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
+  ctx.fill();
+}
+
+/**
+ * draws zoom visualization between two hands
+ * @param ctx canvas context
+ * @param point1 first hand position
+ * @param point2 second hand position
+ * @param centerPoint center between hands
+ * @param dimensions canvas dimensions
+ */
+export function drawZoomFeedback(
+  ctx: CanvasRenderingContext2D,
+  point1: Point,
+  point2: Point,
+  centerPoint: Point,
+  dimensions: CanvasDimensions
+): void {
+  // draw line between hands with gradient
+  const gradient = ctx.createLinearGradient(
+    point1.x,
+    point1.y,
+    point2.x,
+    point2.y
+  );
+  gradient.addColorStop(0, 'rgba(50, 205, 50, 0.3)'); // limegreen
+  gradient.addColorStop(0.5, 'rgba(50, 205, 50, 0.5)');
+  gradient.addColorStop(1, 'rgba(50, 205, 50, 0.3)');
+
+  ctx.beginPath();
+  ctx.moveTo(point1.x, point1.y);
+  ctx.lineTo(point2.x, point2.y);
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // draw zoom center point (solid color without rings)
+  ctx.beginPath();
+  ctx.arc(dimensions.width - centerPoint.x, centerPoint.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(50, 205, 50)'; // solid lime green
+  ctx.fill();
 }

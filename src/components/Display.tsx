@@ -46,6 +46,7 @@ const Display: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const rtcConnectedRef = useRef<boolean>(false);
   const isLeaderRef = useRef<boolean>(false);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
 
   // state for selected camera device
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -194,10 +195,16 @@ const Display: React.FC = () => {
     isLeaderRef.current = isLeader;
   }, [isLeader]);
 
+  useEffect(() => {
+    remoteStreamRef.current = remoteStream;
+  }, [remoteStream]);
+
   // main webcam processing effect for both local and remote feeds
   useEffect(() => {
     // combined webcam processing loop for both local and remote feeds
     const processWebcams = () => {
+      // draw only if we are in multiplayer and not the leader
+      const drawOnly = rtcConnectedRef.current && !isLeaderRef.current;
       // process local webcam feed first
       if (localVideoRef.current && gestureRecognizer && canvasRef.current) {
         // check frame rate for local feed
@@ -225,68 +232,70 @@ const Display: React.FC = () => {
               }
             );
 
-            if (!rtcConnectedRef.current || isLeaderRef.current) {
-              if (results?.landmarks && results.handedness) {
-                // get overlay rect for coordinate conversion
-                const rect =
-                  overlayRef.current?.getBoundingClientRect() || new DOMRect();
+            if (results?.landmarks && results.handedness) {
+              // get overlay rect for coordinate conversion
+              const rect =
+                overlayRef.current?.getBoundingClientRect() || new DOMRect();
 
-                // this function sends events to the overlay
-                const handleInteraction: InteractionEventHandler = (event) => {
-                  // dispatch custom event that bubbles up through the overlay
-                  if (overlayRef.current) {
-                    const customEvent = new CustomEvent('interaction', {
-                      bubbles: true,
-                      composed: true,
-                      detail: event,
-                    });
-                    // find the current visualization element
-                    const visElement = overlayRef.current.firstElementChild;
-                    if (visElement) {
-                      visElement.dispatchEvent(customEvent);
-                    }
+              // this function sends events to the overlay
+              const handleInteraction: InteractionEventHandler = (event) => {
+                // dispatch custom event that bubbles up through the overlay
+                if (overlayRef.current) {
+                  const customEvent = new CustomEvent('interaction', {
+                    bubbles: true,
+                    composed: true,
+                    detail: event,
+                  });
+                  // find the current visualization element
+                  const visElement = overlayRef.current.firstElementChild;
+                  if (visElement) {
+                    visElement.dispatchEvent(customEvent);
                   }
-                };
+                }
+              };
 
-                // process "one" gesture for hovering
-                handleSvgOne(
-                  canvasCtx,
-                  results,
-                  rect,
-                  dimensions,
-                  handleInteraction
-                );
+              // process "one" gesture for hovering
+              handleSvgOne(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction,
+                drawOnly
+              );
 
-                // process "grabbing" gesture for area hovering
-                handleSvgGrabbing(
-                  canvasCtx,
-                  results,
-                  rect,
-                  dimensions,
-                  handleInteraction
-                );
+              // process "grabbing" gesture for area hovering
+              handleSvgGrabbing(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction,
+                drawOnly
+              );
 
-                // process "thumb_index" gesture for selection
-                handleSvgThumbIndex(
-                  canvasCtx,
-                  results,
-                  rect,
-                  dimensions,
-                  handleInteraction
-                );
+              // process "thumb_index" gesture for selection
+              handleSvgThumbIndex(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction,
+                drawOnly
+              );
 
-                // process "ok" gesture for dragging and zooming
-                handleSvgDrag(
-                  canvasCtx,
-                  results,
-                  rect,
-                  dimensions,
-                  handleInteraction
-                );
-              }
-
-              canvasCtx.restore();
+              // process "ok" gesture for dragging and zooming
+              handleSvgDrag(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction,
+                drawOnly
+              );
             }
+
+            canvasCtx.restore();
           }
         }
       }
@@ -296,7 +305,7 @@ const Display: React.FC = () => {
         remoteVideoRef.current &&
         gestureRecognizer2 &&
         remoteCanvasRef.current &&
-        remoteStream &&
+        remoteStreamRef.current &&
         rtcConnectedRef.current
       ) {
         // get canvas context for remote feed
@@ -321,67 +330,69 @@ const Display: React.FC = () => {
             true // mark as remote hands
           );
 
-          if (!rtcConnectedRef.current || isLeaderRef.current) {
-            if (results?.landmarks && results.handedness) {
-              // get overlay rect for coordinate conversion
-              const rect =
-                overlayRef.current?.getBoundingClientRect() || new DOMRect();
+          if (results?.landmarks && results.handedness) {
+            // get overlay rect for coordinate conversion
+            const rect =
+              overlayRef.current?.getBoundingClientRect() || new DOMRect();
 
-              // this function sends events to the overlay
-              const handleInteraction: InteractionEventHandler = (event) => {
-                // dispatch custom event that bubbles up through the overlay
-                if (overlayRef.current) {
-                  const customEvent = new CustomEvent('interaction', {
-                    bubbles: true,
-                    composed: true,
-                    detail: event,
-                  });
-                  // find the current visualization element
-                  const visElement = overlayRef.current.firstElementChild;
-                  if (visElement) {
-                    visElement.dispatchEvent(customEvent);
-                  }
+            // this function sends events to the overlay
+            const handleInteraction: InteractionEventHandler = (event) => {
+              // dispatch custom event that bubbles up through the overlay
+              if (overlayRef.current) {
+                const customEvent = new CustomEvent('interaction', {
+                  bubbles: true,
+                  composed: true,
+                  detail: event,
+                });
+                // find the current visualization element
+                const visElement = overlayRef.current.firstElementChild;
+                if (visElement) {
+                  visElement.dispatchEvent(customEvent);
                 }
-              };
+              }
+            };
 
-              // process "one" gesture for hovering
-              handleSvgOneRemote(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+            // process "one" gesture for hovering
+            handleSvgOneRemote(
+              canvasCtx,
+              results,
+              rect,
+              dimensions,
+              handleInteraction,
+              drawOnly
+            );
 
-              // process "grabbing" gesture for area hovering
-              handleSvgGrabbingRemote(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+            // process "grabbing" gesture for area hovering
+            handleSvgGrabbingRemote(
+              canvasCtx,
+              results,
+              rect,
+              dimensions,
+              handleInteraction,
+              drawOnly
+            );
 
-              // process "thumb_index" gesture for selection
-              handleSvgThumbIndexRemote(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+            // process "thumb_index" gesture for selection
+            handleSvgThumbIndexRemote(
+              canvasCtx,
+              results,
+              rect,
+              dimensions,
+              handleInteraction,
+              drawOnly
+            );
 
-              // process "ok" gesture for dragging and zooming
-              handleSvgDragRemote(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
-            }
-            canvasCtx.restore();
+            // process "ok" gesture for dragging and zooming
+            handleSvgDragRemote(
+              canvasCtx,
+              results,
+              rect,
+              dimensions,
+              handleInteraction,
+              drawOnly
+            );
           }
+          canvasCtx.restore();
         }
       }
 
@@ -391,7 +402,7 @@ const Display: React.FC = () => {
 
     // start the combined processing loop
     processWebcams();
-  }, [gestureRecognizer]);
+  }, [gestureRecognizer, gestureRecognizer2]);
 
   return (
     <div
