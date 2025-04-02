@@ -24,10 +24,14 @@ import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
 import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import NodeLink from '@/components/vis/NodeLink';
+import USMap from '@/components/vis/USMap';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
 // get the dynamic websocket url
 const WS_URL = getWebsocketUrl();
+
+// available visualizations
+type VisualizationType = 'nodelink' | 'usmap';
 
 // main display component that:
 // - manages webcam feed
@@ -107,10 +111,22 @@ const Display: React.FC = () => {
   // state to store SVG data for followers
   const [receivedSvgData, setReceivedSvgData] = useState<string | null>(null);
 
+  // state for selected visualization
+  const [selectedVisualization, setSelectedVisualization] =
+    useState<VisualizationType>('usmap');
+
   // handle camera selection
   const handleCameraSelect = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
   }, []);
+
+  // handle visualization selection
+  const handleVisualizationSelect = useCallback(
+    (visualization: VisualizationType) => {
+      setSelectedVisualization(visualization);
+    },
+    []
+  );
 
   // start local webcam feed
   useEffect(() => {
@@ -431,8 +447,9 @@ const Display: React.FC = () => {
           pointerEvents: 'none',
         }}
       >
-        {/* render NodeLink only for leader or when not connected */}
-        {(!rtcConnectedRef.current || isLeaderRef.current) && <NodeLink />}
+        {/* render visualization based on selection */}
+        {(!rtcConnectedRef.current || isLeaderRef.current) &&
+          (selectedVisualization === 'nodelink' ? <NodeLink /> : <USMap />)}
 
         {/* For follower: render the received SVG directly */}
         {!isLeaderRef.current && rtcConnectedRef.current && receivedSvgData && (
@@ -550,6 +567,8 @@ const Display: React.FC = () => {
         remoteRightGestureData={remoteRightGestureData}
         currentPing={currentPing}
         pingHistory={pingHistory}
+        selectedVisualization={selectedVisualization}
+        onVisualizationSelect={handleVisualizationSelect}
       />
     </div>
   );
