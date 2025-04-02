@@ -431,17 +431,8 @@ const Display: React.FC = () => {
           pointerEvents: 'none',
         }}
       >
-        {/* Always render NodeLink, but hide it when showing follower view */}
-        <div
-          style={{
-            display:
-              !rtcConnectedRef.current || isLeaderRef.current
-                ? 'block'
-                : 'none',
-          }}
-        >
-          <NodeLink />
-        </div>
+        {/* render NodeLink only for leader or when not connected */}
+        {(!rtcConnectedRef.current || isLeaderRef.current) && <NodeLink />}
 
         {/* For follower: render the received SVG directly */}
         {!isLeaderRef.current && rtcConnectedRef.current && receivedSvgData && (

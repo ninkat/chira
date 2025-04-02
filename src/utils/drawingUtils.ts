@@ -1,7 +1,6 @@
 import { GestureRecognizer } from '@mediapipe/tasks-vision';
 import { Point, CanvasDimensions } from '@/types/types';
 import { InteractionPoint } from '@/types/interactionTypes';
-import { NormalizedLandmark } from '@mediapipe/tasks-vision';
 
 /**
  * draws hand landmarks and connections for both hands
