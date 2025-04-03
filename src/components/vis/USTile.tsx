@@ -113,11 +113,30 @@ const lineWidth = 5;
 const dotSize = 4; // larger dots
 const dotSpacing = 20; // closer spacing
 
+// constants for layout
+const totalWidth = 1920;
+const totalHeight = 1080;
+const thirdWidth = totalWidth / 3;
+const mapWidth = thirdWidth * 2;
+const panelWidth = thirdWidth;
+
+// constants for info panel styling
+const panelBackground = 'rgba(33, 33, 33, 0.95)';
+const panelTextColor = 'white';
+const panelBorderRadius = '8px';
+const panelPadding = '24px';
+
+// interface for migration link info
+interface MigrationLinkInfo {
+  origin: string;
+  destination: string;
+  value: number;
+}
+
 const USTile: React.FC = () => {
   // refs for svg and group elements
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
   // ref for migration data instead of state
   const migrationDataRef = useRef<Migration[]>([]);
@@ -134,9 +153,12 @@ const USTile: React.FC = () => {
   // ref to track active migration lines
   const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
 
-  // dimensions
-  const width = 1920;
-  const height = 1080;
+  // ref for active migration links info
+  const activeMigrationLinksRef = useRef<MigrationLinkInfo[]>([]);
+
+  // dimensions for the visualization
+  const width = totalWidth;
+  const height = totalHeight;
 
   // function to get state name from path element
   const getStateName = (element: SVGPathElement): string | null => {
@@ -166,8 +188,21 @@ const USTile: React.FC = () => {
     const destCentroid = stateCentroidsRef.current[destination];
     if (!originCentroid || !destCentroid) return;
 
+    // adjust centroids for panel offset
+    const adjustedOriginCentroid: [number, number] = [
+      originCentroid[0] + panelWidth,
+      originCentroid[1],
+    ];
+    const adjustedDestCentroid: [number, number] = [
+      destCentroid[0] + panelWidth,
+      destCentroid[1],
+    ];
+
     const lineGenerator = d3.line();
-    const pathData = lineGenerator([originCentroid, destCentroid]);
+    const pathData = lineGenerator([
+      adjustedOriginCentroid,
+      adjustedDestCentroid,
+    ]);
     if (!pathData) return;
 
     const svg = d3.select(svgRef.current);
@@ -198,24 +233,6 @@ const USTile: React.FC = () => {
     animate();
   };
 
-  // function to clear lines that are no longer needed
-  const clearUnusedLines = (
-    currentOrigins: Set<string>,
-    currentDestinations: Set<string>
-  ) => {
-    // remove lines whose origin or destination is no longer hovered
-    for (const [key, line] of activeLinesByPair.current.entries()) {
-      const [origin, destination] = key.split('->');
-      if (
-        !currentOrigins.has(origin) ||
-        !currentDestinations.has(destination)
-      ) {
-        d3.select(line).transition().duration(200).style('opacity', 0).remove();
-        activeLinesByPair.current.delete(key);
-      }
-    }
-  };
-
   // function to clear all lines
   const clearAllLines = () => {
     activeLinesByPair.current.forEach((line) => {
@@ -224,12 +241,17 @@ const USTile: React.FC = () => {
     activeLinesByPair.current.clear();
   };
 
-  // function to calculate total migration value
-  const calculateMigrationValue = () => {
+  // function to format migration value
+  const formatMigrationValue = (value: number): string => {
+    return value.toLocaleString();
+  };
+
+  // function to update migration info
+  const updateMigrationInfo = () => {
+    // collect all origin and destination states
     const originStates = new Set<string>();
     const destStates = new Set<string>();
 
-    // collect all origin and destination states
     hoveredElementsRef.current.left.forEach((element) => {
       const stateName = getStateName(element);
       if (stateName) originStates.add(stateName);
@@ -240,41 +262,140 @@ const USTile: React.FC = () => {
       if (stateName) destStates.add(stateName);
     });
 
-    // clear lines that are no longer valid
-    clearUnusedLines(originStates, destStates);
+    // early return if no states selected
+    if (originStates.size === 0 || destStates.size === 0) {
+      clearAllLines();
 
-    // calculate total migration value
+      // update info panel to show default message
+      const infoPanel = d3.select('.info-panel');
+      if (!infoPanel.empty()) {
+        infoPanel
+          .select('.total-migration')
+          .text('Select states to view data')
+          .style('opacity', 0.5);
+
+        infoPanel.select('.migration-links').selectAll('div').remove();
+      }
+
+      activeMigrationLinksRef.current = [];
+      return 0;
+    }
+
+    // clear all lines and recreate them based on current hover state
+    // this ensures the visualization stays in sync with hover state
+    clearAllLines();
+
+    // calculate total migration value and collect link info
     let totalValue = 0;
-    originStates.forEach((origin) => {
-      destStates.forEach((destination) => {
-        const migration = migrationDataRef.current.find(
-          (m) => m.origin === origin && m.destination === destination
-        );
-        if (migration) {
-          totalValue += migration.value;
-          animateMigrationLine(origin, destination);
+    const newMigrationLinks: MigrationLinkInfo[] = [];
+    const migrationsByPair = new Map<string, number>();
+
+    // find all valid migrations between selected states
+    migrationDataRef.current.forEach((migration) => {
+      if (
+        originStates.has(migration.origin) &&
+        destStates.has(migration.destination)
+      ) {
+        const pairKey = getPairKey(migration.origin, migration.destination);
+
+        // if we already have this pair, add to its value
+        if (migrationsByPair.has(pairKey)) {
+          migrationsByPair.set(
+            pairKey,
+            migrationsByPair.get(pairKey)! + migration.value
+          );
+        } else {
+          migrationsByPair.set(pairKey, migration.value);
         }
-      });
+
+        totalValue += migration.value;
+      }
     });
+
+    // convert map to array for sorting
+    migrationsByPair.forEach((value, pairKey) => {
+      const [origin, destination] = pairKey.split('->');
+      newMigrationLinks.push({
+        origin,
+        destination,
+        value,
+      });
+
+      // create animation for this pair
+      animateMigrationLine(origin, destination);
+    });
+
+    // sort migration links by value in descending order
+    newMigrationLinks.sort((a, b) => b.value - a.value);
+
+    // store top 10 migrations
+    activeMigrationLinksRef.current = newMigrationLinks.slice(0, 10);
+
+    // update info panel
+    const infoPanel = d3.select('.info-panel');
+    if (!infoPanel.empty()) {
+      // update total migration
+      infoPanel
+        .select('.total-migration')
+        .text(formatMigrationValue(totalValue))
+        .style('opacity', 1);
+
+      // completely replace migration links list for consistency
+      const migrationLinksContainer = infoPanel.select('.migration-links');
+      migrationLinksContainer.selectAll('div').remove();
+
+      // add new links
+      activeMigrationLinksRef.current.forEach((link) => {
+        migrationLinksContainer
+          .append('div')
+          .style('opacity', 0)
+          .style('margin-bottom', '8px')
+          .style('padding', '8px 12px')
+          .style('background', 'rgba(255, 255, 255, 0.05)')
+          .style('border-radius', '6px')
+          .html(
+            `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 500;">${stateAbbreviations[link.origin]} → ${stateAbbreviations[link.destination]}</span>
+              <span style="color: rgba(255, 255, 255, 0.7);">${formatMigrationValue(link.value)}</span>
+            </div>
+          `
+          )
+          .transition()
+          .duration(200)
+          .style('opacity', 1);
+      });
+    }
 
     return totalValue;
   };
 
-  // function to update tooltip
+  // update tooltip to properly reflect current state
   const updateTooltip = () => {
-    if (!tooltipRef.current) return;
-
     const hasLeftHover = hoveredElementsRef.current.left.size > 0;
     const hasRightHover = hoveredElementsRef.current.right.size > 0;
 
-    if (hasLeftHover && hasRightHover) {
-      const totalValue = calculateMigrationValue();
-      tooltipRef.current.textContent = `Total Migration: ${totalValue.toLocaleString()}`;
-      tooltipRef.current.style.display = 'block';
-    } else {
-      tooltipRef.current.style.display = 'none';
-      // Clear all lines if either hand has no hovers
-      clearAllLines();
+    const infoPanel = d3.select('.info-panel');
+    if (!infoPanel.empty()) {
+      if (hasLeftHover && hasRightHover) {
+        // update panel with migration info
+        updateMigrationInfo();
+        infoPanel.style('opacity', 1);
+      } else {
+        // reset to default state
+        infoPanel
+          .select('.total-migration')
+          .text('Select states to view data')
+          .style('opacity', 0.5);
+
+        // clear migration links
+        infoPanel.select('.migration-links').selectAll('div').remove();
+
+        // keep panel visible but clear lines and links
+        infoPanel.style('opacity', 1);
+        clearAllLines();
+        activeMigrationLinksRef.current = [];
+      }
     }
   };
 
@@ -294,6 +415,85 @@ const USTile: React.FC = () => {
         });
     }
 
+    // add event listeners for the svg element
+    const svgElement = svgRef.current;
+    if (svgElement) {
+      // handle interaction events
+      svgElement.addEventListener('interaction', ((
+        event: CustomEvent<InteractionEvent>
+      ) => {
+        const detail = event.detail;
+
+        switch (detail.type) {
+          case 'pointerover': {
+            const { handedness } = detail;
+            if (
+              !handedness ||
+              (handedness !== 'left' && handedness !== 'right')
+            )
+              return;
+
+            const element = document.elementFromPoint(
+              detail.point.clientX,
+              detail.point.clientY
+            );
+
+            if (element instanceof SVGPathElement) {
+              // add to set of hovered elements for this hand
+              hoveredElementsRef.current[handedness].add(element);
+
+              // highlight the tile with hand-specific color
+              d3.select(element)
+                .attr(
+                  'fill',
+                  handedness === 'left' ? leftHandHoverFill : rightHandHoverFill
+                )
+                .attr('stroke-width', hoverStrokeWidth);
+
+              // Update the information panel immediately
+              updateTooltip();
+            }
+            break;
+          }
+          case 'pointerout': {
+            const { handedness, element: eventElement } = detail;
+            if (
+              !handedness ||
+              (handedness !== 'left' && handedness !== 'right')
+            )
+              return;
+
+            // use the element from the event if provided
+            const hoveredElement =
+              eventElement ||
+              Array.from(hoveredElementsRef.current[handedness])[0];
+
+            if (hoveredElement instanceof SVGPathElement) {
+              // remove from set of hovered elements for this hand
+              hoveredElementsRef.current[handedness].delete(hoveredElement);
+
+              // check if the element is still being hovered by the other hand
+              const otherHand: Handedness =
+                handedness === 'left' ? 'right' : 'left';
+              const isHoveredByOtherHand =
+                hoveredElementsRef.current[otherHand].has(hoveredElement);
+
+              // only reset style if not hovered by other hand
+              if (!isHoveredByOtherHand) {
+                d3.select(hoveredElement)
+                  .attr('fill', defaultFill)
+                  .attr('stroke-width', defaultStrokeWidth);
+              }
+
+              // Update the information panel immediately
+              updateTooltip();
+            }
+            break;
+          }
+        }
+      }) as EventListener);
+    }
+
     // Clear any existing lines when component mounts/unmounts
     return () => {
       clearAllLines();
@@ -307,8 +507,8 @@ const USTile: React.FC = () => {
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    // create main group
-    const g = svg.append('g');
+    // create main group with offset for tilemap
+    const g = svg.append('g').attr('transform', `translate(${panelWidth}, 0)`);
 
     // load and render tilemap
     d3.json('/src/assets/tiles.topo.json').then((topology) => {
@@ -328,10 +528,13 @@ const USTile: React.FC = () => {
       // calculate scale to fit the svg while maintaining aspect ratio
       const bboxWidth = topoBbox[2] - topoBbox[0];
       const bboxHeight = topoBbox[3] - topoBbox[1];
-      const scale = Math.min(width / bboxWidth, height / bboxHeight) * 0.8;
 
-      // compute the center by taking into account the actual bounds
-      const centerX = width * 0.5;
+      // calculate the maximum possible scale that fits in the right two-thirds
+      // add a small padding (0.95) to ensure it doesn't touch the edges
+      const scale = Math.min(mapWidth / bboxWidth, height / bboxHeight) * 0.95;
+
+      // compute the center of the available space
+      const centerX = mapWidth * 0.5;
       const centerY = height * 0.5;
 
       // calculate the offset to center the map based on its actual bounds
@@ -359,7 +562,7 @@ const USTile: React.FC = () => {
         }
       });
 
-      // draw tiles
+      // draw tiles with larger stroke width for better visibility
       g.selectAll('path')
         .data(geoFeature.features)
         .join('path')
@@ -368,9 +571,9 @@ const USTile: React.FC = () => {
         .attr('fill', defaultFill)
         .attr('stroke', '#fff')
         .attr('stroke-width', defaultStrokeWidth)
-        .style('pointer-events', 'all'); // enable pointer events
+        .style('pointer-events', 'all');
 
-      // add state labels
+      // add state labels with adjusted font size for better visibility
       g.selectAll('text')
         .data(geoFeature.features)
         .join('text')
@@ -378,7 +581,7 @@ const USTile: React.FC = () => {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', '#333')
-        .attr('font-size', '12px')
+        .attr('font-size', '14px') // slightly larger font
         .attr('font-weight', 'bold')
         .attr('x', (d) => {
           const centroid = path.centroid(d);
@@ -394,85 +597,6 @@ const USTile: React.FC = () => {
             ? stateAbbreviations[feature.properties.name] || ''
             : '';
         });
-
-      // add event listeners for the svg element
-      const svgElement = svgRef.current;
-      if (svgElement) {
-        // handle interaction events
-        svgElement.addEventListener('interaction', ((
-          event: CustomEvent<InteractionEvent>
-        ) => {
-          const detail = event.detail;
-
-          switch (detail.type) {
-            case 'pointerover': {
-              const { handedness } = detail;
-              if (
-                !handedness ||
-                (handedness !== 'left' && handedness !== 'right')
-              )
-                return;
-
-              const element = document.elementFromPoint(
-                detail.point.clientX,
-                detail.point.clientY
-              );
-
-              if (element instanceof SVGPathElement) {
-                // add to set of hovered elements for this hand
-                hoveredElementsRef.current[handedness].add(element);
-
-                // highlight the tile with hand-specific color
-                d3.select(element)
-                  .attr(
-                    'fill',
-                    handedness === 'left'
-                      ? leftHandHoverFill
-                      : rightHandHoverFill
-                  )
-                  .attr('stroke-width', hoverStrokeWidth);
-
-                updateTooltip();
-              }
-              break;
-            }
-            case 'pointerout': {
-              const { handedness, element: eventElement } = detail;
-              if (
-                !handedness ||
-                (handedness !== 'left' && handedness !== 'right')
-              )
-                return;
-
-              // use the element from the event if provided
-              const hoveredElement =
-                eventElement ||
-                Array.from(hoveredElementsRef.current[handedness])[0];
-
-              if (hoveredElement instanceof SVGPathElement) {
-                // remove from set of hovered elements for this hand
-                hoveredElementsRef.current[handedness].delete(hoveredElement);
-
-                // check if the element is still being hovered by the other hand
-                const otherHand: Handedness =
-                  handedness === 'left' ? 'right' : 'left';
-                const isHoveredByOtherHand =
-                  hoveredElementsRef.current[otherHand].has(hoveredElement);
-
-                // only reset style if not hovered by other hand
-                if (!isHoveredByOtherHand) {
-                  d3.select(hoveredElement)
-                    .attr('fill', defaultFill)
-                    .attr('stroke-width', defaultStrokeWidth);
-                }
-
-                updateTooltip();
-              }
-              break;
-            }
-          }
-        }) as EventListener);
-      }
     });
   }, []);
 
@@ -497,27 +621,96 @@ const USTile: React.FC = () => {
         <g ref={gRef} />
       </svg>
       <div
-        ref={tooltipRef}
+        className='info-panel'
         style={{
           position: 'fixed',
-          top: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(33, 33, 33, 0.95)',
-          color: 'white',
-          padding: '16px 24px',
-          borderRadius: '8px',
+          top: '50%',
+          left: `${totalWidth * 0.16666}px`,
+          transform: 'translate(-50%, -50%)',
+          background: panelBackground,
+          color: panelTextColor,
+          padding: panelPadding,
+          borderRadius: panelBorderRadius,
           boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-          display: 'none',
+          width: `${panelWidth * 0.8}px`,
+          maxHeight: '90vh',
           zIndex: 1000,
-          fontSize: '24px',
-          fontWeight: 'bold',
+          fontSize: '16px',
           border: '2px solid rgba(255, 255, 255, 0.2)',
-          minWidth: '300px',
-          textAlign: 'center',
           backdropFilter: 'blur(4px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
         }}
-      />
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '14px',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Total Migration
+          </h3>
+          <div
+            className='total-migration'
+            style={{
+              fontSize: '32px',
+              fontWeight: 600,
+              background:
+                'linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              opacity: 0.5,
+            }}
+          >
+            Select states to view data
+          </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '14px',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Migration Flows
+          </h3>
+          <div
+            className='migration-links'
+            style={{
+              overflowY: 'auto',
+              flex: 1,
+              paddingRight: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          />
+        </div>
+      </div>
     </>
   );
 };
