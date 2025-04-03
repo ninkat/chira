@@ -100,11 +100,11 @@ interface MigrationData {
 }
 
 // constants for hover and selection styling
-const defaultFill = 'rgba(170,170,170,0.5)';
-const leftHandHoverFill = 'rgba(232, 27, 35, 0.5)'; // light pink
-const rightHandHoverFill = 'rgba(0, 174, 243, 0.5)'; // light blue
-const defaultStrokeWidth = 1;
-const hoverStrokeWidth = 2;
+const defaultFill = 'rgba(170,170,170,0.4)'; // more transparent default state
+const leftHandHoverFill = 'rgba(232, 27, 35, 0.6)'; // slightly more opaque when hovered
+const rightHandHoverFill = 'rgba(0, 174, 243, 0.6)'; // slightly more opaque when hovered
+const defaultStrokeWidth = 1.5; // slightly thicker default stroke
+const hoverStrokeWidth = 2.5; // slightly thicker hover stroke
 
 // constants for line animation
 const lineAnimationDuration = 5000; // 2 seconds per animation
@@ -121,10 +121,9 @@ const mapWidth = thirdWidth * 2;
 const panelWidth = thirdWidth;
 
 // constants for info panel styling
-const panelBackground = 'rgba(33, 33, 33, 0.95)';
+const panelBackground = 'rgba(33, 33, 33, 0.65)'; // more transparent
 const panelTextColor = 'white';
 const panelBorderRadius = '8px';
-const panelPadding = '24px';
 
 // interface for migration link info
 interface MigrationLinkInfo {
@@ -188,14 +187,14 @@ const USTile: React.FC = () => {
     const destCentroid = stateCentroidsRef.current[destination];
     if (!originCentroid || !destCentroid) return;
 
-    // adjust centroids for panel offset
+    // adjust centroids for panel offset and vertical shift
     const adjustedOriginCentroid: [number, number] = [
       originCentroid[0] + panelWidth,
-      originCentroid[1],
+      originCentroid[1] - totalHeight * 0.1, // apply the same vertical shift as the tilemap
     ];
     const adjustedDestCentroid: [number, number] = [
       destCentroid[0] + panelWidth,
-      destCentroid[1],
+      destCentroid[1] - totalHeight * 0.1, // apply the same vertical shift as the tilemap
     ];
 
     const lineGenerator = d3.line();
@@ -271,7 +270,7 @@ const USTile: React.FC = () => {
       if (!infoPanel.empty()) {
         infoPanel
           .select('.total-migration')
-          .text('Select states to view data')
+          .text('select states to view data')
           .style('opacity', 0.5);
 
         infoPanel.select('.migration-links').selectAll('div').remove();
@@ -328,7 +327,7 @@ const USTile: React.FC = () => {
     // sort migration links by value in descending order
     newMigrationLinks.sort((a, b) => b.value - a.value);
 
-    // store top 10 migrations
+    // store top 10 migrations (increased from 10)
     activeMigrationLinksRef.current = newMigrationLinks.slice(0, 10);
 
     // update info panel
@@ -348,22 +347,30 @@ const USTile: React.FC = () => {
       activeMigrationLinksRef.current.forEach((link) => {
         migrationLinksContainer
           .append('div')
-          .style('opacity', 0)
-          .style('margin-bottom', '8px')
-          .style('padding', '8px 12px')
-          .style('background', 'rgba(255, 255, 255, 0.05)')
-          .style('border-radius', '6px')
-          .html(
-            `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 500;">${stateAbbreviations[link.origin]} → ${stateAbbreviations[link.destination]}</span>
-              <span style="color: rgba(255, 255, 255, 0.7);">${formatMigrationValue(link.value)}</span>
-            </div>
-          `
+          .style('opacity', 1)
+          .style('padding', '10px 14px')
+          .style('background', 'rgba(255, 255, 255, 0.07)')
+          .style('border-radius', '8px')
+          .style(
+            'transition',
+            'background 0.2s ease-in-out, transform 0.2s ease-in-out'
           )
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
+          .style('cursor', 'default')
+          .on('mouseenter', function () {
+            d3.select(this)
+              .style('background', 'rgba(255, 255, 255, 0.1)')
+              .style('transform', 'translateY(-1px)');
+          })
+          .on('mouseleave', function () {
+            d3.select(this)
+              .style('background', 'rgba(255, 255, 255, 0.07)')
+              .style('transform', 'translateY(0)');
+          }).html(`
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <span style="font-weight: 600; font-size: 16px; color: rgba(255, 255, 255, 0.9); min-width: 85px;">${stateAbbreviations[link.origin]} → ${stateAbbreviations[link.destination]}</span>
+              <span style="color: rgba(255, 255, 255, 0.8); font-size: 16px; font-weight: 500; text-align: right;">${formatMigrationValue(link.value)}</span>
+            </div>
+          `);
       });
     }
 
@@ -385,7 +392,7 @@ const USTile: React.FC = () => {
         // reset to default state
         infoPanel
           .select('.total-migration')
-          .text('Select states to view data')
+          .text('select states to view data')
           .style('opacity', 0.5);
 
         // clear migration links
@@ -508,7 +515,9 @@ const USTile: React.FC = () => {
     svg.selectAll('*').remove();
 
     // create main group with offset for tilemap
-    const g = svg.append('g').attr('transform', `translate(${panelWidth}, 0)`);
+    const g = svg
+      .append('g')
+      .attr('transform', `translate(${panelWidth}, ${-totalHeight * 0.1})`); // shifted up by 10% to match panel position
 
     // load and render tilemap
     d3.json('/src/assets/tiles.topo.json').then((topology) => {
@@ -571,7 +580,8 @@ const USTile: React.FC = () => {
         .attr('fill', defaultFill)
         .attr('stroke', '#fff')
         .attr('stroke-width', defaultStrokeWidth)
-        .style('pointer-events', 'all');
+        .style('pointer-events', 'all')
+        .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))'); // add subtle shadow to tiles
 
       // add state labels with adjusted font size for better visibility
       g.selectAll('text')
@@ -581,8 +591,9 @@ const USTile: React.FC = () => {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', '#333')
-        .attr('font-size', '14px') // slightly larger font
-        .attr('font-weight', 'bold')
+        .attr('font-size', '16px')
+        .attr('font-weight', '600')
+        .attr('text-shadow', '0 1px 1px rgba(255, 255, 255, 0.5)')
         .attr('x', (d) => {
           const centroid = path.centroid(d);
           return isNaN(centroid[0]) ? 0 : centroid[0];
@@ -624,89 +635,85 @@ const USTile: React.FC = () => {
         className='info-panel'
         style={{
           position: 'fixed',
-          top: '50%',
+          top: '40%',
           left: `${totalWidth * 0.16666}px`,
           transform: 'translate(-50%, -50%)',
           background: panelBackground,
           color: panelTextColor,
-          padding: panelPadding,
+          padding: '36px',
           borderRadius: panelBorderRadius,
-          boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           width: `${panelWidth * 0.8}px`,
-          maxHeight: '90vh',
+          height: '660px',
           zIndex: 1000,
           fontSize: '16px',
-          border: '2px solid rgba(255, 255, 255, 0.2)',
-          backdropFilter: 'blur(4px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
+          gap: '28px',
         }}
       >
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px',
+            gap: '8px',
           }}
         >
           <h3
             style={{
               margin: 0,
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '22px',
+              color: 'rgba(255, 255, 255, 0.75)',
               fontWeight: 500,
-              textTransform: 'uppercase',
+              textTransform: 'lowercase',
               letterSpacing: '0.05em',
             }}
           >
-            Total Migration
+            total migration
           </h3>
           <div
             className='total-migration'
             style={{
-              fontSize: '32px',
-              fontWeight: 600,
+              fontSize: '40px',
+              fontWeight: 700,
               background:
-                'linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7))',
+                'linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.8))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               opacity: 0.5,
+              letterSpacing: '-0.02em',
             }}
           >
-            Select states to view data
+            select states to view data
           </div>
         </div>
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
-            flex: 1,
-            minHeight: 0,
+            gap: '14px',
           }}
         >
           <h3
             style={{
               margin: 0,
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '22px',
+              color: 'rgba(255, 255, 255, 0.75)',
               fontWeight: 500,
-              textTransform: 'uppercase',
+              textTransform: 'lowercase',
               letterSpacing: '0.05em',
             }}
           >
-            Migration Flows
+            migration flows
           </h3>
           <div
             className='migration-links'
             style={{
-              overflowY: 'auto',
-              flex: 1,
-              paddingRight: '12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '4px',
+              gap: '5px',
             }}
           />
         </div>
