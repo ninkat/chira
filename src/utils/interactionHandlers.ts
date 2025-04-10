@@ -785,18 +785,8 @@ function isPointInsideVisualization(
     );
   }
 
-  // fallback - assume a centered visualization of 1280x720 in a 1920x1080 canvas
-  const visWidth = 1280;
-  const visHeight = 720;
-  const visLeft = rect.left + (rect.width - visWidth) / 2;
-  const visTop = rect.top + (rect.height - visHeight) / 2;
-
-  return (
-    point.clientX >= visLeft &&
-    point.clientX <= visLeft + visWidth &&
-    point.clientY >= visTop &&
-    point.clientY <= visTop + visHeight
-  );
+  // for visualizations that don't need bounding box calcs (pan+zoom only)
+  return false;
 }
 
 // handles two-handed zoom operation

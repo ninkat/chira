@@ -6,11 +6,15 @@ import {
   Topology as TopoTopology,
   GeometryCollection,
 } from 'topojson-specification';
+import {
+  InteractionEvent,
+  InteractionEventHandler,
+} from '@/types/interactionTypes';
 
 // define a non-null version of geojsonproperties for extension
-type DefinedGeoJsonProperties = Exclude<GeoJsonProperties, null>;
+type definedgeojsonproperties = Exclude<GeoJsonProperties, null>;
 
-interface CountryProperties extends DefinedGeoJsonProperties {
+interface CountryProperties extends definedgeojsonproperties {
   name: string;
 }
 
@@ -32,24 +36,37 @@ interface Airport {
 // constants for styling
 const totalWidth = window.innerWidth;
 const totalHeight = window.innerHeight;
-const panelWidth = totalWidth * (1 / 3); // width of the info panel
 const defaultFill = 'rgba(170, 170, 170, 0.6)'; // restore transparent fill
 const strokeColor = '#fff'; // restore white stroke
 const defaultStrokeWidth = 0.5;
-const mapWidth = totalWidth * (2 / 3); // width of the map area
-
-// constants for info panel styling (placeholder)
-const panelBackground = 'rgba(33, 33, 33, 0.65)';
-const panelBorderRadius = '8px';
+const mapWidth = totalWidth * (3 / 4); // width of the map area (updated to match new panel width)
 
 // constants for airport styling
 const airportRadius = 15;
 const airportFill = '#ff6b6b';
 const airportStroke = '#ffffff';
 const airportStrokeWidth = 1;
+const airportHighlightFill = '#ff6b6b';
+const airportHighlightStroke = '#FFD580';
+const airportHighlightStrokeWidth = 2;
+
+// constants for panel styling
+const panelWidth = totalWidth / 4; // changed from 1/3 to 1/4
+const panelBackground = 'rgba(33, 33, 33, 0.65)';
+const panelTextColor = 'white';
 
 const WorldMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
+  // reference to keep track of the main group for transformations
+  const gRef = useRef<SVGGElement | null>(null);
+  // reference to store the current transform state
+  const transformRef = useRef<{ k: number; x: number; y: number }>({
+    k: 1,
+    x: 0,
+    y: 0,
+  });
+  // reference to store animation frame id for cleanup
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     // add guard clause for svg ref
@@ -61,6 +78,7 @@ const WorldMap: React.FC = () => {
     svg.selectAll('*').remove(); // clear previous renders
 
     const g = svg.append('g'); // main group for transformations
+    gRef.current = g.node();
 
     // load both data files using Promise.all
     Promise.all([
@@ -82,7 +100,7 @@ const WorldMap: React.FC = () => {
         // adjust projection for the new map width (2/3 of total)
         const projection = d3
           .geoEqualEarth()
-          .center([-30, 50]) // center on north atlantic
+          .center([-80, 50]) // center on north atlantic
           .translate([mapWidth / 2, totalHeight / 3.75]) // translate projection center to svg center
           .scale(800); // increased scale to zoom in on the north atlantic
 
@@ -101,6 +119,7 @@ const WorldMap: React.FC = () => {
           .attr('stroke', strokeColor) // set country border color
           .attr('stroke-width', defaultStrokeWidth) // set country border width
           .attr('class', 'country') // add class for potential styling/selection
+          .style('pointer-events', 'none')
           .append('title') // add tooltip for country name
           .text((d) => d.properties?.name ?? 'unknown'); // display country name or 'unknown'
 
@@ -127,80 +146,752 @@ const WorldMap: React.FC = () => {
           .attr('fill', airportFill)
           .attr('stroke', airportStroke)
           .attr('stroke-width', airportStrokeWidth)
+          .attr('class', 'airport') // add class for styling/selection
           .append('title')
           .text((d) => `${d['Airport Name']} (${d.IATA})`);
 
-        // define zoom behavior
-        const zoom = d3
-          .zoom<SVGSVGElement, unknown>()
-          .scaleExtent([0.4, 6]) // allow zoom out to 0.5x, zoom in to 6x
-          .on('zoom', (event) => {
-            // apply zoom/pan transformation to the main group 'g'
-            g.attr('transform', event.transform.toString());
-          });
+        // interaction handler for custom gesture events
+        const handleInteraction: InteractionEventHandler = (
+          event: InteractionEvent
+        ) => {
+          if (!gRef.current) return;
 
-        // apply zoom behavior to the svg element containing the map
-        svg.call(zoom);
+          switch (event.type) {
+            case 'pointerover':
+              // handle hover over airports
+              if (
+                event.element &&
+                event.element.classList.contains('airport')
+              ) {
+                d3.select(event.element)
+                  .attr('fill', airportHighlightFill)
+                  .attr('stroke', airportHighlightStroke)
+                  .attr('stroke-width', airportHighlightStrokeWidth)
+                  .raise(); // bring to front
+              }
+              break;
+
+            case 'pointerout':
+              // handle hover out for airports
+              if (
+                event.element &&
+                event.element.classList.contains('airport')
+              ) {
+                d3.select(event.element)
+                  .attr('fill', airportFill)
+                  .attr('stroke', airportStroke)
+                  .attr('stroke-width', airportStrokeWidth);
+              }
+              break;
+
+            case 'drag':
+              // handle map panning with single-handed drag
+              transformRef.current = {
+                ...transformRef.current,
+                x: event.transform.x,
+                y: event.transform.y,
+              };
+
+              // apply the transform
+              g.attr(
+                'transform',
+                `translate(${transformRef.current.x},${transformRef.current.y}) scale(${transformRef.current.k})`
+              );
+              break;
+
+            case 'zoom':
+              // handle map zooming with two-handed gesture
+              transformRef.current = {
+                k: event.transform.scale,
+                x: event.transform.x,
+                y: event.transform.y,
+              };
+
+              // apply the transform
+              g.attr(
+                'transform',
+                `translate(${transformRef.current.x},${transformRef.current.y}) scale(${transformRef.current.k})`
+              );
+              break;
+
+            default:
+              break;
+          }
+        };
+
+        // setup event listener to handle interaction events from parent
+        const parent = currentSvg.parentElement;
+        if (parent) {
+          const handler = (e: CustomEvent<InteractionEvent>) =>
+            handleInteraction(e.detail);
+
+          parent.addEventListener('interaction', handler as EventListener);
+
+          // return cleanup function for this listener
+          return () => {
+            parent.removeEventListener('interaction', handler as EventListener);
+          };
+        }
+
+        // cleanup function
+        return () => {
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+          }
+        };
       })
       .catch((error) => {
-        console.error('error loading data:', error); // log errors during data loading
+        console.error('error loading or processing data:', error);
       });
   }, []); // empty dependency array ensures this runs once on mount
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        width: '100vw', // use viewport width
-        height: '100vh', // use viewport height
-        overflow: 'hidden', // prevent scrollbars on the main container
-      }}
-    >
-      {/* left panel (1/3 width) */}
-      <div
-        className='info-panel' // reuse class for potential future styling
+    <>
+      <svg
+        ref={svgRef}
+        width='100%'
+        height='100%'
         style={{
+          pointerEvents: 'all',
+          touchAction: 'none',
+          position: 'relative',
+          cursor: 'pointer',
+          overflow: 'hidden',
+        }}
+      />
+      <div
+        className='info-panel'
+        style={{
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          bottom: '0',
           width: `${panelWidth}px`,
-          height: '100%',
-          background: panelBackground, // placeholder background
-          padding: '20px', // some padding
-          boxSizing: 'border-box', // include padding in width
-          // basic styling similar to ustile
-          color: 'white',
-          borderRadius: panelBorderRadius,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000, // ensure panel is above map potentially
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
+          background: panelBackground,
+          color: panelTextColor,
+          padding: '36px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          zIndex: 1000,
+          fontSize: '18px',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '28px',
         }}
       >
-        {/* placeholder content for the panel */}
-        <h3 style={{ margin: 0, color: 'rgba(255, 255, 255, 0.7)' }}>
-          feedback panel
-        </h3>
-      </div>
-
-      {/* map container (2/3 width) */}
-      <div
-        style={{
-          width: `${mapWidth}px`,
-          height: '100%',
-          position: 'relative', // context for absolute positioning if needed later
-        }}
-      >
-        <svg
-          ref={svgRef}
-          width='100%' // svg takes full width of its container
-          height='100%' // svg takes full height of its container
-          viewBox={`0 0 ${mapWidth} ${totalHeight}`} // adjust viewbox to map dimensions
-          preserveAspectRatio='xMidYMid meet'
+        {/* filters section title */}
+        <h2
           style={{
-            display: 'block', // remove extra space below svg
-            background: 'transparent',
+            margin: '0 0 -10px 0',
+            fontSize: '24px',
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontWeight: 600,
+            textTransform: 'lowercase',
+            letterSpacing: '0.05em',
           }}
-        />
+        >
+          filters
+        </h2>
+
+        {/* sliders section */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+          }}
+        >
+          {/* price slider */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <label
+              style={{
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontSize: '18px',
+                fontWeight: 500,
+                textTransform: 'lowercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              price range: $400 - $1,200
+            </label>
+            <div
+              style={{
+                height: '6px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '3px',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '20%',
+                  right: '30%',
+                  height: '100%',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  borderRadius: '3px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '20%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '70%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* days from today slider */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <label
+              style={{
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontSize: '18px',
+                fontWeight: 500,
+                textTransform: 'lowercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              days from today: 7 - 14
+            </label>
+            <div
+              style={{
+                height: '6px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '3px',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '25%',
+                  right: '40%',
+                  height: '100%',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  borderRadius: '3px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '25%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '60%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* flight time slider */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <label
+              style={{
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontSize: '18px',
+                fontWeight: 500,
+                textTransform: 'lowercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              flight time: 2h - 8h
+            </label>
+            <div
+              style={{
+                height: '6px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '3px',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '15%',
+                  right: '25%',
+                  height: '100%',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  borderRadius: '3px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '15%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '75%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* current selections title */}
+        <h2
+          style={{
+            margin: '5px 0 -10px 0',
+            fontSize: '24px',
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontWeight: 600,
+            textTransform: 'lowercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          current selections
+        </h2>
+
+        {/* origin and destination boxes section */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            marginTop: '10px',
+          }}
+        >
+          {/* origins box */}
+          <div
+            style={{
+              flex: 1,
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.07)',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '20px',
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontWeight: 500,
+                textTransform: 'lowercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              origins
+            </h3>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div
+                style={{
+                  background: 'rgba(232, 27, 35, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                JFK
+              </div>
+              <div
+                style={{
+                  background: 'rgba(232, 27, 35, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                BOS
+              </div>
+              <div
+                style={{
+                  background: 'rgba(232, 27, 35, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                LAX
+              </div>
+            </div>
+          </div>
+
+          {/* destinations box */}
+          <div
+            style={{
+              flex: 1,
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.07)',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '20px',
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontWeight: 500,
+                textTransform: 'lowercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              destinations
+            </h3>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div
+                style={{
+                  background: 'rgba(0, 174, 243, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                LHR
+              </div>
+              <div
+                style={{
+                  background: 'rgba(0, 174, 243, 0.3)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                CDG
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* flights section */}
+        <div
+          style={{
+            marginTop: '10px',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            overflow: 'hidden',
+          }}
+        >
+          <h2
+            style={{
+              margin: '5px 0 0 0',
+              fontSize: '24px',
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontWeight: 600,
+              textTransform: 'lowercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            available flights
+          </h2>
+          <div
+            className='flights-list'
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              overflowY: 'auto',
+              flex: 1,
+            }}
+          >
+            {/* flight items */}
+            <div
+              className='flight-item'
+              style={{
+                padding: '18px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.07)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: '20px' }}>
+                  JFK → LHR
+                </span>
+                <span
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontWeight: 500,
+                    fontSize: '20px',
+                  }}
+                >
+                  $740
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '18px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                }}
+              >
+                <span>American Airlines</span>
+                <span>7h 20m</span>
+              </div>
+              <div
+                style={{
+                  fontSize: '16px',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                May 15, 2023 • 9:45 PM
+              </div>
+            </div>
+
+            <div
+              className='flight-item'
+              style={{
+                padding: '18px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.07)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: '20px' }}>
+                  BOS → CDG
+                </span>
+                <span
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontWeight: 500,
+                    fontSize: '20px',
+                  }}
+                >
+                  $820
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '18px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                }}
+              >
+                <span>Air France</span>
+                <span>6h 55m</span>
+              </div>
+              <div
+                style={{
+                  fontSize: '16px',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                May 17, 2023 • 7:30 PM
+              </div>
+            </div>
+
+            <div
+              className='flight-item'
+              style={{
+                padding: '18px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.07)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: '20px' }}>
+                  LAX → LHR
+                </span>
+                <span
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontWeight: 500,
+                    fontSize: '20px',
+                  }}
+                >
+                  $980
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '18px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                }}
+              >
+                <span>British Airways</span>
+                <span>10h 30m</span>
+              </div>
+              <div
+                style={{
+                  fontSize: '16px',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                May 14, 2023 • 3:15 PM
+              </div>
+            </div>
+
+            <div
+              className='flight-item'
+              style={{
+                padding: '18px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.07)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: '20px' }}>
+                  JFK → CDG
+                </span>
+                <span
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontWeight: 500,
+                    fontSize: '20px',
+                  }}
+                >
+                  $690
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '18px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                }}
+              >
+                <span>Delta Airlines</span>
+                <span>7h 05m</span>
+              </div>
+              <div
+                style={{
+                  fontSize: '16px',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                May 19, 2023 • 8:20 PM
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
