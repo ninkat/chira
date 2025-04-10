@@ -1,0 +1,107 @@
+[
+  {
+    "IATA": "YYZ",
+    "Airport Name": "The Worst Airport in the World",
+    "City": "Toronto",
+    "Latitude": 43.6777,
+    "Longitude": -79.6248
+  },
+  {
+    "IATA": "YVR",
+    "Airport Name": "Vancouver International Airport",
+    "City": "Vancouver",
+    "Latitude": 49.1947,
+    "Longitude": -123.1792
+  },
+  {
+    "IATA": "JFK",
+    "Airport Name": "John Fortnite Kennedy International Airport",
+    "City": "New York",
+    "Latitude": 40.6413,
+    "Longitude": -73.7781
+  },
+  {
+    "IATA": "LAX",
+    "Airport Name": "Los Angeles International Airport",
+    "City": "Los Angeles",
+    "Latitude": 33.9416,
+    "Longitude": -118.4085
+  },
+  {
+    "IATA": "LHR",
+    "Airport Name": "Heathrow Airport",
+    "City": "London",
+    "Latitude": 51.47,
+    "Longitude": -0.4543
+  },
+  {
+    "IATA": "CDG",
+    "Airport Name": "Charles de Gaulle Airport",
+    "City": "Paris",
+    "Latitude": 49.0097,
+    "Longitude": 2.5479
+  },
+  {
+    "IATA": "AMS",
+    "Airport Name": "Schiphol Airport",
+    "City": "Amsterdam",
+    "Latitude": 52.3105,
+    "Longitude": 4.7683
+  },
+  {
+    "IATA": "FRA",
+    "Airport Name": "Frankfurt am Main Airport",
+    "City": "Frankfurt",
+    "Latitude": 50.0379,
+    "Longitude": 8.5622
+  },
+  {
+    "IATA": "MAD",
+    "Airport Name": "Adolfo Su\u00e1rez Madrid\u2013Barajas Airport",
+    "City": "Madrid",
+    "Latitude": 40.4722,
+    "Longitude": -3.5608
+  },
+  {
+    "IATA": "ZRH",
+    "Airport Name": "Zurich Airport",
+    "City": "Zurich",
+    "Latitude": 47.4581,
+    "Longitude": 8.555
+  },
+  {
+    "IATA": "LIS",
+    "Airport Name": "Humberto Delgado Airport",
+    "City": "Lisbon",
+    "Latitude": 38.7742,
+    "Longitude": -9.1342
+  },
+  {
+    "IATA": "VIE",
+    "Airport Name": "Vienna International Airport",
+    "City": "Vienna",
+    "Latitude": 48.1103,
+    "Longitude": 16.5697
+  },
+  {
+    "IATA": "PRG",
+    "Airport Name": "V\u00e1clav Havel Airport Prague",
+    "City": "Prague",
+    "Latitude": 50.1008,
+    "Longitude": 14.2632
+  },
+  {
+    "IATA": "WAW",
+    "Airport Name": "Warsaw Chopin Airport",
+    "City": "Warsaw",
+    "Latitude": 52.1657,
+    "Longitude": 20.9671
+  },
+  {
+    "IATA": "BUD",
+    "Airport Name": "Budapest Ferenc Liszt International",
+    "City": "Budapest",
+    "Latitude": 47.4298,
+    "Longitude": 19.261
+  }
+]

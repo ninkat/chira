@@ -26,13 +26,14 @@ import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import NodeLink from '@/components/vis/NodeLink';
 import USMap from '@/components/vis/USMap';
 import USTile from '@/components/vis/USTile';
+import WorldMap from '@/components/vis/WorldMap';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
 // get the dynamic websocket url
 const WS_URL = getWebsocketUrl();
 
 // available visualizations
-type VisualizationType = 'nodelink' | 'usmap' | 'ustile';
+type VisualizationType = 'nodelink' | 'usmap' | 'ustile' | 'worldmap';
 
 // main display component that:
 // - manages webcam feed
@@ -114,7 +115,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [selectedVisualization, setSelectedVisualization] =
-    useState<VisualizationType>('ustile');
+    useState<VisualizationType>('worldmap');
 
   // handle camera selection
   const handleCameraSelect = useCallback((deviceId: string) => {
@@ -445,7 +446,6 @@ const Display: React.FC = () => {
           zIndex: 4,
           width: '100%',
           height: '100%',
-          pointerEvents: 'none',
         }}
       >
         {/* render visualization based on selection */}
@@ -454,6 +454,8 @@ const Display: React.FC = () => {
             <NodeLink />
           ) : selectedVisualization === 'usmap' ? (
             <USMap />
+          ) : selectedVisualization === 'worldmap' ? (
+            <WorldMap />
           ) : (
             <USTile />
           ))}
