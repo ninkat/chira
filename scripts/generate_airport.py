@@ -88,7 +88,7 @@ def calculate_flight_price(distance_km, flight_time):
     # Ensure minimum price of $100 and maximum of $1200
     return round(max(100, min(1200, final_price)), 2)
 
-# Step 2: Generate 500 random flights
+# Step 2: Generate 5000 random flights
 def random_date(start, end):
     delta = end - start
     return start + timedelta(days=random.randint(0, delta.days))
@@ -100,8 +100,9 @@ airport_dict = {a["IATA"]: a for a in airports}
 
 flights = []
 flight_keys = set()
+flight_id = 1  # initialize flight id counter
 
-while len(flights) < 500:
+while len(flights) < 5000:
     origin, destination = random.sample(iata_codes, 2)
     date = random_date(start_date, end_date).strftime("%Y-%m-%d")
     key = (origin, destination, date)
@@ -124,6 +125,7 @@ while len(flights) < 500:
     price = calculate_flight_price(distance, flight_time)
     
     flights.append({
+        "id": flight_id,  # add unique flight id
         "origin": origin,
         "destination": destination,
         "price": price,
@@ -131,6 +133,7 @@ while len(flights) < 500:
         "date": date,
         "distance_km": round(distance, 1)  # Add distance for reference
     })
+    flight_id += 1  # increment flight id counter
 
 # Step 3: Save to JSON files
 # ensure the directory exists

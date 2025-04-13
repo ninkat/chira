@@ -35,6 +35,7 @@ interface Airport {
 
 // define flight data structure
 interface Flight {
+  id: number;
   origin: string;
   destination: string;
   price: number;
@@ -61,6 +62,12 @@ const airportHighlightStrokeWidth = 4;
 const airportSelectedStroke = '#FFB6C1'; // new color for selected state
 const airportSelectedStrokeWidth = 4; // new stroke width for selected state
 
+// constants for line styling
+const lineColor = 'rgba(116, 100, 139, 0.9)'; // purple color for lines
+const lineWidth = 4;
+const dotSize = 4; // size of dots in the line
+const dotSpacing = 10; // spacing between dots
+
 // constants for panel styling
 const panelWidth = totalWidth / 4; // changed from 1/3 to 1/4
 const panelBackground = 'rgba(33, 33, 33, 0.65)';
@@ -85,6 +92,64 @@ const WorldMap: React.FC = () => {
     left: Set<SVGCircleElement>;
     right: Set<SVGCircleElement>;
   }>({ left: new Set(), right: new Set() });
+
+  // ref to track active lines between airports
+  const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
+
+  // function to get pair key for origin-destination
+  const getPairKey = (origin: string, destination: string) =>
+    `${origin}->${destination}`;
+
+  // function to draw line between airports
+  const drawAirportLine = (
+    origin: SVGCircleElement,
+    destination: SVGCircleElement
+  ) => {
+    if (!gRef.current) return;
+
+    const originData = d3.select(origin).datum() as Airport;
+    const destData = d3.select(destination).datum() as Airport;
+    const pairKey = getPairKey(originData.IATA, destData.IATA);
+
+    // if line already exists for this pair, don't create a new one
+    if (activeLinesByPair.current.has(pairKey)) {
+      return;
+    }
+
+    const lineGenerator = d3.line();
+    const pathData = lineGenerator([
+      [
+        parseFloat(origin.getAttribute('cx')!),
+        parseFloat(origin.getAttribute('cy')!),
+      ],
+      [
+        parseFloat(destination.getAttribute('cx')!),
+        parseFloat(destination.getAttribute('cy')!),
+      ],
+    ]);
+    if (!pathData) return;
+
+    const line = d3
+      .select(gRef.current)
+      .append('path')
+      .attr('d', pathData)
+      .attr('stroke', lineColor)
+      .attr('stroke-width', lineWidth / transformRef.current.k)
+      .attr('fill', 'none')
+      .style('stroke-dasharray', `${dotSize} ${dotSpacing}`)
+      .style('stroke-linecap', 'round');
+
+    // store the line element
+    activeLinesByPair.current.set(pairKey, line.node()!);
+  };
+
+  // function to clear all lines
+  const clearAllLines = () => {
+    activeLinesByPair.current.forEach((line) => {
+      d3.select(line).remove();
+    });
+    activeLinesByPair.current.clear();
+  };
 
   // state for flight data - changed to refs
   const allFlights = useRef<Flight[]>([]);
@@ -225,9 +290,9 @@ const WorldMap: React.FC = () => {
       const dates = flightsToAnalyze.map((f) => new Date(f.date)); // use actual dates
 
       // histogram layout constants
-      const histWidth = panelWidth - 60; // adjust for padding/margins
+      const histWidth = panelWidth; // adjust for padding/margins
       const histHeight = 40; // further reduced height
-      const histMargin = { top: 0, right: 10, bottom: 20, left: 30 }; // reduced top/bottom margins
+      const histMargin = { top: 0, right: 10, bottom: 25, left: 0 }; // increased bottom and left margins for larger labels
       const numBins = 10; // number of bins for histograms
       const histogramBarFill = 'rgba(255, 255, 255, 0.4)'; // uniform bar color
 
@@ -281,7 +346,8 @@ const WorldMap: React.FC = () => {
               )
           )
           .selectAll('text')
-          .style('fill', panelTextColor);
+          .style('fill', panelTextColor)
+          .style('font-size', '14px');
         svg.selectAll('path, line').style('stroke', panelTextColor);
 
         // Explicitly type the histogram generator for numbers
@@ -362,7 +428,8 @@ const WorldMap: React.FC = () => {
               )
           )
           .selectAll('text')
-          .style('fill', panelTextColor);
+          .style('fill', panelTextColor)
+          .style('font-size', '14px');
         svg.selectAll('path, line').style('stroke', panelTextColor);
 
         // using scale.ticks might be simpler for time thresholds
@@ -472,8 +539,8 @@ const WorldMap: React.FC = () => {
           .style('font-size', '14px')
           .style('color', 'rgba(255, 255, 255, 0.6)');
 
-        // assuming airline isn't in data, adding placeholder
-        details.append('span').text('airline placeholder');
+        // show flight id instead of airline placeholder
+        details.append('span').text(`flight #${flight.id}`);
         details.append('span').text(`${flight.duration.toFixed(1)}h`);
 
         const flightDate = new Date(flight.date);
@@ -637,6 +704,19 @@ const WorldMap: React.FC = () => {
                 if (event.handedness) {
                   hoveredAirportsRef.current[event.handedness].add(airport);
                   updateInfoPanel();
+
+                  // draw lines between all origin-destination pairs
+                  if (event.handedness === 'left') {
+                    // new origin added, draw lines to all destinations
+                    hoveredAirportsRef.current.right.forEach((dest) => {
+                      drawAirportLine(airport, dest);
+                    });
+                  } else {
+                    // new destination added, draw lines from all origins
+                    hoveredAirportsRef.current.left.forEach((origin) => {
+                      drawAirportLine(origin, airport);
+                    });
+                  }
                 }
 
                 d3.select(event.element)
@@ -662,6 +742,24 @@ const WorldMap: React.FC = () => {
                 if (event.handedness) {
                   hoveredAirportsRef.current[event.handedness].delete(airport);
                   updateInfoPanel();
+
+                  // clear all lines and redraw remaining ones
+                  clearAllLines();
+                  if (event.handedness === 'left') {
+                    // origin removed, redraw lines between remaining origins and all destinations
+                    hoveredAirportsRef.current.left.forEach((origin) => {
+                      hoveredAirportsRef.current.right.forEach((dest) => {
+                        drawAirportLine(origin, dest);
+                      });
+                    });
+                  } else {
+                    // destination removed, redraw lines between all origins and remaining destinations
+                    hoveredAirportsRef.current.left.forEach((origin) => {
+                      hoveredAirportsRef.current.right.forEach((dest) => {
+                        drawAirportLine(origin, dest);
+                      });
+                    });
+                  }
                 }
 
                 // only reset if not selected
@@ -720,6 +818,14 @@ const WorldMap: React.FC = () => {
                 'transform',
                 `translate(${transformRef.current.x},${transformRef.current.y}) scale(${transformRef.current.k})`
               );
+
+              // update line positions
+              activeLinesByPair.current.forEach((line) => {
+                d3.select(line).attr(
+                  'stroke-width',
+                  lineWidth / transformRef.current.k
+                );
+              });
               break;
 
             case 'zoom':
@@ -746,6 +852,14 @@ const WorldMap: React.FC = () => {
                   }
                   return airportStrokeWidth / transformRef.current.k;
                 });
+
+              // update line positions and widths
+              activeLinesByPair.current.forEach((line) => {
+                d3.select(line).attr(
+                  'stroke-width',
+                  lineWidth / transformRef.current.k
+                );
+              });
               break;
 
             default:
@@ -772,6 +886,7 @@ const WorldMap: React.FC = () => {
           if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
           }
+          clearAllLines();
         };
       })
       .catch((error) => {
