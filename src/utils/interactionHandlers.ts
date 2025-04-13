@@ -165,7 +165,7 @@ export function handleOne(
 
       if (handLabel === 'right') {
         // handle right hand hover
-        if (currentElement !== lastHoveredElementRight) {
+        if (currentElement !== lastHoveredElementRight && currentElement) {
           // send pointerout to previous element
           if (lastHoveredElementRight) {
             onInteraction({
@@ -174,6 +174,7 @@ export function handleOne(
               timestamp: Date.now(),
               sourceType: 'gesture',
               handedness: 'right',
+              element: lastHoveredElementRight,
             });
           }
 
@@ -185,6 +186,7 @@ export function handleOne(
               timestamp: Date.now(),
               sourceType: 'gesture',
               handedness: 'right',
+              element: currentElement,
             });
           }
 
@@ -193,7 +195,7 @@ export function handleOne(
         }
       } else {
         // handle left hand hover
-        if (currentElement !== lastHoveredElementLeft) {
+        if (currentElement !== lastHoveredElementLeft && currentElement) {
           // send pointerout to previous element
           if (lastHoveredElementLeft) {
             onInteraction({
@@ -202,6 +204,7 @@ export function handleOne(
               timestamp: Date.now(),
               sourceType: 'gesture',
               handedness: 'left',
+              element: lastHoveredElementLeft,
             });
           }
 
@@ -213,6 +216,7 @@ export function handleOne(
               timestamp: Date.now(),
               sourceType: 'gesture',
               handedness: 'left',
+              element: currentElement,
             });
           }
 
@@ -621,7 +625,7 @@ export function handleDrag(
     if (!gestureState.active) {
       const indexTip = hand.landmarks[8];
       const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
-      const isInside = isPointInsideVisualization(point, rect);
+      const isInside = isPointInsideVisualization(point);
       gestureState.active = true;
       gestureState.startedInside = isInside;
     }
@@ -663,8 +667,8 @@ export function handleDrag(
       rect
     );
 
-    const hand1Inside = isPointInsideVisualization(hand1IndexTip, rect);
-    const hand2Inside = isPointInsideVisualization(hand2IndexTip, rect);
+    const hand1Inside = isPointInsideVisualization(hand1IndexTip);
+    const hand2Inside = isPointInsideVisualization(hand2IndexTip);
 
     // Check if either hand started inside
     const hand1StartedInside =
@@ -721,7 +725,7 @@ export function handleDrag(
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    const isInsideVis = isPointInsideVisualization(point, rect);
+    const isInsideVis = isPointInsideVisualization(point);
     const startedInside = gestureStartLocation[handLabel].startedInside;
 
     // if started inside or currently inside, only allow element manipulation
@@ -769,10 +773,9 @@ export function handleDrag(
 
 // simplified helper to check if a point is inside the visualization
 // in a real implementation, this would use the actual visualization dimensions
-function isPointInsideVisualization(
-  point: InteractionPoint,
-  rect: DOMRect
-): boolean {
+// note: you will explicitly need to set the bounding box for the visualization
+// otherwise, it will return false
+function isPointInsideVisualization(point: InteractionPoint): boolean {
   // Get the visualization element
   const visElement = document.querySelector('.vis-bounding-box');
   if (visElement instanceof SVGElement) {

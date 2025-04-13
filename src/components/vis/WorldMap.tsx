@@ -43,12 +43,12 @@ const mapWidth = totalWidth * (3 / 4); // width of the map area (updated to matc
 
 // constants for airport styling
 const airportRadius = 15;
-const airportFill = '#ff6b6b';
+const airportFill = '#1E90FF';
 const airportStroke = '#ffffff';
-const airportStrokeWidth = 1;
-const airportHighlightFill = '#ff6b6b';
+const airportStrokeWidth = 1.5;
+const airportHighlightFill = '#1E90FF';
 const airportHighlightStroke = '#FFD580';
-const airportHighlightStrokeWidth = 2;
+const airportHighlightStrokeWidth = 4;
 
 // constants for panel styling
 const panelWidth = totalWidth / 4; // changed from 1/3 to 1/4
@@ -77,6 +77,29 @@ const WorldMap: React.FC = () => {
     const svg = d3.select(currentSvg);
     svg.selectAll('*').remove(); // clear previous renders
 
+    // add filter definitions for drop shadows
+    const defs = svg.append('defs');
+
+    // map shadow filter
+    defs
+      .append('filter')
+      .attr('id', 'map-shadow')
+      .append('feDropShadow')
+      .attr('dx', 0)
+      .attr('dy', 2)
+      .attr('stdDeviation', 3)
+      .attr('flood-opacity', 0.5);
+
+    // airport shadow filter
+    defs
+      .append('filter')
+      .attr('id', 'airport-shadow')
+      .append('feDropShadow')
+      .attr('dx', 0)
+      .attr('dy', 1)
+      .attr('stdDeviation', 2)
+      .attr('flood-opacity', 0.75);
+
     const g = svg.append('g'); // main group for transformations
     gRef.current = g.node();
 
@@ -100,14 +123,18 @@ const WorldMap: React.FC = () => {
         // adjust projection for the new map width (2/3 of total)
         const projection = d3
           .geoEqualEarth()
-          .center([-80, 50]) // center on north atlantic
+          .center([-75, 47]) // center on north atlantic
           .translate([mapWidth / 2, totalHeight / 3.75]) // translate projection center to svg center
           .scale(800); // increased scale to zoom in on the north atlantic
 
         const path = d3.geoPath().projection(projection);
 
         // create a group for map features
-        const mapGroup = g.append('g').attr('class', 'map-features');
+        const mapGroup = g
+          .append('g')
+          .attr('class', 'map-features')
+          .style('pointer-events', 'none')
+          .style('filter', 'url(#map-shadow)'); // apply map shadow
 
         // render map features in the map group
         mapGroup
@@ -119,7 +146,6 @@ const WorldMap: React.FC = () => {
           .attr('stroke', strokeColor) // set country border color
           .attr('stroke-width', defaultStrokeWidth) // set country border width
           .attr('class', 'country') // add class for potential styling/selection
-          .style('pointer-events', 'none')
           .append('title') // add tooltip for country name
           .text((d) => d.properties?.name ?? 'unknown'); // display country name or 'unknown'
 
@@ -127,7 +153,8 @@ const WorldMap: React.FC = () => {
         const airportsGroup = g
           .append('g')
           .attr('class', 'airports')
-          .style('pointer-events', 'all'); // ensure tooltips work
+          .style('pointer-events', 'all') // ensure tooltips work
+          .style('filter', 'url(#airport-shadow)'); // apply airport shadow
 
         // add airports
         airportsGroup
@@ -142,11 +169,11 @@ const WorldMap: React.FC = () => {
             const coords = projection([d.Longitude, d.Latitude]);
             return coords ? coords[1] : 0;
           })
-          .attr('r', airportRadius)
+          .attr('r', airportRadius / transformRef.current.k)
           .attr('fill', airportFill)
           .attr('stroke', airportStroke)
-          .attr('stroke-width', airportStrokeWidth)
-          .attr('class', 'airport') // add class for styling/selection
+          .attr('stroke-width', airportStrokeWidth / transformRef.current.k)
+          .attr('class', 'airport')
           .append('title')
           .text((d) => `${d['Airport Name']} (${d.IATA})`);
 
@@ -166,7 +193,10 @@ const WorldMap: React.FC = () => {
                 d3.select(event.element)
                   .attr('fill', airportHighlightFill)
                   .attr('stroke', airportHighlightStroke)
-                  .attr('stroke-width', airportHighlightStrokeWidth)
+                  .attr(
+                    'stroke-width',
+                    airportHighlightStrokeWidth / transformRef.current.k
+                  )
                   .raise(); // bring to front
               }
               break;
@@ -180,7 +210,10 @@ const WorldMap: React.FC = () => {
                 d3.select(event.element)
                   .attr('fill', airportFill)
                   .attr('stroke', airportStroke)
-                  .attr('stroke-width', airportStrokeWidth);
+                  .attr(
+                    'stroke-width',
+                    airportStrokeWidth / transformRef.current.k
+                  );
               }
               break;
 
@@ -207,11 +240,19 @@ const WorldMap: React.FC = () => {
                 y: event.transform.y,
               };
 
-              // apply the transform
+              // apply the transform to the main group
               g.attr(
                 'transform',
                 `translate(${transformRef.current.x},${transformRef.current.y}) scale(${transformRef.current.k})`
               );
+
+              // adjust airport circle sizes and stroke width inversely to the zoom scale
+              g.selectAll('circle.airport')
+                .attr('r', airportRadius / transformRef.current.k)
+                .attr(
+                  'stroke-width',
+                  airportStrokeWidth / transformRef.current.k
+                );
               break;
 
             default:
@@ -574,7 +615,7 @@ const WorldMap: React.FC = () => {
                   fontWeight: 600,
                 }}
               >
-                BOS
+                YYZ
               </div>
               <div
                 style={{

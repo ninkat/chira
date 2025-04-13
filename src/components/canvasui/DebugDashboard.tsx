@@ -37,9 +37,9 @@ interface DebugDashboardProps {
   currentPing: number | null;
   pingHistory: number[];
   // visualization selection props
-  selectedVisualization: 'nodelink' | 'usmap' | 'ustile' | 'naeurope';
+  selectedVisualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap';
   onVisualizationSelect: (
-    visualization: 'nodelink' | 'usmap' | 'ustile' | 'naeurope'
+    visualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap'
   ) => void;
 }
 
@@ -320,7 +320,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         | 'nodelink'
                         | 'usmap'
                         | 'ustile'
-                        | 'naeurope'
+                        | 'worldmap'
                     )
                   }
                   style={{
