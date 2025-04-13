@@ -40,8 +40,14 @@ function landmarkToInteractionPoint(
 let lastHoveredElementRight: Element | null = null;
 let lastHoveredElementLeft: Element | null = null;
 
-// state for tracking the last selected element in fine select mode
-let lastSelectedElement: Element | null = null;
+// state for tracking the last selected element in fine select mode per hand
+const lastSelectedElementByHand: {
+  left: Element | null;
+  right: Element | null;
+} = {
+  left: null,
+  right: null,
+};
 
 // state for tracking currently hovered elements for circle hover
 const hoveredElementsByHand = {
@@ -442,7 +448,7 @@ export function handleGrabbing(
   });
 }
 
-// handles thumb_index gesture for precise selection
+// handles thumb_index gesture for precise selection, tracking selection per hand
 export function handleThumbIndex(
   ctx: CanvasRenderingContext2D,
   results: GestureRecognizerResult,
@@ -456,6 +462,11 @@ export function handleThumbIndex(
     !results.handedness?.length ||
     !results.gestures?.length
   ) {
+    // clear selection state if no hands are detected
+    if (!drawOnly) {
+      lastSelectedElementByHand.left = null;
+      lastSelectedElementByHand.right = null;
+    }
     return;
   }
 
@@ -471,22 +482,34 @@ export function handleThumbIndex(
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    // Use drawing utility for visual indicator
+    // draw visual indicator using the drawing utility
     drawThumbIndexGestureFeedback(ctx, point);
 
     // handle selection if not in drawOnly mode
     if (!drawOnly) {
       const element = document.elementFromPoint(point.clientX, point.clientY);
-      if (element !== lastSelectedElement && isInteractableElement(element)) {
-        onInteraction({
-          type: 'pointerselect',
-          point,
-          timestamp: Date.now(),
-          sourceType: 'gesture',
-          handedness: handLabel,
-          element: element as Element,
-        });
-        lastSelectedElement = element;
+      const lastSelected = lastSelectedElementByHand[handLabel];
+
+      // check if the element is interactable
+      const interactableElement = isInteractableElement(element)
+        ? element
+        : null;
+
+      // if the interactable element under the pointer has changed for this hand
+      if (interactableElement !== lastSelected) {
+        // if there's a new interactable element, send select event
+        if (interactableElement) {
+          onInteraction({
+            type: 'pointerselect',
+            point,
+            timestamp: Date.now(),
+            sourceType: 'gesture',
+            handedness: handLabel,
+            element: interactableElement, // use the validated interactable element
+          });
+        }
+
+        lastSelectedElementByHand[handLabel] = interactableElement;
       }
     }
   });

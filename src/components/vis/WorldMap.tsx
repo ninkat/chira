@@ -85,8 +85,11 @@ const WorldMap: React.FC = () => {
   });
   // reference to store animation frame id for cleanup
   const animationFrameRef = useRef<number | null>(null);
-  // reference to store currently selected airport
-  const selectedAirportRef = useRef<SVGCircleElement | null>(null);
+  // reference to store currently selected airport for each hand
+  const selectedAirportsRef = useRef<{
+    left: SVGCircleElement | null;
+    right: SVGCircleElement | null;
+  }>({ left: null, right: null });
   // reference to store hovered airports for each hand
   const hoveredAirportsRef = useRef<{
     left: Set<SVGCircleElement>;
@@ -151,6 +154,16 @@ const WorldMap: React.FC = () => {
     activeLinesByPair.current.clear();
   };
 
+  // function to redraw all lines based on current hovered/selected airports
+  const redrawAllLines = () => {
+    clearAllLines();
+    hoveredAirportsRef.current.left.forEach((origin) => {
+      hoveredAirportsRef.current.right.forEach((dest) => {
+        drawAirportLine(origin, dest);
+      });
+    });
+  };
+
   // state for flight data - changed to refs
   const allFlights = useRef<Flight[]>([]);
   const filteredFlights = useRef<Flight[]>([]);
@@ -202,10 +215,16 @@ const WorldMap: React.FC = () => {
 
     leftToShow.forEach((airport) => {
       const data = d3.select(airport).datum() as Airport;
+      const isSelected = airport === selectedAirportsRef.current.left;
       originsBox
         .append('div')
         .style('background', 'rgba(232, 27, 35, 0.3)')
-        .style('padding', '8px 12px')
+        // adjust padding and add border if selected
+        .style('padding', isSelected ? '6px 10px' : '8px 12px')
+        .style(
+          'border',
+          isSelected ? `2px solid ${airportSelectedStroke}` : 'none'
+        )
         .style('borderRadius', '6px')
         .style('fontSize', '18px')
         .style('fontWeight', '600')
@@ -236,10 +255,16 @@ const WorldMap: React.FC = () => {
 
     rightToShow.forEach((airport) => {
       const data = d3.select(airport).datum() as Airport;
+      const isSelected = airport === selectedAirportsRef.current.right;
       destinationsBox
         .append('div')
         .style('background', 'rgba(0, 174, 243, 0.3)')
-        .style('padding', '8px 12px')
+        // adjust padding and add border if selected
+        .style('padding', isSelected ? '6px 10px' : '8px 12px')
+        .style(
+          'border',
+          isSelected ? `2px solid ${airportSelectedStroke}` : 'none'
+        )
         .style('borderRadius', '6px')
         .style('fontSize', '18px')
         .style('fontWeight', '600')
@@ -696,37 +721,33 @@ const WorldMap: React.FC = () => {
               if (
                 event.element &&
                 event.element.classList.contains('airport') &&
-                event.element !== selectedAirportRef.current // skip if already selected
+                event.handedness
               ) {
                 const airport = event.element as SVGCircleElement;
+                const otherHand =
+                  event.handedness === 'left' ? 'right' : 'left';
 
                 // add to appropriate hand's set
-                if (event.handedness) {
-                  hoveredAirportsRef.current[event.handedness].add(airport);
-                  updateInfoPanel();
+                hoveredAirportsRef.current[event.handedness].add(airport);
 
-                  // draw lines between all origin-destination pairs
-                  if (event.handedness === 'left') {
-                    // new origin added, draw lines to all destinations
-                    hoveredAirportsRef.current.right.forEach((dest) => {
-                      drawAirportLine(airport, dest);
-                    });
-                  } else {
-                    // new destination added, draw lines from all origins
-                    hoveredAirportsRef.current.left.forEach((origin) => {
-                      drawAirportLine(origin, airport);
-                    });
-                  }
+                // redraw all lines based on updated hovered sets
+                redrawAllLines();
+                updateInfoPanel();
+
+                // apply hover style only if not selected by the other hand
+                if (
+                  airport !== selectedAirportsRef.current.left &&
+                  airport !== selectedAirportsRef.current.right
+                ) {
+                  d3.select(airport)
+                    .attr('fill', airportHighlightFill)
+                    .attr('stroke', airportHighlightStroke)
+                    .attr(
+                      'stroke-width',
+                      airportHighlightStrokeWidth / transformRef.current.k
+                    )
+                    .raise(); // bring to front
                 }
-
-                d3.select(event.element)
-                  .attr('fill', airportHighlightFill)
-                  .attr('stroke', airportHighlightStroke)
-                  .attr(
-                    'stroke-width',
-                    airportHighlightStrokeWidth / transformRef.current.k
-                  )
-                  .raise(); // bring to front
               }
               break;
 
@@ -734,37 +755,25 @@ const WorldMap: React.FC = () => {
               // handle hover out for airports
               if (
                 event.element &&
-                event.element.classList.contains('airport')
+                event.element.classList.contains('airport') &&
+                event.handedness &&
+                event.element !== selectedAirportsRef.current.left &&
+                event.element !== selectedAirportsRef.current.right
               ) {
                 const airport = event.element as SVGCircleElement;
+                const otherHand =
+                  event.handedness === 'left' ? 'right' : 'left';
 
                 // remove from appropriate hand's set
-                if (event.handedness) {
-                  hoveredAirportsRef.current[event.handedness].delete(airport);
-                  updateInfoPanel();
+                hoveredAirportsRef.current[event.handedness].delete(airport);
 
-                  // clear all lines and redraw remaining ones
-                  clearAllLines();
-                  if (event.handedness === 'left') {
-                    // origin removed, redraw lines between remaining origins and all destinations
-                    hoveredAirportsRef.current.left.forEach((origin) => {
-                      hoveredAirportsRef.current.right.forEach((dest) => {
-                        drawAirportLine(origin, dest);
-                      });
-                    });
-                  } else {
-                    // destination removed, redraw lines between all origins and remaining destinations
-                    hoveredAirportsRef.current.left.forEach((origin) => {
-                      hoveredAirportsRef.current.right.forEach((dest) => {
-                        drawAirportLine(origin, dest);
-                      });
-                    });
-                  }
-                }
+                // redraw all lines based on updated hovered sets
+                redrawAllLines();
+                updateInfoPanel();
 
-                // only reset if not selected
-                if (event.element !== selectedAirportRef.current) {
-                  d3.select(event.element)
+                // only reset style if not selected by the other hand
+                if (airport !== selectedAirportsRef.current[otherHand]) {
+                  d3.select(airport)
                     .attr('fill', airportFill)
                     .attr('stroke', airportStroke)
                     .attr(
@@ -779,29 +788,72 @@ const WorldMap: React.FC = () => {
               // handle airport selection
               if (
                 event.element &&
-                event.element.classList.contains('airport')
+                event.element.classList.contains('airport') &&
+                event.handedness // ensure handedness is defined
               ) {
-                // unselect previous airport if exists
-                if (selectedAirportRef.current) {
-                  d3.select(selectedAirportRef.current)
+                const selectedAirport = event.element as SVGCircleElement;
+                const hand = event.handedness;
+                const currentSelection = selectedAirportsRef.current[hand];
+
+                // case 1: clicking the currently selected airport for this hand -> unselect
+                if (selectedAirport === currentSelection) {
+                  // reset style
+                  d3.select(selectedAirport)
                     .attr('fill', airportFill)
                     .attr('stroke', airportStroke)
                     .attr(
                       'stroke-width',
                       airportStrokeWidth / transformRef.current.k
                     );
+                  // remove from selected state
+                  selectedAirportsRef.current[hand] = null;
+                  // remove from hovered set
+                  hoveredAirportsRef.current[hand].delete(selectedAirport);
+                  // redraw lines and update panel
+                  redrawAllLines();
+                  updateInfoPanel();
                 }
+                // case 2: selecting a new airport (or the first one) for this hand
+                else {
+                  // unselect previous airport for this hand, if any
+                  if (currentSelection) {
+                    const otherHand = hand === 'left' ? 'right' : 'left';
+                    // only reset style if not selected by the other hand
+                    if (
+                      currentSelection !==
+                      selectedAirportsRef.current[otherHand]
+                    ) {
+                      d3.select(currentSelection)
+                        .attr('fill', airportFill)
+                        .attr('stroke', airportStroke)
+                        .attr(
+                          'stroke-width',
+                          airportStrokeWidth / transformRef.current.k
+                        );
+                    }
+                    // remove old selection from hovered set
+                    hoveredAirportsRef.current[hand].delete(currentSelection);
+                  }
 
-                // select new airport
-                selectedAirportRef.current = event.element as SVGCircleElement;
-                d3.select(event.element)
-                  .attr('fill', airportFill)
-                  .attr('stroke', airportSelectedStroke)
-                  .attr(
-                    'stroke-width',
-                    airportSelectedStrokeWidth / transformRef.current.k
-                  )
-                  .raise(); // bring to front
+                  // select the new airport
+                  selectedAirportsRef.current[hand] = selectedAirport;
+                  // add new selection to the hovered set (pinned)
+                  hoveredAirportsRef.current[hand].add(selectedAirport);
+
+                  // apply selected style
+                  d3.select(selectedAirport)
+                    .attr('fill', airportFill) // keep fill default
+                    .attr('stroke', airportSelectedStroke)
+                    .attr(
+                      'stroke-width',
+                      airportSelectedStrokeWidth / transformRef.current.k
+                    )
+                    .raise(); // bring to front
+
+                  // redraw lines and update panel
+                  redrawAllLines();
+                  updateInfoPanel();
+                }
               }
               break;
 
@@ -846,11 +898,62 @@ const WorldMap: React.FC = () => {
               g.selectAll('circle.airport')
                 .attr('r', airportRadius / transformRef.current.k)
                 .attr('stroke-width', (d, i, nodes) => {
-                  const element = nodes[i];
-                  if (element === selectedAirportRef.current) {
+                  const element = nodes[i] as SVGCircleElement;
+                  // check if selected by either hand
+                  if (
+                    element === selectedAirportsRef.current.left ||
+                    element === selectedAirportsRef.current.right
+                  ) {
                     return airportSelectedStrokeWidth / transformRef.current.k;
                   }
+                  // check if hovered by a hand that doesn't have a selection
+                  let isHoveredNotSelected = false;
+                  if (
+                    hoveredAirportsRef.current.left.has(element) &&
+                    !selectedAirportsRef.current.left
+                  ) {
+                    isHoveredNotSelected = true;
+                  }
+                  if (
+                    hoveredAirportsRef.current.right.has(element) &&
+                    !selectedAirportsRef.current.right
+                  ) {
+                    isHoveredNotSelected = true;
+                  }
+                  if (isHoveredNotSelected) {
+                    // note: this might override selection stroke if hovered by one hand and selected by the other
+                    // selection stroke should take precedence, handled by the 'if' above.
+                    // we only care about hover stroke if not selected.
+                    return airportHighlightStrokeWidth / transformRef.current.k;
+                  }
                   return airportStrokeWidth / transformRef.current.k;
+                })
+                .attr('stroke', (d, i, nodes) => {
+                  const element = nodes[i] as SVGCircleElement;
+                  if (
+                    element === selectedAirportsRef.current.left ||
+                    element === selectedAirportsRef.current.right
+                  ) {
+                    return airportSelectedStroke;
+                  }
+                  // check if hovered by a hand that doesn't have a selection
+                  let isHoveredNotSelected = false;
+                  if (
+                    hoveredAirportsRef.current.left.has(element) &&
+                    !selectedAirportsRef.current.left
+                  ) {
+                    isHoveredNotSelected = true;
+                  }
+                  if (
+                    hoveredAirportsRef.current.right.has(element) &&
+                    !selectedAirportsRef.current.right
+                  ) {
+                    isHoveredNotSelected = true;
+                  }
+                  if (isHoveredNotSelected) {
+                    return airportHighlightStroke;
+                  }
+                  return airportStroke; // default stroke
                 });
 
               // update line positions and widths
@@ -929,36 +1032,6 @@ const WorldMap: React.FC = () => {
           gap: '16px',
         }}
       >
-        {/* section title - renamed */}
-        <h2
-          style={{
-            margin: '0 0 -8px 0',
-            fontSize: '20px',
-            color: 'rgba(255, 255, 255, 0.85)',
-            fontWeight: 600,
-            textTransform: 'lowercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          flight distributions {/* renamed */}
-        </h2>
-
-        {/* distributions section */}
-        <div
-          className='distributions-container' // added class for d3 selection
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '5px', // reduced gap between histograms
-            // fix height to roughly 1/3rd panel height
-            height: `${totalHeight * 0.25}px`, // estimate based on panel height being ~0.6 of totalheight
-            // removed overflow/scrollbar styles
-          }}
-        >
-          {/* distribution bars rendered by d3 */}
-          {/* placeholder text moved inside d3 rendering logic */}
-        </div>
-
         {/* current selections title */}
         <h2
           style={{
@@ -1013,7 +1086,7 @@ const WorldMap: React.FC = () => {
               className='content'
               style={{
                 display: 'flex',
-                flexDirection: 'column', // changed from wrap to column for consistency
+                flexDirection: 'column',
                 gap: '8px',
                 overflow: 'hidden',
               }}
@@ -1052,7 +1125,7 @@ const WorldMap: React.FC = () => {
               className='content'
               style={{
                 display: 'flex',
-                flexDirection: 'column', // changed from wrap to column
+                flexDirection: 'column',
                 gap: '8px',
                 overflow: 'hidden',
               }}
@@ -1060,7 +1133,7 @@ const WorldMap: React.FC = () => {
           </div>
         </div>
 
-        {/* flights section */}
+        {/* available flights section */}
         <div
           style={{
             marginTop: '8px',
@@ -1070,9 +1143,9 @@ const WorldMap: React.FC = () => {
             gap: '10px',
             overflow: 'hidden',
             paddingBottom: '10px',
-            scrollbarWidth: 'thin' /* firefox */,
+            scrollbarWidth: 'thin',
             scrollbarColor:
-              'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)' /* firefox */,
+              'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)',
           }}
         >
           <h2
@@ -1097,9 +1170,35 @@ const WorldMap: React.FC = () => {
               flex: 1,
             }}
           >
-            {/* flight items rendered using react state - removed */}
-            {/* d3 will render content here */}
+            {/* flight items rendered using d3 */}
           </div>
+        </div>
+
+        {/* flight distributions title */}
+        <h2
+          style={{
+            margin: '0 0 -8px 0',
+            fontSize: '20px',
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontWeight: 600,
+            textTransform: 'lowercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          flight distributions
+        </h2>
+
+        {/* distributions section */}
+        <div
+          className='distributions-container'
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '5px',
+            height: `${totalHeight * 0.25}px`,
+          }}
+        >
+          {/* distribution bars rendered by d3 */}
         </div>
       </div>
     </>
