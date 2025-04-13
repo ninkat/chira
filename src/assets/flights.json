@@ -1,1402 +1,4002 @@
 [
   {
-    "origin": "MAD",
-    "destination": "BUD",
-    "price": 1429.42,
-    "duration": 10.3,
-    "date": "2025-05-19"
-  },
-  {
     "origin": "YVR",
-    "destination": "ZRH",
-    "price": 989.5,
-    "duration": 3.8,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "YVR",
-    "destination": "PRG",
-    "price": 1110.47,
-    "duration": 11.7,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "FRA",
-    "price": 1016.09,
-    "duration": 1.5,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "PRG",
-    "destination": "MAD",
-    "price": 1289.53,
-    "duration": 3.3,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "JFK",
-    "destination": "MAD",
-    "price": 385.92,
-    "duration": 1.1,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "JFK",
     "destination": "WAW",
-    "price": 919.14,
-    "duration": 5.2,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "JFK",
-    "destination": "MAD",
-    "price": 1219.73,
-    "duration": 10.6,
-    "date": "2025-05-11"
-  },
-  {
-    "origin": "JFK",
-    "destination": "FRA",
-    "price": 619.76,
-    "duration": 7.7,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "VIE",
-    "destination": "ZRH",
-    "price": 106.44,
-    "duration": 8.0,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "MAD",
-    "destination": "LAX",
-    "price": 801.86,
-    "duration": 11.6,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "LHR",
-    "destination": "FRA",
-    "price": 1347.72,
-    "duration": 5.6,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "JFK",
-    "destination": "LIS",
-    "price": 1321.05,
-    "duration": 9.2,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "FRA",
-    "destination": "YVR",
-    "price": 544.66,
-    "duration": 9.3,
-    "date": "2025-05-07"
-  },
-  {
-    "origin": "AMS",
-    "destination": "WAW",
-    "price": 577.74,
-    "duration": 8.4,
-    "date": "2025-05-19"
-  },
-  {
-    "origin": "WAW",
-    "destination": "LAX",
-    "price": 1408.44,
-    "duration": 5.7,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "LIS",
-    "price": 914.7,
-    "duration": 6.6,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "LAX",
-    "destination": "FRA",
-    "price": 368.5,
-    "duration": 6.7,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "MAD",
-    "destination": "JFK",
-    "price": 1150.79,
-    "duration": 5.2,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "FRA",
-    "destination": "JFK",
-    "price": 229.73,
-    "duration": 11.8,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "CDG",
-    "destination": "YVR",
-    "price": 139.64,
-    "duration": 3.8,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "WAW",
-    "price": 549.65,
-    "duration": 11.0,
-    "date": "2025-05-11"
-  },
-  {
-    "origin": "LHR",
-    "destination": "AMS",
-    "price": 1457.78,
-    "duration": 5.8,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "LAX",
-    "destination": "FRA",
-    "price": 149.64,
-    "duration": 7.5,
-    "date": "2025-05-23"
-  },
-  {
-    "origin": "FRA",
-    "destination": "CDG",
-    "price": 1020.05,
-    "duration": 1.7,
-    "date": "2025-05-17"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "MAD",
-    "price": 589.01,
-    "duration": 7.0,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "PRG",
-    "destination": "LAX",
-    "price": 735.82,
-    "duration": 3.1,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "MAD",
-    "price": 1023.95,
-    "duration": 8.0,
-    "date": "2025-05-28"
-  },
-  {
-    "origin": "PRG",
-    "destination": "YVR",
-    "price": 1118.91,
-    "duration": 1.5,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "LHR",
-    "destination": "PRG",
-    "price": 598.3,
-    "duration": 11.9,
-    "date": "2025-05-12"
-  },
-  {
-    "origin": "WAW",
-    "destination": "PRG",
-    "price": 1308.79,
-    "duration": 9.6,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "JFK",
-    "destination": "WAW",
-    "price": 1386.84,
-    "duration": 8.2,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "AMS",
-    "destination": "JFK",
-    "price": 1150.76,
-    "duration": 9.1,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "CDG",
-    "destination": "LAX",
-    "price": 1479.72,
-    "duration": 11.8,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "JFK",
-    "destination": "MAD",
-    "price": 325.6,
-    "duration": 8.3,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "BUD",
-    "destination": "AMS",
-    "price": 932.4,
-    "duration": 4.8,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "YVR",
-    "destination": "JFK",
-    "price": 758.36,
-    "duration": 1.4,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "WAW",
-    "price": 1385.52,
-    "duration": 3.8,
-    "date": "2025-05-23"
-  },
-  {
-    "origin": "JFK",
-    "destination": "VIE",
-    "price": 1117.78,
-    "duration": 9.2,
-    "date": "2025-05-19"
-  },
-  {
-    "origin": "JFK",
-    "destination": "CDG",
-    "price": 568.34,
-    "duration": 1.6,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "LHR",
-    "destination": "BUD",
-    "price": 1250.22,
-    "duration": 1.3,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YYZ",
-    "price": 387.59,
-    "duration": 8.3,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "BUD",
-    "price": 569.43,
-    "duration": 11.0,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "JFK",
-    "price": 1248.92,
-    "duration": 9.3,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "LAX",
-    "destination": "MAD",
-    "price": 295.52,
-    "duration": 7.2,
-    "date": "2025-05-10"
-  },
-  {
-    "origin": "LAX",
-    "destination": "CDG",
-    "price": 382.25,
-    "duration": 7.9,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "BUD",
-    "destination": "YVR",
-    "price": 919.99,
-    "duration": 10.1,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "JFK",
-    "destination": "LAX",
-    "price": 815.82,
-    "duration": 7.1,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "YVR",
-    "destination": "BUD",
-    "price": 1382.41,
-    "duration": 6.9,
-    "date": "2025-05-02"
-  },
-  {
-    "origin": "FRA",
-    "destination": "PRG",
-    "price": 607.32,
-    "duration": 3.5,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "AMS",
-    "destination": "YYZ",
-    "price": 836.49,
-    "duration": 3.3,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "FRA",
-    "destination": "LAX",
-    "price": 704.86,
-    "duration": 6.6,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "BUD",
-    "destination": "WAW",
-    "price": 759.71,
-    "duration": 9.5,
-    "date": "2025-05-19"
-  },
-  {
-    "origin": "LIS",
-    "destination": "BUD",
-    "price": 1354.86,
-    "duration": 6.5,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "AMS",
-    "destination": "FRA",
-    "price": 1114.81,
-    "duration": 1.8,
-    "date": "2025-05-10"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YYZ",
-    "price": 792.86,
-    "duration": 3.9,
-    "date": "2025-05-27"
-  },
-  {
-    "origin": "LHR",
-    "destination": "LAX",
-    "price": 1283.45,
-    "duration": 4.0,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "LAX",
-    "destination": "YYZ",
-    "price": 123.06,
-    "duration": 4.5,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "LIS",
-    "price": 337.87,
-    "duration": 8.0,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "AMS",
-    "destination": "PRG",
-    "price": 1292.39,
-    "duration": 11.2,
-    "date": "2025-05-27"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YVR",
-    "price": 1208.33,
-    "duration": 10.3,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "AMS",
-    "destination": "LAX",
-    "price": 126.08,
-    "duration": 4.7,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "PRG",
-    "destination": "LIS",
-    "price": 1407.69,
-    "duration": 5.9,
-    "date": "2025-05-11"
-  },
-  {
-    "origin": "FRA",
-    "destination": "PRG",
-    "price": 216.96,
-    "duration": 9.4,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "PRG",
-    "destination": "VIE",
-    "price": 900.49,
-    "duration": 6.1,
-    "date": "2025-05-12"
-  },
-  {
-    "origin": "PRG",
-    "destination": "CDG",
-    "price": 106.85,
-    "duration": 7.6,
-    "date": "2025-05-23"
-  },
-  {
-    "origin": "CDG",
-    "destination": "LIS",
-    "price": 1316.98,
-    "duration": 1.8,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "FRA",
-    "destination": "LIS",
-    "price": 1489.41,
-    "duration": 1.8,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "LIS",
-    "destination": "VIE",
-    "price": 500.56,
-    "duration": 9.9,
-    "date": "2025-05-17"
-  },
-  {
-    "origin": "LIS",
-    "destination": "FRA",
-    "price": 1434.94,
-    "duration": 6.3,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "FRA",
-    "destination": "WAW",
-    "price": 355.17,
-    "duration": 8.5,
-    "date": "2025-05-28"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YVR",
-    "price": 523.08,
-    "duration": 4.1,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "LAX",
-    "price": 472.96,
-    "duration": 1.6,
-    "date": "2025-05-08"
-  },
-  {
-    "origin": "LAX",
-    "destination": "ZRH",
-    "price": 1390.91,
-    "duration": 8.3,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "LHR",
-    "destination": "ZRH",
-    "price": 1238.03,
-    "duration": 11.2,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "LIS",
-    "price": 1021.79,
-    "duration": 6.9,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "MAD",
-    "destination": "LIS",
-    "price": 689.92,
-    "duration": 10.9,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "AMS",
-    "price": 1326.54,
-    "duration": 6.2,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "MAD",
-    "price": 1484.74,
-    "duration": 9.2,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "FRA",
-    "destination": "YVR",
-    "price": 199.85,
-    "duration": 7.7,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "MAD",
-    "price": 712.75,
-    "duration": 8.7,
-    "date": "2025-05-27"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "CDG",
-    "price": 857.78,
-    "duration": 3.8,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "LIS",
-    "destination": "AMS",
-    "price": 749.35,
-    "duration": 1.4,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "MAD",
-    "destination": "PRG",
-    "price": 178.09,
-    "duration": 7.6,
-    "date": "2025-05-23"
-  },
-  {
-    "origin": "MAD",
-    "destination": "LHR",
-    "price": 454.86,
-    "duration": 6.0,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "PRG",
-    "destination": "AMS",
-    "price": 131.52,
-    "duration": 9.4,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "JFK",
-    "destination": "ZRH",
-    "price": 773.14,
-    "duration": 2.7,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "CDG",
-    "destination": "YVR",
-    "price": 674.81,
-    "duration": 11.9,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "PRG",
-    "price": 816.72,
-    "duration": 8.2,
-    "date": "2025-05-10"
-  },
-  {
-    "origin": "PRG",
-    "destination": "WAW",
-    "price": 938.11,
-    "duration": 8.1,
-    "date": "2025-05-02"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "JFK",
-    "price": 410.46,
-    "duration": 2.3,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "YVR",
-    "destination": "YYZ",
-    "price": 159.01,
-    "duration": 9.8,
-    "date": "2025-05-07"
-  },
-  {
-    "origin": "VIE",
-    "destination": "YYZ",
-    "price": 172.63,
-    "duration": 9.3,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "BUD",
-    "destination": "CDG",
-    "price": 1282.72,
-    "duration": 10.9,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "WAW",
-    "destination": "YYZ",
-    "price": 816.45,
-    "duration": 10.3,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "LIS",
-    "destination": "PRG",
-    "price": 517.08,
+    "price": 789.89,
     "duration": 10.4,
-    "date": "2025-05-09"
+    "date": "2025-05-17",
+    "distance_km": 8246.3
   },
   {
-    "origin": "ZRH",
-    "destination": "YYZ",
-    "price": 1278.07,
-    "duration": 1.6,
-    "date": "2025-05-16"
-  },
-  {
-    "origin": "LIS",
-    "destination": "AMS",
-    "price": 1435.45,
-    "duration": 9.1,
-    "date": "2025-05-19"
-  },
-  {
-    "origin": "BUD",
+    "origin": "MAD",
     "destination": "FRA",
-    "price": 145.79,
-    "duration": 11.2,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "AMS",
-    "destination": "MAD",
-    "price": 1242.15,
-    "duration": 4.0,
-    "date": "2025-05-09"
+    "price": 215.42,
+    "duration": 2.1,
+    "date": "2025-05-09",
+    "distance_km": 1421.9
   },
   {
     "origin": "FRA",
-    "destination": "LHR",
-    "price": 1116.18,
-    "duration": 7.2,
-    "date": "2025-05-08"
-  },
-  {
-    "origin": "BUD",
-    "destination": "LIS",
-    "price": 1250.4,
-    "duration": 11.2,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "AMS",
-    "destination": "VIE",
-    "price": 922.68,
-    "duration": 2.4,
-    "date": "2025-05-12"
-  },
-  {
-    "origin": "PRG",
-    "destination": "VIE",
-    "price": 913.93,
-    "duration": 8.0,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "VIE",
-    "destination": "BUD",
-    "price": 897.62,
-    "duration": 6.5,
-    "date": "2025-05-28"
-  },
-  {
-    "origin": "PRG",
-    "destination": "VIE",
-    "price": 701.22,
-    "duration": 9.3,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "MAD",
-    "destination": "FRA",
-    "price": 554.0,
-    "duration": 4.3,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "MAD",
     "destination": "AMS",
-    "price": 369.32,
-    "duration": 8.2,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "LHR",
-    "destination": "YYZ",
-    "price": 1037.1,
-    "duration": 10.9,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "WAW",
-    "destination": "LHR",
-    "price": 1290.59,
-    "duration": 1.5,
-    "date": "2025-05-03"
-  },
-  {
-    "origin": "PRG",
-    "destination": "MAD",
-    "price": 596.5,
-    "duration": 2.0,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "LIS",
-    "destination": "AMS",
-    "price": 824.4,
-    "duration": 3.4,
-    "date": "2025-05-17"
-  },
-  {
-    "origin": "LAX",
-    "destination": "WAW",
-    "price": 358.03,
-    "duration": 1.4,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "BUD",
-    "destination": "AMS",
-    "price": 634.38,
-    "duration": 5.2,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "LIS",
-    "destination": "YVR",
-    "price": 1326.55,
-    "duration": 7.8,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "YVR",
-    "destination": "MAD",
-    "price": 551.31,
-    "duration": 3.3,
-    "date": "2025-05-08"
-  },
-  {
-    "origin": "BUD",
-    "destination": "LAX",
-    "price": 1495.24,
-    "duration": 1.4,
-    "date": "2025-05-16"
-  },
-  {
-    "origin": "LIS",
-    "destination": "YYZ",
-    "price": 1127.24,
-    "duration": 5.7,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "PRG",
-    "destination": "YVR",
-    "price": 201.42,
-    "duration": 8.4,
-    "date": "2025-05-02"
-  },
-  {
-    "origin": "LAX",
-    "destination": "VIE",
-    "price": 1432.16,
-    "duration": 7.6,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "PRG",
-    "destination": "LIS",
-    "price": 346.0,
-    "duration": 8.8,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "JFK",
-    "destination": "YYZ",
-    "price": 1258.27,
-    "duration": 1.2,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "LAX",
-    "destination": "WAW",
-    "price": 933.01,
-    "duration": 4.9,
-    "date": "2025-05-24"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "LAX",
-    "price": 865.95,
-    "duration": 4.4,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "AMS",
-    "destination": "PRG",
-    "price": 288.42,
-    "duration": 2.8,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "WAW",
-    "destination": "AMS",
-    "price": 1221.92,
-    "duration": 11.6,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "LIS",
-    "destination": "BUD",
-    "price": 1128.71,
-    "duration": 10.1,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "VIE",
-    "destination": "AMS",
-    "price": 960.63,
-    "duration": 9.1,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "AMS",
-    "destination": "JFK",
-    "price": 1014.24,
-    "duration": 5.3,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "LHR",
-    "destination": "JFK",
-    "price": 328.97,
-    "duration": 2.7,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "AMS",
-    "destination": "VIE",
-    "price": 1436.85,
-    "duration": 8.4,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "WAW",
-    "destination": "MAD",
-    "price": 1323.89,
-    "duration": 5.6,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "BUD",
-    "price": 261.98,
-    "duration": 4.4,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "WAW",
-    "destination": "YVR",
-    "price": 291.63,
-    "duration": 6.5,
-    "date": "2025-05-10"
-  },
-  {
-    "origin": "JFK",
-    "destination": "VIE",
-    "price": 690.18,
-    "duration": 7.7,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "LHR",
-    "destination": "WAW",
-    "price": 457.95,
-    "duration": 9.5,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "JFK",
-    "destination": "YYZ",
-    "price": 1440.87,
-    "duration": 5.0,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YYZ",
-    "price": 802.64,
-    "duration": 6.0,
-    "date": "2025-05-19"
-  },
-  {
-    "origin": "PRG",
-    "destination": "JFK",
-    "price": 130.88,
-    "duration": 11.2,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "YVR",
-    "destination": "AMS",
-    "price": 466.92,
-    "duration": 6.7,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "YVR",
-    "destination": "LAX",
-    "price": 390.36,
-    "duration": 4.2,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "AMS",
-    "destination": "WAW",
-    "price": 561.88,
-    "duration": 10.3,
-    "date": "2025-05-02"
-  },
-  {
-    "origin": "PRG",
-    "destination": "LHR",
-    "price": 1124.34,
-    "duration": 10.1,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "CDG",
-    "destination": "MAD",
-    "price": 1118.97,
-    "duration": 4.9,
-    "date": "2025-05-07"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "FRA",
-    "price": 943.31,
-    "duration": 7.5,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "LAX",
-    "price": 851.4,
-    "duration": 2.3,
-    "date": "2025-05-06"
-  },
-  {
-    "origin": "LHR",
-    "destination": "CDG",
-    "price": 472.23,
-    "duration": 9.9,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "YVR",
-    "destination": "LIS",
-    "price": 247.24,
-    "duration": 1.7,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "FRA",
-    "destination": "LAX",
-    "price": 509.11,
-    "duration": 7.3,
-    "date": "2025-05-10"
-  },
-  {
-    "origin": "AMS",
-    "destination": "YVR",
-    "price": 924.05,
-    "duration": 10.5,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "BUD",
-    "destination": "LHR",
-    "price": 232.11,
-    "duration": 4.1,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "JFK",
-    "destination": "ZRH",
-    "price": 522.91,
-    "duration": 2.9,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "LIS",
-    "destination": "CDG",
-    "price": 1249.42,
-    "duration": 5.5,
-    "date": "2025-05-12"
-  },
-  {
-    "origin": "YVR",
-    "destination": "CDG",
-    "price": 1153.76,
-    "duration": 4.2,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "CDG",
-    "destination": "LHR",
-    "price": 360.5,
-    "duration": 11.1,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "LIS",
-    "destination": "BUD",
-    "price": 1476.82,
-    "duration": 2.4,
-    "date": "2025-05-30"
-  },
-  {
-    "origin": "LHR",
-    "destination": "FRA",
-    "price": 226.44,
-    "duration": 3.5,
-    "date": "2025-05-29"
-  },
-  {
-    "origin": "AMS",
-    "destination": "YVR",
-    "price": 749.77,
-    "duration": 11.4,
-    "date": "2025-05-25"
-  },
-  {
-    "origin": "ZRH",
-    "destination": "WAW",
-    "price": 555.86,
-    "duration": 3.2,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "LAX",
-    "destination": "YYZ",
-    "price": 986.54,
-    "duration": 1.5,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "CDG",
-    "destination": "LIS",
-    "price": 970.06,
-    "duration": 1.6,
-    "date": "2025-05-18"
-  },
-  {
-    "origin": "WAW",
-    "destination": "ZRH",
-    "price": 1114.41,
-    "duration": 6.8,
-    "date": "2025-05-20"
-  },
-  {
-    "origin": "YVR",
-    "destination": "MAD",
-    "price": 902.27,
-    "duration": 7.1,
-    "date": "2025-05-17"
-  },
-  {
-    "origin": "MAD",
-    "destination": "YVR",
-    "price": 755.46,
-    "duration": 6.9,
-    "date": "2025-05-31"
-  },
-  {
-    "origin": "VIE",
-    "destination": "AMS",
-    "price": 557.82,
-    "duration": 4.5,
-    "date": "2025-05-15"
-  },
-  {
-    "origin": "JFK",
-    "destination": "VIE",
-    "price": 1312.3,
+    "price": 100,
     "duration": 1.0,
-    "date": "2025-05-23"
+    "date": "2025-05-28",
+    "distance_km": 365.7
   },
   {
-    "origin": "LAX",
-    "destination": "YYZ",
-    "price": 107.66,
-    "duration": 10.4,
-    "date": "2025-05-15"
+    "origin": "LHR",
+    "destination": "WAW",
+    "price": 203.85,
+    "duration": 2.1,
+    "date": "2025-05-17",
+    "distance_km": 1469.1
   },
   {
-    "origin": "YVR",
-    "destination": "FRA",
-    "price": 796.06,
-    "duration": 5.5,
-    "date": "2025-05-21"
-  },
-  {
-    "origin": "YVR",
+    "origin": "AMS",
     "destination": "LAX",
-    "price": 416.42,
-    "duration": 1.8,
-    "date": "2025-05-18"
+    "price": 860.8,
+    "duration": 11.7,
+    "date": "2025-05-23",
+    "distance_km": 8956.1
   },
   {
-    "origin": "YYZ",
-    "destination": "BUD",
-    "price": 472.82,
-    "duration": 4.2,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "YYZ",
-    "destination": "YVR",
-    "price": 659.49,
-    "duration": 1.7,
-    "date": "2025-05-03"
+    "origin": "LIS",
+    "destination": "LAX",
+    "price": 766.15,
+    "duration": 12.1,
+    "date": "2025-05-16",
+    "distance_km": 9137.3
   },
   {
     "origin": "PRG",
-    "destination": "VIE",
-    "price": 1447.53,
-    "duration": 1.8,
-    "date": "2025-05-11"
+    "destination": "LAX",
+    "price": 835.77,
+    "duration": 13.6,
+    "date": "2025-05-15",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "WAW",
+    "destination": "YYZ",
+    "price": 576.5,
+    "duration": 7.5,
+    "date": "2025-05-05",
+    "distance_km": 6934.3
   },
   {
     "origin": "JFK",
-    "destination": "BUD",
-    "price": 1190.87,
-    "duration": 11.7,
-    "date": "2025-05-08"
+    "destination": "CDG",
+    "price": 538.15,
+    "duration": 6.9,
+    "date": "2025-05-30",
+    "distance_km": 5833.5
+  },
+  {
+    "origin": "JFK",
+    "destination": "FRA",
+    "price": 563.87,
+    "duration": 6.7,
+    "date": "2025-05-02",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "PRG",
+    "destination": "MAD",
+    "price": 225.53,
+    "duration": 3.3,
+    "date": "2025-05-14",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "BUD",
+    "destination": "LAX",
+    "price": 954.75,
+    "duration": 11.5,
+    "date": "2025-05-04",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "JFK",
+    "destination": "WAW",
+    "price": 546.72,
+    "duration": 9.7,
+    "date": "2025-05-30",
+    "distance_km": 6847.6
+  },
+  {
+    "origin": "LIS",
+    "destination": "LAX",
+    "price": 744.11,
+    "duration": 10.3,
+    "date": "2025-05-08",
+    "distance_km": 9137.3
   },
   {
     "origin": "ZRH",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-26",
+    "distance_km": 477.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "MAD",
+    "price": 560.99,
+    "duration": 7.2,
+    "date": "2025-05-05",
+    "distance_km": 5762.2
+  },
+  {
+    "origin": "BUD",
+    "destination": "JFK",
+    "price": 596.04,
+    "duration": 8.9,
+    "date": "2025-05-06",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "CDG",
+    "price": 182.75,
+    "duration": 2.2,
+    "date": "2025-05-26",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "LIS",
+    "destination": "FRA",
+    "price": 269.77,
+    "duration": 3.3,
+    "date": "2025-05-30",
+    "distance_km": 1874.1
+  },
+  {
+    "origin": "CDG",
+    "destination": "YVR",
+    "price": 696.6,
+    "duration": 9.0,
+    "date": "2025-05-29",
+    "distance_km": 7925.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-15",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "BUD",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 214.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "CDG",
+    "price": 164.87,
+    "duration": 1.9,
+    "date": "2025-05-04",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YVR",
+    "price": 758.18,
+    "duration": 9.3,
+    "date": "2025-05-24",
+    "distance_km": 8308.3
+  },
+  {
+    "origin": "YYZ",
+    "destination": "MAD",
+    "price": 636.56,
+    "duration": 8.1,
+    "date": "2025-05-07",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "PRG",
     "destination": "BUD",
-    "price": 330.61,
-    "duration": 9.9,
-    "date": "2025-05-08"
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-24",
+    "distance_km": 471.4
   },
   {
     "origin": "PRG",
     "destination": "LHR",
-    "price": 844.14,
-    "duration": 8.5,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "MAD",
-    "destination": "BUD",
-    "price": 838.34,
-    "duration": 5.3,
-    "date": "2025-05-26"
-  },
-  {
-    "origin": "CDG",
-    "destination": "ZRH",
-    "price": 1245.71,
-    "duration": 2.1,
-    "date": "2025-05-12"
+    "price": 151.22,
+    "duration": 1.5,
+    "date": "2025-05-11",
+    "distance_km": 1044.0
   },
   {
     "origin": "JFK",
+    "destination": "LIS",
+    "price": 535.51,
+    "duration": 6.5,
+    "date": "2025-05-16",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "FRA",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-22",
+    "distance_km": 286.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-02",
+    "distance_km": 286.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "YVR",
+    "price": 735.71,
+    "duration": 8.6,
+    "date": "2025-05-11",
+    "distance_km": 7925.2
+  },
+  {
+    "origin": "LHR",
+    "destination": "VIE",
+    "price": 156.09,
+    "duration": 2.1,
+    "date": "2025-05-07",
+    "distance_km": 1274.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "WAW",
+    "price": 149.66,
+    "duration": 1.9,
+    "date": "2025-05-06",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "YVR",
+    "destination": "CDG",
+    "price": 626.53,
+    "duration": 8.7,
+    "date": "2025-05-09",
+    "distance_km": 7925.2
+  },
+  {
+    "origin": "CDG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-15",
+    "distance_km": 448.8
+  },
+  {
+    "origin": "LHR",
+    "destination": "MAD",
+    "price": 171.51,
+    "duration": 2.1,
+    "date": "2025-05-12",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-29",
+    "distance_km": 540.6
+  },
+  {
+    "origin": "YVR",
+    "destination": "WAW",
+    "price": 690.54,
+    "duration": 10.2,
+    "date": "2025-05-12",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "LHR",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-13",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "FRA",
+    "destination": "JFK",
+    "price": 475.95,
+    "duration": 7.1,
+    "date": "2025-05-23",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YYZ",
+    "price": 584.05,
+    "duration": 8.8,
+    "date": "2025-05-24",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "LIS",
+    "price": 311.63,
+    "duration": 3.0,
+    "date": "2025-05-16",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "YVR",
     "destination": "LHR",
-    "price": 136.7,
-    "duration": 9.1,
-    "date": "2025-05-23"
+    "price": 748.68,
+    "duration": 10.0,
+    "date": "2025-05-20",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "WAW",
+    "destination": "FRA",
+    "price": 144.9,
+    "duration": 1.6,
+    "date": "2025-05-14",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YYZ",
+    "price": 503.83,
+    "duration": 9.0,
+    "date": "2025-05-27",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "FRA",
+    "price": 544.14,
+    "duration": 7.6,
+    "date": "2025-05-10",
+    "distance_km": 6342.8
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 867.48,
+    "duration": 11.4,
+    "date": "2025-05-14",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "YVR",
+    "destination": "AMS",
+    "price": 589.9,
+    "duration": 9.6,
+    "date": "2025-05-11",
+    "distance_km": 7707.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "VIE",
+    "price": 162.71,
+    "duration": 1.9,
+    "date": "2025-05-08",
+    "distance_km": 1274.5
+  },
+  {
+    "origin": "CDG",
+    "destination": "LAX",
+    "price": 723.84,
+    "duration": 9.7,
+    "date": "2025-05-12",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "PRG",
+    "destination": "LHR",
+    "price": 172.76,
+    "duration": 1.7,
+    "date": "2025-05-02",
+    "distance_km": 1044.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "MAD",
+    "price": 530.36,
+    "duration": 7.8,
+    "date": "2025-05-23",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "PRG",
+    "destination": "YVR",
+    "price": 709.83,
+    "duration": 11.5,
+    "date": "2025-05-23",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "JFK",
+    "destination": "MAD",
+    "price": 570.3,
+    "duration": 8.3,
+    "date": "2025-05-12",
+    "distance_km": 5762.2
+  },
+  {
+    "origin": "VIE",
+    "destination": "LIS",
+    "price": 313.23,
+    "duration": 2.7,
+    "date": "2025-05-05",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "CDG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 448.8
+  },
+  {
+    "origin": "YYZ",
+    "destination": "FRA",
+    "price": 502.34,
+    "duration": 8.6,
+    "date": "2025-05-17",
+    "distance_km": 6342.8
   },
   {
     "origin": "JFK",
     "destination": "PRG",
-    "price": 246.81,
-    "duration": 1.5,
-    "date": "2025-05-13"
+    "price": 536.95,
+    "duration": 7.6,
+    "date": "2025-05-08",
+    "distance_km": 6551.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "YVR",
+    "price": 774.33,
+    "duration": 11.7,
+    "date": "2025-05-16",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 143.9,
+    "duration": 1.4,
+    "date": "2025-05-02",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "VIE",
+    "destination": "AMS",
+    "price": 135.78,
+    "duration": 1.7,
+    "date": "2025-05-21",
+    "distance_km": 959.3
+  },
+  {
+    "origin": "WAW",
+    "destination": "LIS",
+    "price": 348.22,
+    "duration": 3.4,
+    "date": "2025-05-13",
+    "distance_km": 2749.4
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 228.35,
+    "duration": 2.2,
+    "date": "2025-05-08",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "WAW",
+    "destination": "JFK",
+    "price": 572.94,
+    "duration": 7.6,
+    "date": "2025-05-19",
+    "distance_km": 6847.6
+  },
+  {
+    "origin": "YVR",
+    "destination": "BUD",
+    "price": 761.18,
+    "duration": 11.0,
+    "date": "2025-05-06",
+    "distance_km": 8679.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "LAX",
+    "price": 236.01,
+    "duration": 2.7,
+    "date": "2025-05-14",
+    "distance_km": 1741.0
+  },
+  {
+    "origin": "LIS",
+    "destination": "VIE",
+    "price": 325.82,
+    "duration": 2.8,
+    "date": "2025-05-26",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "CDG",
+    "destination": "BUD",
+    "price": 195.87,
+    "duration": 2.2,
+    "date": "2025-05-10",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "WAW",
+    "destination": "ZRH",
+    "price": 127.3,
+    "duration": 1.6,
+    "date": "2025-05-03",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "AMS",
+    "destination": "JFK",
+    "price": 501.8,
+    "duration": 6.7,
+    "date": "2025-05-15",
+    "distance_km": 5847.6
+  },
+  {
+    "origin": "AMS",
+    "destination": "ZRH",
+    "price": 100.1,
+    "duration": 1.0,
+    "date": "2025-05-05",
+    "distance_km": 603.7
+  },
+  {
+    "origin": "AMS",
+    "destination": "LAX",
+    "price": 748.99,
+    "duration": 9.8,
+    "date": "2025-05-31",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "AMS",
+    "destination": "WAW",
+    "price": 177.85,
+    "duration": 1.6,
+    "date": "2025-05-04",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "ZRH",
+    "price": 657.64,
+    "duration": 8.8,
+    "date": "2025-05-27",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "YYZ",
+    "price": 641.19,
+    "duration": 8.1,
+    "date": "2025-05-28",
+    "distance_km": 6683.8
+  },
+  {
+    "origin": "JFK",
+    "destination": "YYZ",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 588.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "BUD",
+    "price": 756.54,
+    "duration": 9.5,
+    "date": "2025-05-16",
+    "distance_km": 8679.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "WAW",
+    "price": 142.0,
+    "duration": 1.7,
+    "date": "2025-05-15",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-24",
+    "distance_km": 214.9
+  },
+  {
+    "origin": "PRG",
+    "destination": "LAX",
+    "price": 752.66,
+    "duration": 11.1,
+    "date": "2025-05-19",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "VIE",
+    "destination": "JFK",
+    "price": 572.71,
+    "duration": 9.0,
+    "date": "2025-05-28",
+    "distance_km": 6804.9
+  },
+  {
+    "origin": "JFK",
+    "destination": "MAD",
+    "price": 563.57,
+    "duration": 8.1,
+    "date": "2025-05-28",
+    "distance_km": 5762.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "PRG",
+    "price": 107.05,
+    "duration": 1.2,
+    "date": "2025-05-24",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-11",
+    "distance_km": 370.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LHR",
+    "price": 110.2,
+    "duration": 1.2,
+    "date": "2025-05-30",
+    "distance_km": 788.4
+  },
+  {
+    "origin": "PRG",
+    "destination": "LAX",
+    "price": 994.56,
+    "duration": 12.0,
+    "date": "2025-05-03",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "CDG",
+    "destination": "YYZ",
+    "price": 558.52,
+    "duration": 8.0,
+    "date": "2025-05-06",
+    "distance_km": 6019.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "LAX",
+    "price": 750.46,
+    "duration": 10.9,
+    "date": "2025-05-02",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "JFK",
+    "price": 557.77,
+    "duration": 6.8,
+    "date": "2025-05-18",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "BUD",
+    "price": 126.42,
+    "duration": 1.4,
+    "date": "2025-05-04",
+    "distance_km": 804.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 448.8
+  },
+  {
+    "origin": "CDG",
+    "destination": "YYZ",
+    "price": 468.84,
+    "duration": 7.0,
+    "date": "2025-05-11",
+    "distance_km": 6019.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-22",
+    "distance_km": 286.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-10",
+    "distance_km": 477.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-24",
+    "distance_km": 277.8
+  },
+  {
+    "origin": "LHR",
+    "destination": "LAX",
+    "price": 727.74,
+    "duration": 10.8,
+    "date": "2025-05-09",
+    "distance_km": 8760.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "PRG",
+    "price": 669.42,
+    "duration": 11.6,
+    "date": "2025-05-29",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-04",
+    "distance_km": 520.8
+  },
+  {
+    "origin": "PRG",
+    "destination": "AMS",
+    "price": 105.65,
+    "duration": 1.3,
+    "date": "2025-05-08",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YYZ",
+    "price": 534.46,
+    "duration": 7.5,
+    "date": "2025-05-16",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "YVR",
+    "price": 739.7,
+    "duration": 10.8,
+    "date": "2025-05-12",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "YVR",
+    "price": 391.28,
+    "duration": 3.9,
+    "date": "2025-05-03",
+    "distance_km": 3345.6
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 875.38,
+    "duration": 12.0,
+    "date": "2025-05-17",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "WAW",
+    "price": 326.99,
+    "duration": 3.6,
+    "date": "2025-05-07",
+    "distance_km": 2749.4
+  },
+  {
+    "origin": "JFK",
+    "destination": "LAX",
+    "price": 341.99,
+    "duration": 4.6,
+    "date": "2025-05-18",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "WAW",
+    "price": 905.65,
+    "duration": 11.6,
+    "date": "2025-05-07",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "VIE",
+    "destination": "AMS",
+    "price": 142.61,
+    "duration": 1.8,
+    "date": "2025-05-26",
+    "distance_km": 959.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 814.28,
+    "duration": 11.8,
+    "date": "2025-05-03",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "ZRH",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-16",
+    "distance_km": 510.9
+  },
+  {
+    "origin": "LAX",
+    "destination": "AMS",
+    "price": 804.41,
+    "duration": 12.3,
+    "date": "2025-05-30",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "PRG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-12",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "MAD",
+    "price": 239.85,
+    "duration": 3.0,
+    "date": "2025-05-03",
+    "distance_km": 1974.7
+  },
+  {
+    "origin": "LHR",
+    "destination": "LAX",
+    "price": 770.34,
+    "duration": 11.6,
+    "date": "2025-05-30",
+    "distance_km": 8760.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-02",
+    "distance_km": 370.3
+  },
+  {
+    "origin": "YYZ",
+    "destination": "ZRH",
+    "price": 598.44,
+    "duration": 8.2,
+    "date": "2025-05-31",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "AMS",
+    "price": 100,
+    "duration": 1.2,
+    "date": "2025-05-07",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-16",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "LIS",
+    "destination": "CDG",
+    "price": 221.52,
+    "duration": 2.6,
+    "date": "2025-05-20",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "MAD",
+    "price": 234.82,
+    "duration": 2.4,
+    "date": "2025-05-14",
+    "distance_km": 1460.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "AMS",
+    "price": 100,
+    "duration": 1.1,
+    "date": "2025-05-27",
+    "distance_km": 603.7
+  },
+  {
+    "origin": "BUD",
+    "destination": "LAX",
+    "price": 1032.87,
+    "duration": 12.4,
+    "date": "2025-05-20",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "YVR",
+    "destination": "YYZ",
+    "price": 406.46,
+    "duration": 4.6,
+    "date": "2025-05-19",
+    "distance_km": 3345.6
+  },
+  {
+    "origin": "FRA",
+    "destination": "AMS",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 365.7
   },
   {
     "origin": "WAW",
     "destination": "MAD",
-    "price": 1437.85,
-    "duration": 6.0,
-    "date": "2025-05-02"
+    "price": 278.23,
+    "duration": 3.0,
+    "date": "2025-05-15",
+    "distance_km": 2271.0
   },
   {
-    "origin": "CDG",
-    "destination": "VIE",
-    "price": 531.41,
-    "duration": 4.8,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "FRA",
-    "destination": "YYZ",
-    "price": 606.27,
-    "duration": 11.6,
-    "date": "2025-05-04"
-  },
-  {
-    "origin": "VIE",
+    "origin": "YVR",
     "destination": "ZRH",
-    "price": 771.4,
-    "duration": 10.5,
-    "date": "2025-05-13"
+    "price": 725.49,
+    "duration": 9.2,
+    "date": "2025-05-02",
+    "distance_km": 8308.3
   },
   {
     "origin": "PRG",
+    "destination": "MAD",
+    "price": 256.64,
+    "duration": 3.1,
+    "date": "2025-05-07",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "LAX",
+    "destination": "ZRH",
+    "price": 989.03,
+    "duration": 12.0,
+    "date": "2025-05-18",
+    "distance_km": 9535.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "PRG",
+    "price": 110.55,
+    "duration": 1.1,
+    "date": "2025-05-12",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-18",
+    "distance_km": 510.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "CDG",
+    "price": 194.99,
+    "duration": 2.4,
+    "date": "2025-05-22",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "YVR",
+    "price": 374.79,
+    "duration": 5.1,
+    "date": "2025-05-10",
+    "distance_km": 3930.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "FRA",
+    "price": 195.7,
+    "duration": 2.5,
+    "date": "2025-05-02",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-16",
+    "distance_km": 448.8
+  },
+  {
+    "origin": "MAD",
+    "destination": "LHR",
+    "price": 182.39,
+    "duration": 2.0,
+    "date": "2025-05-01",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "LIS",
+    "destination": "VIE",
+    "price": 254.14,
+    "duration": 3.2,
+    "date": "2025-05-16",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "JFK",
     "destination": "LIS",
-    "price": 671.09,
+    "price": 438.89,
+    "duration": 6.9,
+    "date": "2025-05-10",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "AMS",
+    "destination": "JFK",
+    "price": 481.01,
+    "duration": 7.4,
+    "date": "2025-05-01",
+    "distance_km": 5847.6
+  },
+  {
+    "origin": "LAX",
+    "destination": "PRG",
+    "price": 833.5,
+    "duration": 12.2,
+    "date": "2025-05-30",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "LHR",
+    "destination": "MAD",
+    "price": 172.17,
+    "duration": 2.3,
+    "date": "2025-05-06",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "CDG",
+    "price": 217.92,
+    "duration": 2.4,
+    "date": "2025-05-05",
+    "distance_km": 1342.8
+  },
+  {
+    "origin": "YVR",
+    "destination": "MAD",
+    "price": 702.79,
+    "duration": 9.3,
+    "date": "2025-05-29",
+    "distance_km": 8426.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "MAD",
+    "price": 320.02,
+    "duration": 2.5,
+    "date": "2025-05-19",
+    "distance_km": 2271.0
+  },
+  {
+    "origin": "YVR",
+    "destination": "JFK",
+    "price": 444.09,
+    "duration": 4.6,
+    "date": "2025-05-02",
+    "distance_km": 3930.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "YVR",
+    "price": 622.14,
+    "duration": 8.8,
+    "date": "2025-05-03",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "LIS",
+    "price": 202.47,
+    "duration": 2.7,
+    "date": "2025-05-18",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "VIE",
+    "destination": "LIS",
+    "price": 330.61,
     "duration": 2.9,
-    "date": "2025-05-18"
+    "date": "2025-05-30",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "WAW",
+    "price": 133.74,
+    "duration": 1.5,
+    "date": "2025-05-28",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YVR",
+    "price": 713.85,
+    "duration": 11.4,
+    "date": "2025-05-01",
+    "distance_km": 8308.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 249.52,
+    "duration": 2.9,
+    "date": "2025-05-06",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "PRG",
+    "destination": "WAW",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-25",
+    "distance_km": 520.8
+  },
+  {
+    "origin": "LAX",
+    "destination": "YYZ",
+    "price": 364.33,
+    "duration": 4.3,
+    "date": "2025-05-03",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "BUD",
+    "destination": "YYZ",
+    "price": 595.67,
+    "duration": 9.7,
+    "date": "2025-05-22",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "VIE",
+    "destination": "LHR",
+    "price": 191.16,
+    "duration": 2.0,
+    "date": "2025-05-25",
+    "distance_km": 1274.5
   },
   {
     "origin": "FRA",
     "destination": "CDG",
-    "price": 1171.83,
-    "duration": 1.8,
-    "date": "2025-05-14"
-  },
-  {
-    "origin": "FRA",
-    "destination": "LHR",
-    "price": 448.96,
-    "duration": 2.1,
-    "date": "2025-05-05"
-  },
-  {
-    "origin": "VIE",
-    "destination": "LHR",
-    "price": 785.44,
-    "duration": 3.5,
-    "date": "2025-05-13"
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 448.8
   },
   {
     "origin": "MAD",
-    "destination": "YYZ",
-    "price": 138.32,
-    "duration": 2.5,
-    "date": "2025-05-18"
+    "destination": "ZRH",
+    "price": 175.73,
+    "duration": 2.0,
+    "date": "2025-05-01",
+    "distance_km": 1240.0
   },
   {
-    "origin": "PRG",
-    "destination": "YYZ",
-    "price": 969.63,
-    "duration": 4.2,
-    "date": "2025-05-27"
+    "origin": "AMS",
+    "destination": "YVR",
+    "price": 711.95,
+    "duration": 9.3,
+    "date": "2025-05-18",
+    "distance_km": 7707.0
+  },
+  {
+    "origin": "LAX",
+    "destination": "JFK",
+    "price": 347.93,
+    "duration": 4.6,
+    "date": "2025-05-30",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "CDG",
+    "destination": "MAD",
+    "price": 135.49,
+    "duration": 1.7,
+    "date": "2025-05-08",
+    "distance_km": 1064.0
   },
   {
     "origin": "BUD",
-    "destination": "LHR",
-    "price": 317.07,
-    "duration": 7.2,
-    "date": "2025-05-16"
+    "destination": "AMS",
+    "price": 185.44,
+    "duration": 2.1,
+    "date": "2025-05-13",
+    "distance_km": 1169.0
   },
   {
-    "origin": "PRG",
+    "origin": "WAW",
     "destination": "VIE",
-    "price": 564.19,
-    "duration": 2.2,
-    "date": "2025-05-28"
-  },
-  {
-    "origin": "VIE",
-    "destination": "AMS",
-    "price": 1451.24,
-    "duration": 6.1,
-    "date": "2025-05-22"
-  },
-  {
-    "origin": "PRG",
-    "destination": "AMS",
-    "price": 1307.14,
-    "duration": 11.1,
-    "date": "2025-05-27"
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-19",
+    "distance_km": 548.9
   },
   {
     "origin": "LIS",
     "destination": "BUD",
-    "price": 694.37,
+    "price": 342.75,
+    "duration": 2.8,
+    "date": "2025-05-02",
+    "distance_km": 2480.5
+  },
+  {
+    "origin": "VIE",
+    "destination": "YVR",
+    "price": 641.54,
+    "duration": 9.2,
+    "date": "2025-05-06",
+    "distance_km": 8525.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "FRA",
+    "price": 145.51,
     "duration": 1.6,
-    "date": "2025-05-01"
-  },
-  {
-    "origin": "AMS",
-    "destination": "BUD",
-    "price": 568.15,
-    "duration": 6.9,
-    "date": "2025-05-13"
-  },
-  {
-    "origin": "VIE",
-    "destination": "MAD",
-    "price": 1085.8,
-    "duration": 5.2,
-    "date": "2025-05-09"
-  },
-  {
-    "origin": "VIE",
-    "destination": "JFK",
-    "price": 1204.52,
-    "duration": 6.2,
-    "date": "2025-05-09"
+    "date": "2025-05-24",
+    "distance_km": 896.6
   },
   {
     "origin": "MAD",
+    "destination": "FRA",
+    "price": 225.48,
+    "duration": 2.1,
+    "date": "2025-05-23",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "JFK",
+    "price": 654.9,
+    "duration": 8.4,
+    "date": "2025-05-12",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "VIE",
+    "destination": "JFK",
+    "price": 493.29,
+    "duration": 7.6,
+    "date": "2025-05-30",
+    "distance_km": 6804.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "YYZ",
+    "price": 593.46,
+    "duration": 8.7,
+    "date": "2025-05-29",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "YVR",
+    "destination": "BUD",
+    "price": 814.72,
+    "duration": 11.8,
+    "date": "2025-05-21",
+    "distance_km": 8679.2
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 840.2,
+    "duration": 10.2,
+    "date": "2025-05-19",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 259.21,
+    "duration": 2.4,
+    "date": "2025-05-27",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "LHR",
+    "price": 705.48,
+    "duration": 9.6,
+    "date": "2025-05-25",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "AMS",
+    "destination": "YYZ",
+    "price": 494.07,
+    "duration": 6.6,
+    "date": "2025-05-25",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "JFK",
     "destination": "WAW",
-    "price": 166.52,
-    "duration": 11.5,
-    "date": "2025-05-11"
+    "price": 615.17,
+    "duration": 8.1,
+    "date": "2025-05-24",
+    "distance_km": 6847.6
   },
   {
     "origin": "LHR",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-02",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "ZRH",
+    "price": 523.38,
+    "duration": 7.2,
+    "date": "2025-05-19",
+    "distance_km": 6310.0
+  },
+  {
+    "origin": "CDG",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 477.0
+  },
+  {
+    "origin": "FRA",
+    "destination": "LIS",
+    "price": 260.4,
+    "duration": 3.4,
+    "date": "2025-05-15",
+    "distance_km": 1874.1
+  },
+  {
+    "origin": "JFK",
+    "destination": "ZRH",
+    "price": 477.67,
+    "duration": 8.0,
+    "date": "2025-05-08",
+    "distance_km": 6310.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "PRG",
+    "price": 138.75,
+    "duration": 2.0,
+    "date": "2025-05-14",
+    "distance_km": 1044.0
+  },
+  {
+    "origin": "LAX",
+    "destination": "PRG",
+    "price": 876.37,
+    "duration": 12.0,
+    "date": "2025-05-11",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "LAX",
+    "destination": "BUD",
+    "price": 990.94,
+    "duration": 14.2,
+    "date": "2025-05-10",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "PRG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-23",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "LAX",
+    "destination": "BUD",
+    "price": 1000.72,
+    "duration": 13.3,
+    "date": "2025-05-31",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "PRG",
+    "destination": "YYZ",
+    "price": 558.13,
+    "duration": 8.4,
+    "date": "2025-05-17",
+    "distance_km": 6683.8
+  },
+  {
+    "origin": "YVR",
+    "destination": "LHR",
+    "price": 694.37,
+    "duration": 8.9,
+    "date": "2025-05-21",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "FRA",
+    "destination": "LAX",
+    "price": 971.02,
+    "duration": 13.3,
+    "date": "2025-05-25",
+    "distance_km": 9321.3
+  },
+  {
+    "origin": "PRG",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-18",
+    "distance_km": 277.8
+  },
+  {
+    "origin": "FRA",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-29",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-16",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 227.74,
+    "duration": 2.5,
+    "date": "2025-05-17",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LAX",
+    "price": 856.76,
+    "duration": 10.2,
+    "date": "2025-05-25",
+    "distance_km": 9535.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "ZRH",
+    "price": 151.46,
+    "duration": 1.9,
+    "date": "2025-05-03",
+    "distance_km": 1240.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "LAX",
+    "price": 358.48,
+    "duration": 5.2,
+    "date": "2025-05-09",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "LIS",
+    "price": 763.84,
+    "duration": 12.2,
+    "date": "2025-05-01",
+    "distance_km": 9137.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "BUD",
+    "price": 333.84,
+    "duration": 2.9,
+    "date": "2025-05-05",
+    "distance_km": 2480.5
+  },
+  {
+    "origin": "YYZ",
+    "destination": "WAW",
+    "price": 545.41,
+    "duration": 9.5,
+    "date": "2025-05-18",
+    "distance_km": 6934.3
+  },
+  {
+    "origin": "YVR",
     "destination": "JFK",
-    "price": 272.14,
-    "duration": 1.4,
-    "date": "2025-05-19"
+    "price": 407.62,
+    "duration": 4.5,
+    "date": "2025-05-10",
+    "distance_km": 3930.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.3,
+    "date": "2025-05-05",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "WAW",
+    "destination": "YVR",
+    "price": 670.13,
+    "duration": 9.8,
+    "date": "2025-05-03",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "LHR",
+    "destination": "YYZ",
+    "price": 510.55,
+    "duration": 6.1,
+    "date": "2025-05-28",
+    "distance_km": 5707.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "FRA",
+    "price": 752.08,
+    "duration": 9.2,
+    "date": "2025-05-03",
+    "distance_km": 8061.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "YVR",
+    "price": 809.97,
+    "duration": 11.2,
+    "date": "2025-05-15",
+    "distance_km": 8061.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 116.75,
+    "duration": 1.6,
+    "date": "2025-05-08",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "MAD",
+    "destination": "CDG",
+    "price": 176.16,
+    "duration": 1.8,
+    "date": "2025-05-07",
+    "distance_km": 1064.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-07",
+    "distance_km": 602.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "MAD",
+    "price": 290.08,
+    "duration": 3.7,
+    "date": "2025-05-14",
+    "distance_km": 1974.7
   },
   {
     "origin": "BUD",
     "destination": "CDG",
-    "price": 283.75,
+    "price": 199.57,
+    "duration": 2.1,
+    "date": "2025-05-26",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "YYZ",
+    "price": 528.66,
+    "duration": 6.4,
+    "date": "2025-05-23",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "LAX",
+    "destination": "AMS",
+    "price": 869.18,
+    "duration": 11.0,
+    "date": "2025-05-28",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "AMS",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-04",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "WAW",
+    "destination": "LIS",
+    "price": 308.5,
+    "duration": 3.3,
+    "date": "2025-05-31",
+    "distance_km": 2749.4
+  },
+  {
+    "origin": "MAD",
+    "destination": "PRG",
+    "price": 232.44,
+    "duration": 3.3,
+    "date": "2025-05-26",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "CDG",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-12",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "BUD",
+    "destination": "YYZ",
+    "price": 627.5,
+    "duration": 9.0,
+    "date": "2025-05-27",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "CDG",
+    "destination": "BUD",
+    "price": 159.46,
+    "duration": 2.3,
+    "date": "2025-05-06",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "CDG",
+    "destination": "BUD",
+    "price": 197.49,
+    "duration": 2.2,
+    "date": "2025-05-25",
+    "distance_km": 1248.0
+  },
+  {
+    "origin": "ZRH",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-23",
+    "distance_km": 602.9
+  },
+  {
+    "origin": "LAX",
+    "destination": "BUD",
+    "price": 1028.47,
+    "duration": 13.9,
+    "date": "2025-05-24",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "JFK",
+    "destination": "LIS",
+    "price": 433.76,
+    "duration": 5.8,
+    "date": "2025-05-24",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "LIS",
+    "destination": "LAX",
+    "price": 751.46,
+    "duration": 11.8,
+    "date": "2025-05-29",
+    "distance_km": 9137.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 245.96,
+    "duration": 2.6,
+    "date": "2025-05-28",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "FRA",
+    "destination": "LAX",
+    "price": 928.72,
+    "duration": 10.2,
+    "date": "2025-05-19",
+    "distance_km": 9321.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LAX",
+    "price": 974.95,
+    "duration": 10.9,
+    "date": "2025-05-10",
+    "distance_km": 9535.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 227.73,
+    "duration": 2.3,
+    "date": "2025-05-04",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "LIS",
+    "destination": "AMS",
+    "price": 282.83,
+    "duration": 3.4,
+    "date": "2025-05-11",
+    "distance_km": 1847.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "PRG",
+    "price": 637.98,
+    "duration": 9.6,
+    "date": "2025-05-12",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "WAW",
+    "price": 155.15,
+    "duration": 1.5,
+    "date": "2025-05-12",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "YYZ",
+    "destination": "BUD",
+    "price": 633.6,
+    "duration": 8.2,
+    "date": "2025-05-28",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "MAD",
+    "destination": "FRA",
+    "price": 213.53,
+    "duration": 2.2,
+    "date": "2025-05-15",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "VIE",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-22",
+    "distance_km": 214.9
+  },
+  {
+    "origin": "LAX",
+    "destination": "FRA",
+    "price": 905.04,
+    "duration": 12.0,
+    "date": "2025-05-31",
+    "distance_km": 9321.3
+  },
+  {
+    "origin": "LHR",
+    "destination": "LAX",
+    "price": 670.42,
+    "duration": 9.9,
+    "date": "2025-05-18",
+    "distance_km": 8760.2
+  },
+  {
+    "origin": "LAX",
+    "destination": "JFK",
+    "price": 425.57,
+    "duration": 4.3,
+    "date": "2025-05-18",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "VIE",
+    "destination": "YYZ",
+    "price": 505.56,
+    "duration": 8.6,
+    "date": "2025-05-27",
+    "distance_km": 6947.9
+  },
+  {
+    "origin": "FRA",
+    "destination": "AMS",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "VIE",
+    "price": 285.0,
     "duration": 2.9,
-    "date": "2025-05-24"
+    "date": "2025-05-03",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "PRG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-07",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "LHR",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.2,
+    "date": "2025-05-29",
+    "distance_km": 653.5
+  },
+  {
+    "origin": "YVR",
+    "destination": "CDG",
+    "price": 699.83,
+    "duration": 11.2,
+    "date": "2025-05-15",
+    "distance_km": 7925.2
+  },
+  {
+    "origin": "YYZ",
+    "destination": "LAX",
+    "price": 414.9,
+    "duration": 4.9,
+    "date": "2025-05-05",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "BUD",
+    "price": 106.53,
+    "duration": 1.3,
+    "date": "2025-05-12",
+    "distance_km": 804.5
+  },
+  {
+    "origin": "AMS",
+    "destination": "VIE",
+    "price": 142.02,
+    "duration": 1.7,
+    "date": "2025-05-07",
+    "distance_km": 959.3
+  },
+  {
+    "origin": "YYZ",
+    "destination": "AMS",
+    "price": 590.1,
+    "duration": 8.0,
+    "date": "2025-05-11",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "JFK",
+    "destination": "ZRH",
+    "price": 493.73,
+    "duration": 8.6,
+    "date": "2025-05-26",
+    "distance_km": 6310.0
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 141.82,
+    "duration": 1.5,
+    "date": "2025-05-25",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "PRG",
+    "destination": "JFK",
+    "price": 592.05,
+    "duration": 7.5,
+    "date": "2025-05-09",
+    "distance_km": 6551.0
+  },
+  {
+    "origin": "WAW",
+    "destination": "YYZ",
+    "price": 540.6,
+    "duration": 9.8,
+    "date": "2025-05-25",
+    "distance_km": 6934.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "ZRH",
+    "price": 660.59,
+    "duration": 9.6,
+    "date": "2025-05-20",
+    "distance_km": 8308.3
+  },
+  {
+    "origin": "WAW",
+    "destination": "CDG",
+    "price": 205.67,
+    "duration": 2.3,
+    "date": "2025-05-21",
+    "distance_km": 1342.8
+  },
+  {
+    "origin": "BUD",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-18",
+    "distance_km": 471.4
+  },
+  {
+    "origin": "LIS",
+    "destination": "LHR",
+    "price": 201.85,
+    "duration": 2.4,
+    "date": "2025-05-07",
+    "distance_km": 1564.8
+  },
+  {
+    "origin": "AMS",
+    "destination": "BUD",
+    "price": 176.35,
+    "duration": 2.1,
+    "date": "2025-05-18",
+    "distance_km": 1169.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "LIS",
+    "price": 314.54,
+    "duration": 2.5,
+    "date": "2025-05-29",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "BUD",
+    "destination": "AMS",
+    "price": 179.33,
+    "duration": 1.7,
+    "date": "2025-05-23",
+    "distance_km": 1169.0
+  },
+  {
+    "origin": "BUD",
+    "destination": "AMS",
+    "price": 162.57,
+    "duration": 1.8,
+    "date": "2025-05-07",
+    "distance_km": 1169.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "LAX",
+    "price": 898.25,
+    "duration": 12.4,
+    "date": "2025-05-21",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "PRG",
+    "destination": "MAD",
+    "price": 232.12,
+    "duration": 2.6,
+    "date": "2025-05-10",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "JFK",
+    "destination": "YYZ",
+    "price": 100,
+    "duration": 1.1,
+    "date": "2025-05-01",
+    "distance_km": 588.2
+  },
+  {
+    "origin": "CDG",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-13",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "YVR",
+    "destination": "JFK",
+    "price": 362.6,
+    "duration": 5.0,
+    "date": "2025-05-31",
+    "distance_km": 3930.0
+  },
+  {
+    "origin": "LIS",
+    "destination": "LHR",
+    "price": 197.18,
+    "duration": 2.6,
+    "date": "2025-05-24",
+    "distance_km": 1564.8
+  },
+  {
+    "origin": "LAX",
+    "destination": "YYZ",
+    "price": 404.9,
+    "duration": 4.1,
+    "date": "2025-05-13",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "VIE",
+    "price": 101.71,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "YYZ",
+    "price": 503.5,
+    "duration": 6.7,
+    "date": "2025-05-13",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "AMS",
+    "destination": "LAX",
+    "price": 776.43,
+    "duration": 10.3,
+    "date": "2025-05-05",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 242.57,
+    "duration": 2.5,
+    "date": "2025-05-31",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "WAW",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-30",
+    "distance_km": 548.9
+  },
+  {
+    "origin": "LIS",
+    "destination": "YVR",
+    "price": 753.97,
+    "duration": 10.4,
+    "date": "2025-05-07",
+    "distance_km": 8289.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "WAW",
+    "price": 128.16,
+    "duration": 1.6,
+    "date": "2025-05-22",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "LIS",
+    "destination": "YVR",
+    "price": 647.45,
+    "duration": 9.5,
+    "date": "2025-05-30",
+    "distance_km": 8289.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "LIS",
+    "price": 792.22,
+    "duration": 10.9,
+    "date": "2025-05-05",
+    "distance_km": 9137.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "VIE",
+    "price": 965.41,
+    "duration": 12.6,
+    "date": "2025-05-28",
+    "distance_km": 9853.9
+  },
+  {
+    "origin": "VIE",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-21",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "JFK",
+    "price": 508.88,
+    "duration": 6.9,
+    "date": "2025-05-10",
+    "distance_km": 5762.2
+  },
+  {
+    "origin": "PRG",
+    "destination": "MAD",
+    "price": 270.93,
+    "duration": 3.2,
+    "date": "2025-05-05",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "LAX",
+    "price": 979.83,
+    "duration": 13.4,
+    "date": "2025-05-31",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "LAX",
+    "destination": "YYZ",
+    "price": 343.38,
+    "duration": 4.2,
+    "date": "2025-05-27",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "VIE",
+    "destination": "LIS",
+    "price": 259.63,
+    "duration": 3.0,
+    "date": "2025-05-07",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "WAW",
+    "destination": "CDG",
+    "price": 193.97,
+    "duration": 2.5,
+    "date": "2025-05-19",
+    "distance_km": 1342.8
+  },
+  {
+    "origin": "WAW",
+    "destination": "ZRH",
+    "price": 139.85,
+    "duration": 1.8,
+    "date": "2025-05-29",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "ZRH",
+    "destination": "AMS",
+    "price": 101.35,
+    "duration": 1.0,
+    "date": "2025-05-02",
+    "distance_km": 603.7
+  },
+  {
+    "origin": "ZRH",
+    "destination": "WAW",
+    "price": 164.74,
+    "duration": 1.5,
+    "date": "2025-05-25",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "WAW",
+    "destination": "LIS",
+    "price": 279.33,
+    "duration": 3.1,
+    "date": "2025-05-19",
+    "distance_km": 2749.4
+  },
+  {
+    "origin": "JFK",
+    "destination": "LIS",
+    "price": 548.14,
+    "duration": 6.3,
+    "date": "2025-05-19",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "LHR",
+    "destination": "LAX",
+    "price": 887.28,
+    "duration": 10.4,
+    "date": "2025-05-27",
+    "distance_km": 8760.2
+  },
+  {
+    "origin": "BUD",
+    "destination": "YVR",
+    "price": 863.9,
+    "duration": 11.3,
+    "date": "2025-05-25",
+    "distance_km": 8679.2
+  },
+  {
+    "origin": "MAD",
+    "destination": "YYZ",
+    "price": 586.62,
+    "duration": 7.9,
+    "date": "2025-05-14",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "PRG",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-23",
+    "distance_km": 471.4
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 188.67,
+    "duration": 2.7,
+    "date": "2025-05-20",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "PRG",
+    "destination": "MAD",
+    "price": 232.86,
+    "duration": 3.3,
+    "date": "2025-05-04",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "PRG",
+    "destination": "AMS",
+    "price": 108.45,
+    "duration": 1.2,
+    "date": "2025-05-23",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "VIE",
+    "price": 578.8,
+    "duration": 8.8,
+    "date": "2025-05-07",
+    "distance_km": 6947.9
+  },
+  {
+    "origin": "VIE",
+    "destination": "WAW",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-17",
+    "distance_km": 548.9
+  },
+  {
+    "origin": "YVR",
+    "destination": "FRA",
+    "price": 745.9,
+    "duration": 10.9,
+    "date": "2025-05-23",
+    "distance_km": 8061.5
+  },
+  {
+    "origin": "JFK",
+    "destination": "FRA",
+    "price": 525.81,
+    "duration": 7.7,
+    "date": "2025-05-24",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "AMS",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-31",
+    "distance_km": 370.3
+  },
+  {
+    "origin": "FRA",
+    "destination": "LHR",
+    "price": 100.66,
+    "duration": 1.2,
+    "date": "2025-05-31",
+    "distance_km": 653.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-03",
+    "distance_km": 520.8
+  },
+  {
+    "origin": "PRG",
+    "destination": "MAD",
+    "price": 253.04,
+    "duration": 2.9,
+    "date": "2025-05-15",
+    "distance_km": 1750.5
+  },
+  {
+    "origin": "LAX",
+    "destination": "AMS",
+    "price": 720.82,
+    "duration": 11.0,
+    "date": "2025-05-29",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "WAW",
+    "destination": "MAD",
+    "price": 293.16,
+    "duration": 2.5,
+    "date": "2025-05-01",
+    "distance_km": 2271.0
+  },
+  {
+    "origin": "CDG",
+    "destination": "YYZ",
+    "price": 586.26,
+    "duration": 6.8,
+    "date": "2025-05-22",
+    "distance_km": 6019.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 548.9
+  },
+  {
+    "origin": "LIS",
+    "destination": "ZRH",
+    "price": 257.72,
+    "duration": 3.0,
+    "date": "2025-05-31",
+    "distance_km": 1723.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "YVR",
+    "price": 386.75,
+    "duration": 4.3,
+    "date": "2025-05-04",
+    "distance_km": 3345.6
+  },
+  {
+    "origin": "CDG",
+    "destination": "YYZ",
+    "price": 597.23,
+    "duration": 7.0,
+    "date": "2025-05-04",
+    "distance_km": 6019.5
+  },
+  {
+    "origin": "VIE",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-19",
+    "distance_km": 277.8
+  },
+  {
+    "origin": "MAD",
+    "destination": "LIS",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-17",
+    "distance_km": 513.2
+  },
+  {
+    "origin": "CDG",
+    "destination": "LIS",
+    "price": 216.48,
+    "duration": 2.7,
+    "date": "2025-05-19",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "VIE",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-20",
+    "distance_km": 277.8
+  },
+  {
+    "origin": "LHR",
+    "destination": "YVR",
+    "price": 732.22,
+    "duration": 9.5,
+    "date": "2025-05-01",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "PRG",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-09",
+    "distance_km": 471.4
+  },
+  {
+    "origin": "LHR",
+    "destination": "ZRH",
+    "price": 134.42,
+    "duration": 1.5,
+    "date": "2025-05-20",
+    "distance_km": 788.4
+  },
+  {
+    "origin": "PRG",
+    "destination": "LIS",
+    "price": 251.67,
+    "duration": 3.1,
+    "date": "2025-05-11",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "YYZ",
+    "price": 463.79,
+    "duration": 7.1,
+    "date": "2025-05-19",
+    "distance_km": 5740.5
+  },
+  {
+    "origin": "LAX",
+    "destination": "WAW",
+    "price": 800.17,
+    "duration": 10.7,
+    "date": "2025-05-16",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "YYZ",
+    "destination": "LIS",
+    "price": 496.8,
+    "duration": 8.0,
+    "date": "2025-05-31",
+    "distance_km": 5740.5
+  },
+  {
+    "origin": "CDG",
+    "destination": "VIE",
+    "price": 147.7,
+    "duration": 1.8,
+    "date": "2025-05-19",
+    "distance_km": 1035.2
+  },
+  {
+    "origin": "AMS",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-26",
+    "distance_km": 399.0
+  },
+  {
+    "origin": "ZRH",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-14",
+    "distance_km": 286.9
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 133.07,
+    "duration": 1.4,
+    "date": "2025-05-29",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "WAW",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-01",
+    "distance_km": 520.8
+  },
+  {
+    "origin": "YVR",
+    "destination": "WAW",
+    "price": 637.43,
+    "duration": 8.9,
+    "date": "2025-05-18",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 252.18,
+    "duration": 2.6,
+    "date": "2025-05-09",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "BUD",
+    "destination": "YVR",
+    "price": 714.06,
+    "duration": 9.7,
+    "date": "2025-05-05",
+    "distance_km": 8679.2
+  },
+  {
+    "origin": "YYZ",
+    "destination": "AMS",
+    "price": 592.34,
+    "duration": 7.1,
+    "date": "2025-05-22",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "LAX",
+    "destination": "WAW",
+    "price": 926.8,
+    "duration": 10.4,
+    "date": "2025-05-15",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "LIS",
+    "destination": "YYZ",
+    "price": 568.04,
+    "duration": 7.6,
+    "date": "2025-05-24",
+    "distance_km": 5740.5
+  },
+  {
+    "origin": "MAD",
+    "destination": "WAW",
+    "price": 322.15,
+    "duration": 3.2,
+    "date": "2025-05-20",
+    "distance_km": 2271.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-10",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "LHR",
+    "destination": "BUD",
+    "price": 188.52,
+    "duration": 2.9,
+    "date": "2025-05-27",
+    "distance_km": 1489.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "BUD",
+    "price": 664.61,
+    "duration": 8.7,
+    "date": "2025-05-08",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "FRA",
+    "destination": "MAD",
+    "price": 226.28,
+    "duration": 2.4,
+    "date": "2025-05-24",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "VIE",
+    "destination": "WAW",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-27",
+    "distance_km": 548.9
+  },
+  {
+    "origin": "JFK",
+    "destination": "FRA",
+    "price": 539.53,
+    "duration": 8.7,
+    "date": "2025-05-20",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "AMS",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-16",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "MAD",
+    "destination": "LAX",
+    "price": 932.18,
+    "duration": 10.3,
+    "date": "2025-05-22",
+    "distance_km": 9387.2
+  },
+  {
+    "origin": "VIE",
+    "destination": "YVR",
+    "price": 734.51,
+    "duration": 11.7,
+    "date": "2025-05-25",
+    "distance_km": 8525.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-12",
+    "distance_km": 602.9
+  },
+  {
+    "origin": "AMS",
+    "destination": "PRG",
+    "price": 118.64,
+    "duration": 1.2,
+    "date": "2025-05-21",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "LHR",
+    "price": 574.76,
+    "duration": 6.6,
+    "date": "2025-05-26",
+    "distance_km": 5707.2
+  },
+  {
+    "origin": "JFK",
+    "destination": "LAX",
+    "price": 396.77,
+    "duration": 4.2,
+    "date": "2025-05-26",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-26",
+    "distance_km": 510.9
+  },
+  {
+    "origin": "PRG",
+    "destination": "JFK",
+    "price": 587.59,
+    "duration": 7.1,
+    "date": "2025-05-16",
+    "distance_km": 6551.0
+  },
+  {
+    "origin": "BUD",
+    "destination": "LIS",
+    "price": 280.71,
+    "duration": 2.9,
+    "date": "2025-05-22",
+    "distance_km": 2480.5
+  },
+  {
+    "origin": "VIE",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.1,
+    "date": "2025-05-02",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "FRA",
+    "price": 187.21,
+    "duration": 2.5,
+    "date": "2025-05-16",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "FRA",
+    "price": 485.04,
+    "duration": 7.9,
+    "date": "2025-05-18",
+    "distance_km": 6342.8
+  },
+  {
+    "origin": "YVR",
+    "destination": "LHR",
+    "price": 629.08,
+    "duration": 10.7,
+    "date": "2025-05-30",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "YYZ",
+    "destination": "AMS",
+    "price": 472.2,
+    "duration": 7.3,
+    "date": "2025-05-24",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "AMS",
+    "destination": "WAW",
+    "price": 148.16,
+    "duration": 2.0,
+    "date": "2025-05-27",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "LAX",
+    "price": 430.82,
+    "duration": 4.8,
+    "date": "2025-05-29",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "WAW",
+    "destination": "CDG",
+    "price": 203.82,
+    "duration": 2.3,
+    "date": "2025-05-20",
+    "distance_km": 1342.8
+  },
+  {
+    "origin": "AMS",
+    "destination": "ZRH",
+    "price": 100,
+    "duration": 1.1,
+    "date": "2025-05-06",
+    "distance_km": 603.7
+  },
+  {
+    "origin": "JFK",
+    "destination": "FRA",
+    "price": 575.77,
+    "duration": 8.6,
+    "date": "2025-05-09",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "LAX",
+    "destination": "PRG",
+    "price": 966.4,
+    "duration": 11.1,
+    "date": "2025-05-22",
+    "distance_km": 9576.1
+  },
+  {
+    "origin": "LAX",
+    "destination": "YYZ",
+    "price": 441.9,
+    "duration": 4.7,
+    "date": "2025-05-15",
+    "distance_km": 3494.5
+  },
+  {
+    "origin": "CDG",
+    "destination": "PRG",
+    "price": 126.09,
+    "duration": 1.2,
+    "date": "2025-05-17",
+    "distance_km": 852.8
+  },
+  {
+    "origin": "WAW",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-03",
+    "distance_km": 540.6
+  },
+  {
+    "origin": "VIE",
+    "destination": "YYZ",
+    "price": 625.5,
+    "duration": 7.8,
+    "date": "2025-05-28",
+    "distance_km": 6947.9
+  },
+  {
+    "origin": "AMS",
+    "destination": "MAD",
+    "price": 234.78,
+    "duration": 2.5,
+    "date": "2025-05-10",
+    "distance_km": 1460.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "ZRH",
+    "price": 132.43,
+    "duration": 1.8,
+    "date": "2025-05-01",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "YYZ",
+    "destination": "MAD",
+    "price": 556.3,
+    "duration": 8.2,
+    "date": "2025-05-28",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "JFK",
+    "destination": "CDG",
+    "price": 450.29,
+    "duration": 6.3,
+    "date": "2025-05-28",
+    "distance_km": 5833.5
+  },
+  {
+    "origin": "MAD",
+    "destination": "YYZ",
+    "price": 575.84,
+    "duration": 8.1,
+    "date": "2025-05-12",
+    "distance_km": 6059.7
+  },
+  {
+    "origin": "FRA",
+    "destination": "LHR",
+    "price": 103.9,
+    "duration": 1.2,
+    "date": "2025-05-25",
+    "distance_km": 653.5
+  },
+  {
+    "origin": "FRA",
+    "destination": "YVR",
+    "price": 652.86,
+    "duration": 10.6,
+    "date": "2025-05-29",
+    "distance_km": 8061.5
+  },
+  {
+    "origin": "CDG",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-23",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "BUD",
+    "destination": "YYZ",
+    "price": 550.18,
+    "duration": 7.7,
+    "date": "2025-05-26",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "CDG",
+    "destination": "LIS",
+    "price": 230.12,
+    "duration": 2.8,
+    "date": "2025-05-15",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "CDG",
+    "destination": "VIE",
+    "price": 151.32,
+    "duration": 1.8,
+    "date": "2025-05-07",
+    "distance_km": 1035.2
+  },
+  {
+    "origin": "PRG",
+    "destination": "AMS",
+    "price": 104.97,
+    "duration": 1.3,
+    "date": "2025-05-01",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "AMS",
+    "price": 484.7,
+    "duration": 8.3,
+    "date": "2025-05-07",
+    "distance_km": 5847.6
+  },
+  {
+    "origin": "PRG",
+    "destination": "YYZ",
+    "price": 569.89,
+    "duration": 9.3,
+    "date": "2025-05-02",
+    "distance_km": 6683.8
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LIS",
+    "price": 228.17,
+    "duration": 2.5,
+    "date": "2025-05-20",
+    "distance_km": 1723.9
+  },
+  {
+    "origin": "LHR",
+    "destination": "LAX",
+    "price": 695.31,
+    "duration": 11.5,
+    "date": "2025-05-13",
+    "distance_km": 8760.2
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 261.43,
+    "duration": 3.2,
+    "date": "2025-05-18",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "PRG",
+    "destination": "CDG",
+    "price": 116.16,
+    "duration": 1.6,
+    "date": "2025-05-09",
+    "distance_km": 852.8
+  },
+  {
+    "origin": "CDG",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-19",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "LIS",
+    "price": 523.01,
+    "duration": 7.4,
+    "date": "2025-05-20",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "YVR",
+    "destination": "LIS",
+    "price": 634.11,
+    "duration": 10.3,
+    "date": "2025-05-07",
+    "distance_km": 8289.3
+  },
+  {
+    "origin": "MAD",
+    "destination": "LHR",
+    "price": 207.62,
+    "duration": 2.3,
+    "date": "2025-05-17",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "JFK",
+    "price": 624.28,
+    "duration": 8.8,
+    "date": "2025-05-28",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "WAW",
+    "destination": "LIS",
+    "price": 334.57,
+    "duration": 3.3,
+    "date": "2025-05-17",
+    "distance_km": 2749.4
+  },
+  {
+    "origin": "WAW",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-08",
+    "distance_km": 540.6
+  },
+  {
+    "origin": "VIE",
+    "destination": "MAD",
+    "price": 295.14,
+    "duration": 3.5,
+    "date": "2025-05-24",
+    "distance_km": 1805.8
+  },
+  {
+    "origin": "MAD",
+    "destination": "LHR",
+    "price": 196.57,
+    "duration": 2.0,
+    "date": "2025-05-09",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "BUD",
+    "destination": "MAD",
+    "price": 275.75,
+    "duration": 2.9,
+    "date": "2025-05-21",
+    "distance_km": 1974.7
+  },
+  {
+    "origin": "YYZ",
+    "destination": "YVR",
+    "price": 410.41,
+    "duration": 4.2,
+    "date": "2025-05-29",
+    "distance_km": 3345.6
+  },
+  {
+    "origin": "LIS",
+    "destination": "VIE",
+    "price": 246.97,
+    "duration": 2.6,
+    "date": "2025-05-20",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "LAX",
+    "destination": "JFK",
+    "price": 400.06,
+    "duration": 4.6,
+    "date": "2025-05-05",
+    "distance_km": 3974.3
+  },
+  {
+    "origin": "ZRH",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-01",
+    "distance_km": 477.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "AMS",
+    "price": 202.62,
+    "duration": 2.7,
+    "date": "2025-05-21",
+    "distance_km": 1460.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "PRG",
+    "price": 561.86,
+    "duration": 7.4,
+    "date": "2025-05-07",
+    "distance_km": 6683.8
+  },
+  {
+    "origin": "LHR",
+    "destination": "WAW",
+    "price": 224.64,
+    "duration": 2.2,
+    "date": "2025-05-12",
+    "distance_km": 1469.1
+  },
+  {
+    "origin": "AMS",
+    "destination": "LAX",
+    "price": 861.35,
+    "duration": 10.1,
+    "date": "2025-05-21",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "MAD",
+    "destination": "ZRH",
+    "price": 192.03,
+    "duration": 2.2,
+    "date": "2025-05-22",
+    "distance_km": 1240.0
+  },
+  {
+    "origin": "BUD",
+    "destination": "MAD",
+    "price": 296.11,
+    "duration": 3.3,
+    "date": "2025-05-26",
+    "distance_km": 1974.7
+  },
+  {
+    "origin": "AMS",
+    "destination": "VIE",
+    "price": 156.67,
+    "duration": 1.4,
+    "date": "2025-05-24",
+    "distance_km": 959.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "ZRH",
+    "price": 222.77,
+    "duration": 2.5,
+    "date": "2025-05-07",
+    "distance_km": 1723.9
+  },
+  {
+    "origin": "PRG",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-29",
+    "distance_km": 471.4
+  },
+  {
+    "origin": "LHR",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-09",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "CDG",
+    "destination": "LIS",
+    "price": 197.75,
+    "duration": 2.2,
+    "date": "2025-05-29",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "LIS",
+    "price": 720.41,
+    "duration": 10.6,
+    "date": "2025-05-26",
+    "distance_km": 8289.3
+  },
+  {
+    "origin": "CDG",
+    "destination": "PRG",
+    "price": 107.98,
+    "duration": 1.4,
+    "date": "2025-05-11",
+    "distance_km": 852.8
+  },
+  {
+    "origin": "BUD",
+    "destination": "JFK",
+    "price": 657.13,
+    "duration": 9.4,
+    "date": "2025-05-07",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "WAW",
+    "price": 735.51,
+    "duration": 10.0,
+    "date": "2025-05-21",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "LAX",
+    "price": 734.92,
+    "duration": 11.4,
+    "date": "2025-05-20",
+    "distance_km": 9137.3
+  },
+  {
+    "origin": "MAD",
+    "destination": "VIE",
+    "price": 244.3,
+    "duration": 3.2,
+    "date": "2025-05-06",
+    "distance_km": 1805.8
+  },
+  {
+    "origin": "CDG",
+    "destination": "LAX",
+    "price": 976.4,
+    "duration": 12.3,
+    "date": "2025-05-11",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "LHR",
+    "price": 194.31,
+    "duration": 2.8,
+    "date": "2025-05-06",
+    "distance_km": 1564.8
+  },
+  {
+    "origin": "WAW",
+    "destination": "JFK",
+    "price": 592.46,
+    "duration": 8.3,
+    "date": "2025-05-08",
+    "distance_km": 6847.6
+  },
+  {
+    "origin": "FRA",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-20",
+    "distance_km": 448.8
+  },
+  {
+    "origin": "LIS",
+    "destination": "YYZ",
+    "price": 520.02,
+    "duration": 8.0,
+    "date": "2025-05-04",
+    "distance_km": 5740.5
+  },
+  {
+    "origin": "LHR",
+    "destination": "MAD",
+    "price": 203.57,
+    "duration": 2.3,
+    "date": "2025-05-24",
+    "distance_km": 1245.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "YVR",
+    "price": 818.46,
+    "duration": 11.2,
+    "date": "2025-05-21",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "YYZ",
+    "destination": "VIE",
+    "price": 614.22,
+    "duration": 8.0,
+    "date": "2025-05-18",
+    "distance_km": 6947.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "JFK",
+    "price": 651.89,
+    "duration": 8.6,
+    "date": "2025-05-15",
+    "distance_km": 6310.0
+  },
+  {
+    "origin": "AMS",
+    "destination": "LHR",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 370.3
+  },
+  {
+    "origin": "AMS",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-23",
+    "distance_km": 365.7
+  },
+  {
+    "origin": "LAX",
+    "destination": "FRA",
+    "price": 897.77,
+    "duration": 12.7,
+    "date": "2025-05-26",
+    "distance_km": 9321.3
+  },
+  {
+    "origin": "LHR",
+    "destination": "ZRH",
+    "price": 129.49,
+    "duration": 1.3,
+    "date": "2025-05-15",
+    "distance_km": 788.4
+  },
+  {
+    "origin": "YYZ",
+    "destination": "VIE",
+    "price": 642.64,
+    "duration": 9.6,
+    "date": "2025-05-02",
+    "distance_km": 6947.9
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YVR",
+    "price": 787.81,
+    "duration": 10.0,
+    "date": "2025-05-31",
+    "distance_km": 8308.3
+  },
+  {
+    "origin": "VIE",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-27",
+    "distance_km": 277.8
+  },
+  {
+    "origin": "WAW",
+    "destination": "LAX",
+    "price": 917.8,
+    "duration": 13.6,
+    "date": "2025-05-21",
+    "distance_km": 9658.5
+  },
+  {
+    "origin": "LIS",
+    "destination": "AMS",
+    "price": 271.14,
+    "duration": 3.3,
+    "date": "2025-05-22",
+    "distance_km": 1847.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "PRG",
+    "price": 798.72,
+    "duration": 9.7,
+    "date": "2025-05-22",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 925.38,
+    "duration": 12.6,
+    "date": "2025-05-18",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "FRA",
+    "destination": "MAD",
+    "price": 200.4,
+    "duration": 2.0,
+    "date": "2025-05-16",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "WAW",
+    "price": 193.99,
+    "duration": 2.5,
+    "date": "2025-05-09",
+    "distance_km": 1342.8
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 133.45,
+    "duration": 1.3,
+    "date": "2025-05-30",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "WAW",
+    "destination": "AMS",
+    "price": 147.76,
+    "duration": 2.1,
+    "date": "2025-05-25",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "LAX",
+    "price": 936.29,
+    "duration": 11.6,
+    "date": "2025-05-15",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "JFK",
+    "destination": "BUD",
+    "price": 563.09,
+    "duration": 8.0,
+    "date": "2025-05-13",
+    "distance_km": 7016.3
+  },
+  {
+    "origin": "JFK",
+    "destination": "MAD",
+    "price": 628.88,
+    "duration": 8.1,
+    "date": "2025-05-31",
+    "distance_km": 5762.2
+  },
+  {
+    "origin": "LAX",
+    "destination": "BUD",
+    "price": 1150.19,
+    "duration": 13.7,
+    "date": "2025-05-14",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "WAW",
+    "destination": "JFK",
+    "price": 580.95,
+    "duration": 8.9,
+    "date": "2025-05-01",
+    "distance_km": 6847.6
+  },
+  {
+    "origin": "LHR",
+    "destination": "LIS",
+    "price": 229.3,
+    "duration": 2.3,
+    "date": "2025-05-31",
+    "distance_km": 1564.8
+  },
+  {
+    "origin": "AMS",
+    "destination": "JFK",
+    "price": 519.01,
+    "duration": 8.4,
+    "date": "2025-05-10",
+    "distance_km": 5847.6
+  },
+  {
+    "origin": "LAX",
+    "destination": "BUD",
+    "price": 810.57,
+    "duration": 10.8,
+    "date": "2025-05-05",
+    "distance_km": 10031.1
+  },
+  {
+    "origin": "VIE",
+    "destination": "LAX",
+    "price": 879.63,
+    "duration": 12.0,
+    "date": "2025-05-31",
+    "distance_km": 9853.9
+  },
+  {
+    "origin": "MAD",
+    "destination": "FRA",
+    "price": 183.37,
+    "duration": 2.6,
+    "date": "2025-05-12",
+    "distance_km": 1421.9
+  },
+  {
+    "origin": "AMS",
+    "destination": "WAW",
+    "price": 142.85,
+    "duration": 1.7,
+    "date": "2025-05-18",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "JFK",
+    "destination": "PRG",
+    "price": 678.49,
+    "duration": 9.3,
+    "date": "2025-05-20",
+    "distance_km": 6551.0
+  },
+  {
+    "origin": "MAD",
+    "destination": "WAW",
+    "price": 333.95,
+    "duration": 2.9,
+    "date": "2025-05-04",
+    "distance_km": 2271.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "JFK",
+    "price": 591.33,
+    "duration": 9.0,
+    "date": "2025-05-29",
+    "distance_km": 6804.9
+  },
+  {
+    "origin": "VIE",
+    "destination": "FRA",
+    "price": 103.26,
+    "duration": 1.1,
+    "date": "2025-05-11",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "LIS",
+    "destination": "AMS",
+    "price": 288.01,
+    "duration": 2.8,
+    "date": "2025-05-30",
+    "distance_km": 1847.3
+  },
+  {
+    "origin": "PRG",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "JFK",
+    "destination": "VIE",
+    "price": 518.26,
+    "duration": 7.8,
+    "date": "2025-05-03",
+    "distance_km": 6804.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "AMS",
+    "price": 171.91,
+    "duration": 1.8,
+    "date": "2025-05-06",
+    "distance_km": 1100.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "JFK",
+    "price": 506.71,
+    "duration": 8.3,
+    "date": "2025-05-18",
+    "distance_km": 5833.5
+  },
+  {
+    "origin": "AMS",
+    "destination": "YVR",
+    "price": 638.05,
+    "duration": 9.2,
+    "date": "2025-05-14",
+    "distance_km": 7707.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "PRG",
+    "price": 130.63,
+    "duration": 1.5,
+    "date": "2025-05-20",
+    "distance_km": 1044.0
+  },
+  {
+    "origin": "LHR",
+    "destination": "ZRH",
+    "price": 128.55,
+    "duration": 1.3,
+    "date": "2025-05-08",
+    "distance_km": 788.4
+  },
+  {
+    "origin": "MAD",
+    "destination": "BUD",
+    "price": 287.31,
+    "duration": 2.9,
+    "date": "2025-05-18",
+    "distance_km": 1974.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "CDG",
+    "price": 203.7,
+    "duration": 2.2,
+    "date": "2025-05-15",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "ZRH",
+    "destination": "YYZ",
+    "price": 508.26,
+    "duration": 7.1,
+    "date": "2025-05-10",
+    "distance_km": 6491.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "FRA",
+    "price": 100,
+    "duration": 1.1,
+    "date": "2025-05-30",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "VIE",
+    "destination": "LHR",
+    "price": 158.32,
+    "duration": 2.1,
+    "date": "2025-05-15",
+    "distance_km": 1274.5
+  },
+  {
+    "origin": "LIS",
+    "destination": "VIE",
+    "price": 299.77,
+    "duration": 3.0,
+    "date": "2025-05-17",
+    "distance_km": 2305.3
+  },
+  {
+    "origin": "YVR",
+    "destination": "AMS",
+    "price": 610.15,
+    "duration": 9.6,
+    "date": "2025-05-04",
+    "distance_km": 7707.0
+  },
+  {
+    "origin": "YVR",
+    "destination": "LHR",
+    "price": 619.47,
+    "duration": 8.9,
+    "date": "2025-05-31",
+    "distance_km": 7578.7
+  },
+  {
+    "origin": "LIS",
+    "destination": "MAD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-22",
+    "distance_km": 513.2
+  },
+  {
+    "origin": "YYZ",
+    "destination": "AMS",
+    "price": 460.34,
+    "duration": 7.5,
+    "date": "2025-05-30",
+    "distance_km": 5989.4
+  },
+  {
+    "origin": "LIS",
+    "destination": "PRG",
+    "price": 274.71,
+    "duration": 2.9,
+    "date": "2025-05-31",
+    "distance_km": 2229.3
+  },
+  {
+    "origin": "MAD",
+    "destination": "LAX",
+    "price": 879.42,
+    "duration": 12.2,
+    "date": "2025-05-17",
+    "distance_km": 9387.2
+  },
+  {
+    "origin": "LIS",
+    "destination": "CDG",
+    "price": 199.09,
+    "duration": 2.4,
+    "date": "2025-05-18",
+    "distance_km": 1470.2
+  },
+  {
+    "origin": "LHR",
+    "destination": "CDG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-27",
+    "distance_km": 347.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "CDG",
+    "price": 504.64,
+    "duration": 8.2,
+    "date": "2025-05-22",
+    "distance_km": 6019.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LIS",
+    "price": 262.15,
+    "duration": 3.2,
+    "date": "2025-05-25",
+    "distance_km": 1723.9
+  },
+  {
+    "origin": "YYZ",
+    "destination": "YVR",
+    "price": 356.52,
+    "duration": 4.3,
+    "date": "2025-05-10",
+    "distance_km": 3345.6
+  },
+  {
+    "origin": "YVR",
+    "destination": "PRG",
+    "price": 702.96,
+    "duration": 11.2,
+    "date": "2025-05-09",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "AMS",
+    "destination": "YVR",
+    "price": 689.36,
+    "duration": 9.7,
+    "date": "2025-05-06",
+    "distance_km": 7707.0
+  },
+  {
+    "origin": "JFK",
+    "destination": "FRA",
+    "price": 538.67,
+    "duration": 8.4,
+    "date": "2025-05-14",
+    "distance_km": 6188.5
+  },
+  {
+    "origin": "ZRH",
+    "destination": "MAD",
+    "price": 185.25,
+    "duration": 2.2,
+    "date": "2025-05-29",
+    "distance_km": 1240.0
+  },
+  {
+    "origin": "LAX",
+    "destination": "CDG",
+    "price": 938.83,
+    "duration": 12.0,
+    "date": "2025-05-04",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "FRA",
+    "destination": "PRG",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-06",
+    "distance_km": 406.9
+  },
+  {
+    "origin": "WAW",
+    "destination": "BUD",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-13",
+    "distance_km": 540.6
+  },
+  {
+    "origin": "FRA",
+    "destination": "LIS",
+    "price": 267.08,
+    "duration": 3.5,
+    "date": "2025-05-10",
+    "distance_km": 1874.1
+  },
+  {
+    "origin": "CDG",
+    "destination": "VIE",
+    "price": 154.57,
+    "duration": 1.6,
+    "date": "2025-05-16",
+    "distance_km": 1035.2
+  },
+  {
+    "origin": "YVR",
+    "destination": "WAW",
+    "price": 650.26,
+    "duration": 9.1,
+    "date": "2025-05-25",
+    "distance_km": 8246.3
+  },
+  {
+    "origin": "AMS",
+    "destination": "LAX",
+    "price": 867.87,
+    "duration": 12.6,
+    "date": "2025-05-25",
+    "distance_km": 8956.1
+  },
+  {
+    "origin": "WAW",
+    "destination": "ZRH",
+    "price": 161.1,
+    "duration": 1.9,
+    "date": "2025-05-09",
+    "distance_km": 1031.1
+  },
+  {
+    "origin": "JFK",
+    "destination": "LHR",
+    "price": 449.81,
+    "duration": 5.9,
+    "date": "2025-05-07",
+    "distance_km": 5540.0
+  },
+  {
+    "origin": "LIS",
+    "destination": "JFK",
+    "price": 531.45,
+    "duration": 7.6,
+    "date": "2025-05-20",
+    "distance_km": 5404.8
+  },
+  {
+    "origin": "AMS",
+    "destination": "PRG",
+    "price": 118.64,
+    "duration": 1.1,
+    "date": "2025-05-25",
+    "distance_km": 705.0
+  },
+  {
+    "origin": "FRA",
+    "destination": "WAW",
+    "price": 116.12,
+    "duration": 1.5,
+    "date": "2025-05-17",
+    "distance_km": 896.6
+  },
+  {
+    "origin": "PRG",
+    "destination": "LHR",
+    "price": 155.86,
+    "duration": 1.9,
+    "date": "2025-05-25",
+    "distance_km": 1044.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "FRA",
+    "price": 644.2,
+    "duration": 8.7,
+    "date": "2025-05-24",
+    "distance_km": 6342.8
+  },
+  {
+    "origin": "YYZ",
+    "destination": "FRA",
+    "price": 618.75,
+    "duration": 9.1,
+    "date": "2025-05-15",
+    "distance_km": 6342.8
+  },
+  {
+    "origin": "PRG",
+    "destination": "YVR",
+    "price": 835.15,
+    "duration": 11.4,
+    "date": "2025-05-30",
+    "distance_km": 8252.9
+  },
+  {
+    "origin": "CDG",
+    "destination": "YVR",
+    "price": 675.36,
+    "duration": 8.7,
+    "date": "2025-05-31",
+    "distance_km": 7925.2
+  },
+  {
+    "origin": "ZRH",
+    "destination": "LAX",
+    "price": 854.22,
+    "duration": 10.7,
+    "date": "2025-05-01",
+    "distance_km": 9535.0
+  },
+  {
+    "origin": "YYZ",
+    "destination": "BUD",
+    "price": 553.25,
+    "duration": 8.5,
+    "date": "2025-05-27",
+    "distance_km": 7154.4
+  },
+  {
+    "origin": "CDG",
+    "destination": "LAX",
+    "price": 808.65,
+    "duration": 10.2,
+    "date": "2025-05-05",
+    "distance_km": 9102.7
+  },
+  {
+    "origin": "FRA",
+    "destination": "VIE",
+    "price": 100,
+    "duration": 1.0,
+    "date": "2025-05-03",
+    "distance_km": 621.0
+  },
+  {
+    "origin": "WAW",
+    "destination": "YYZ",
+    "price": 634.12,
+    "duration": 9.0,
+    "date": "2025-05-14",
+    "distance_km": 6934.3
+  },
+  {
+    "origin": "LIS",
+    "destination": "FRA",
+    "price": 282.2,
+    "duration": 3.4,
+    "date": "2025-05-15",
+    "distance_km": 1874.1
   }
 ]

@@ -33,6 +33,15 @@ interface Airport {
   Longitude: number;
 }
 
+// define flight data structure
+interface Flight {
+  origin: string;
+  destination: string;
+  price: number;
+  duration: number; // assuming duration is in hours
+  date: string; // date string format 'yyyy-mm-dd'
+}
+
 // constants for styling
 const totalWidth = window.innerWidth;
 const totalHeight = window.innerHeight;
@@ -41,8 +50,8 @@ const strokeColor = '#fff'; // restore white stroke
 const defaultStrokeWidth = 0.5;
 const mapWidth = totalWidth * (3 / 4); // width of the map area (updated to match new panel width)
 
-// constants for airport styling
-const airportRadius = 15;
+// constants for airport stylings
+const airportRadius = 25;
 const airportFill = '#1E90FF';
 const airportStroke = '#ffffff';
 const airportStrokeWidth = 1.5;
@@ -71,6 +80,427 @@ const WorldMap: React.FC = () => {
   const animationFrameRef = useRef<number | null>(null);
   // reference to store currently selected airport
   const selectedAirportRef = useRef<SVGCircleElement | null>(null);
+  // reference to store hovered airports for each hand
+  const hoveredAirportsRef = useRef<{
+    left: Set<SVGCircleElement>;
+    right: Set<SVGCircleElement>;
+  }>({ left: new Set(), right: new Set() });
+
+  // state for flight data - changed to refs
+  const allFlights = useRef<Flight[]>([]);
+  const filteredFlights = useRef<Flight[]>([]);
+
+  // function to update the info panel with hovered airports, flights, and distributions
+  const updateInfoPanel = () => {
+    const infoPanel = d3.select('.info-panel');
+    if (infoPanel.empty()) return;
+
+    // get iata codes for origins and destinations
+    const originIatas = Array.from(hoveredAirportsRef.current.left).map(
+      (el) => (d3.select(el).datum() as Airport).IATA
+    );
+    const destinationIatas = Array.from(hoveredAirportsRef.current.right).map(
+      (el) => (d3.select(el).datum() as Airport).IATA
+    );
+
+    // filter flights
+    let currentFilteredFlights: Flight[] = [];
+    if (originIatas.length > 0 && destinationIatas.length > 0) {
+      currentFilteredFlights = allFlights.current.filter(
+        (flight) =>
+          originIatas.includes(flight.origin) &&
+          destinationIatas.includes(flight.destination)
+      );
+    } else if (originIatas.length > 0) {
+      // show flights originating from hovered left airports
+      currentFilteredFlights = allFlights.current.filter((flight) =>
+        originIatas.includes(flight.origin)
+      );
+    } else if (destinationIatas.length > 0) {
+      // show flights destined for hovered right airports
+      currentFilteredFlights = allFlights.current.filter((flight) =>
+        destinationIatas.includes(flight.destination)
+      );
+    }
+    // update react state for filtered flights - changed to update ref
+    filteredFlights.current = currentFilteredFlights;
+
+    // --- start d3 rendering (only for airport lists in this function) ---
+    // update origins (left hand)
+    const originsBox = infoPanel.select('.origins-box .content'); // select content div
+    originsBox.selectAll('div').remove(); // clear previous items
+
+    // get first 3 airports and count remaining
+    const leftAirports = Array.from(hoveredAirportsRef.current.left);
+    const leftToShow = leftAirports.slice(0, 3);
+    const leftRemaining = leftAirports.length - 3;
+
+    leftToShow.forEach((airport) => {
+      const data = d3.select(airport).datum() as Airport;
+      originsBox
+        .append('div')
+        .style('background', 'rgba(232, 27, 35, 0.3)')
+        .style('padding', '8px 12px')
+        .style('borderRadius', '6px')
+        .style('fontSize', '18px')
+        .style('fontWeight', '600')
+        .text(`${data.IATA} (${data.City})`);
+    });
+
+    // add "more" indicator if needed
+    if (leftRemaining > 0) {
+      originsBox
+        .append('div')
+        .style('background', 'rgba(232, 27, 35, 0.3)')
+        .style('padding', '8px 12px')
+        .style('borderRadius', '6px')
+        .style('fontSize', '18px')
+        .style('fontWeight', '600')
+        .style('opacity', '0.7')
+        .text(`and ${leftRemaining} more...`);
+    }
+
+    // update destinations (right hand)
+    const destinationsBox = infoPanel.select('.destinations-box .content'); // select content div
+    destinationsBox.selectAll('div').remove(); // clear previous items
+
+    // get first 3 airports and count remaining
+    const rightAirports = Array.from(hoveredAirportsRef.current.right);
+    const rightToShow = rightAirports.slice(0, 3);
+    const rightRemaining = rightAirports.length - 3;
+
+    rightToShow.forEach((airport) => {
+      const data = d3.select(airport).datum() as Airport;
+      destinationsBox
+        .append('div')
+        .style('background', 'rgba(0, 174, 243, 0.3)')
+        .style('padding', '8px 12px')
+        .style('borderRadius', '6px')
+        .style('fontSize', '18px')
+        .style('fontWeight', '600')
+        .text(`${data.IATA} (${data.City})`);
+    });
+
+    // add "more" indicator if needed
+    if (rightRemaining > 0) {
+      destinationsBox
+        .append('div')
+        .style('background', 'rgba(0, 174, 243, 0.3)')
+        .style('padding', '8px 12px')
+        .style('borderRadius', '6px')
+        .style('fontSize', '18px')
+        .style('fontWeight', '600')
+        .style('opacity', '0.7')
+        .text(`and ${rightRemaining} more...`);
+    }
+
+    // --- d3 rendering for distributions (histograms) ---
+    const distributionsContainer = infoPanel.select<HTMLDivElement>(
+      '.distributions-container'
+    );
+    distributionsContainer.selectAll('*').remove(); // clear previous content
+
+    const flightsToAnalyze = filteredFlights.current;
+    const originsSelected = hoveredAirportsRef.current.left.size > 0;
+    const destinationsSelected = hoveredAirportsRef.current.right.size > 0;
+
+    if (!originsSelected || !destinationsSelected) {
+      // message when not hovering both origins and destinations
+      distributionsContainer
+        .append('div')
+        .style('color', 'rgba(255, 255, 255, 0.5)')
+        .text(
+          'hover over origins (left) and destinations (right) to see flight distributions.'
+        );
+    } else if (flightsToAnalyze.length === 0) {
+      // message when airports selected but no flights match
+      distributionsContainer
+        .append('div')
+        .style('color', 'rgba(255, 255, 255, 0.5)')
+        .text('no flight data available for distribution analysis.');
+    } else {
+      // proceed with histogram generation
+      const prices = flightsToAnalyze.map((f) => f.price);
+      const durations = flightsToAnalyze.map((f) => f.duration);
+      const dates = flightsToAnalyze.map((f) => new Date(f.date)); // use actual dates
+
+      // histogram layout constants
+      const histWidth = panelWidth - 60; // adjust for padding/margins
+      const histHeight = 40; // further reduced height
+      const histMargin = { top: 0, right: 10, bottom: 20, left: 30 }; // reduced top/bottom margins
+      const numBins = 10; // number of bins for histograms
+      const histogramBarFill = 'rgba(255, 255, 255, 0.4)'; // uniform bar color
+
+      // --- histogram helper functions ---
+
+      // helper for linear scale histograms (price, duration)
+      const createLinearHistogram = (
+        data: number[],
+        title: string,
+        unit: string = ''
+      ) => {
+        const histContainer = distributionsContainer
+          .append('div')
+          .style('display', 'flex')
+          .style('flex-direction', 'column')
+          .style('gap', '2px');
+
+        histContainer
+          .append('label')
+          .style('color', 'rgba(255, 255, 255, 0.75)')
+          .style('font-size', '16px')
+          .style('font-weight', '500')
+          .style('text-transform', 'lowercase')
+          .style('letter-spacing', '0.05em')
+          .text(title);
+
+        const svg = histContainer
+          .append('svg')
+          .attr('width', histWidth + histMargin.left + histMargin.right)
+          .attr('height', histHeight + histMargin.top + histMargin.bottom)
+          .append('g')
+          .attr('transform', `translate(${histMargin.left},${histMargin.top})`);
+
+        const [minVal, maxVal] = d3.extent(data);
+        if (minVal === undefined || maxVal === undefined) return;
+
+        const xScale = d3
+          .scaleLinear()
+          .domain([minVal, maxVal])
+          .range([0, histWidth]);
+        svg
+          .append('g')
+          .attr('transform', `translate(0,${histHeight})`)
+          .call(
+            d3
+              .axisBottom(xScale)
+              .ticks(5)
+              .tickFormat(
+                (d) =>
+                  `${unit === '$' ? unit : ''}${d}${unit !== '$' ? unit : ''}`
+              )
+          )
+          .selectAll('text')
+          .style('fill', panelTextColor);
+        svg.selectAll('path, line').style('stroke', panelTextColor);
+
+        // Explicitly type the histogram generator for numbers
+        const histogram = d3
+          .histogram<number, number>()
+          .value((d) => d)
+          .domain([minVal, maxVal])
+          .thresholds(xScale.ticks(numBins));
+        const bins: d3.Bin<number, number>[] = histogram(data);
+
+        // Check if bins is empty or contains invalid data before proceeding
+        if (!bins || bins.length === 0 || bins[0] === undefined) {
+          console.warn('Histogram bins calculation failed for linear data.');
+          return; // Avoid errors if bins are invalid
+        }
+
+        const yMax = d3.max(bins, (d) => d.length) ?? 0;
+        const yScale = d3
+          .scaleLinear()
+          .range([histHeight, 0])
+          .domain([0, yMax]);
+
+        svg
+          .selectAll('rect')
+          .data(bins)
+          .join('rect')
+          .attr('x', (d) => xScale(d.x0!) + 1)
+          .attr('width', (d) => Math.max(0, xScale(d.x1!) - xScale(d.x0!) - 1))
+          .attr('y', (d) => yScale(d.length))
+          .attr('height', (d) => histHeight - yScale(d.length))
+          .style('fill', histogramBarFill);
+      };
+
+      // helper for time scale histograms (date)
+      const createTimeHistogram = (data: Date[], title: string) => {
+        const histContainer = distributionsContainer
+          .append('div')
+          .style('display', 'flex')
+          .style('flex-direction', 'column')
+          .style('gap', '2px');
+
+        histContainer
+          .append('label')
+          .style('color', 'rgba(255, 255, 255, 0.75)')
+          .style('font-size', '16px')
+          .style('font-weight', '500')
+          .style('text-transform', 'lowercase')
+          .style('letter-spacing', '0.05em')
+          .text(title);
+
+        const svg = histContainer
+          .append('svg')
+          .attr('width', histWidth + histMargin.left + histMargin.right)
+          .attr('height', histHeight + histMargin.top + histMargin.bottom)
+          .append('g')
+          .attr('transform', `translate(${histMargin.left},${histMargin.top})`);
+
+        const [minVal, maxVal] = d3.extent(data);
+        if (minVal === undefined || maxVal === undefined) return;
+
+        const xScale = d3
+          .scaleTime()
+          .domain([minVal, maxVal])
+          .range([0, histWidth]);
+        svg
+          .append('g')
+          .attr('transform', `translate(0,${histHeight})`)
+          // use a suitable time tick format
+          .call(
+            d3
+              .axisBottom(xScale)
+              .ticks(5)
+              .tickFormat(
+                d3.timeFormat('%b %d') as (
+                  domainValue: Date | d3.NumberValue,
+                  index: number
+                ) => string
+              )
+          )
+          .selectAll('text')
+          .style('fill', panelTextColor);
+        svg.selectAll('path, line').style('stroke', panelTextColor);
+
+        // using scale.ticks might be simpler for time thresholds
+        const histogram = d3
+          .histogram<Date, Date>()
+          .value((d) => d)
+          .domain([minVal, maxVal])
+          .thresholds(xScale.ticks(numBins)); // use scale ticks for thresholds
+        const bins: d3.Bin<Date, Date>[] = histogram(data);
+
+        // Check if bins is empty or contains invalid data before proceeding
+        if (!bins || bins.length === 0 || bins[0] === undefined) {
+          console.warn('Histogram bins calculation failed for time data.');
+          return; // Avoid errors if bins are invalid
+        }
+
+        const yMax = d3.max(bins, (d) => d.length) ?? 0;
+        const yScale = d3
+          .scaleLinear()
+          .range([histHeight, 0])
+          .domain([0, yMax]);
+
+        svg
+          .selectAll('rect')
+          .data(bins)
+          .join('rect')
+          .attr('x', (d) => xScale(d.x0!) + 1)
+          .attr('width', (d) => Math.max(0, xScale(d.x1!) - xScale(d.x0!) - 1))
+          .attr('y', (d) => yScale(d.length))
+          .attr('height', (d) => histHeight - yScale(d.length))
+          .style('fill', histogramBarFill);
+      };
+
+      // --- end histogram helper functions ---
+
+      // create the three histograms using specific helpers
+      createLinearHistogram(prices, 'price distribution', '$');
+      createLinearHistogram(durations, 'flight time distribution', 'h');
+      createTimeHistogram(dates, 'date');
+    }
+
+    // --- d3 rendering for flights list ---
+    const flightsListContainer =
+      infoPanel.select<HTMLDivElement>('.flights-list');
+    flightsListContainer.selectAll('*').remove(); // clear previous items
+
+    const flightsToShow = filteredFlights.current;
+    const numToShow = 10;
+
+    if (
+      hoveredAirportsRef.current.left.size === 0 ||
+      hoveredAirportsRef.current.right.size === 0
+    ) {
+      // message when not hovering both origins and destinations
+      flightsListContainer
+        .append('div')
+        .style('color', 'rgba(255, 255, 255, 0.5)')
+        .style('text-align', 'center')
+        .style('padding-top', '20px')
+        .text(
+          'select origins (left) and destinations (right) to see available flights.'
+        );
+    } else if (flightsToShow.length === 0) {
+      // message when airports selected but no flights match
+      flightsListContainer
+        .append('div')
+        .style('color', 'rgba(255, 255, 255, 0.5)')
+        .style('text-align', 'center')
+        .style('padding-top', '20px')
+        .text('no direct flights found for the current selection.');
+    } else {
+      // render flight items using d3
+      flightsToShow.slice(0, numToShow).forEach((flight) => {
+        const item = flightsListContainer
+          .append('div')
+          .attr('class', 'flight-item')
+          .style('padding', '12px')
+          .style('border-radius', '6px')
+          .style('background', 'rgba(255, 255, 255, 0.07)')
+          .style('display', 'flex')
+          .style('flex-direction', 'column')
+          .style('gap', '8px');
+
+        const header = item
+          .append('div')
+          .style('display', 'flex')
+          .style('justify-content', 'space-between')
+          .style('align-items', 'center');
+
+        header
+          .append('span')
+          .style('font-weight', '600')
+          .style('font-size', '16px')
+          .text(`${flight.origin} → ${flight.destination}`);
+
+        header
+          .append('span')
+          .style('color', 'rgba(255, 255, 255, 0.7)')
+          .style('font-weight', '500')
+          .style('font-size', '16px')
+          .text(`$${flight.price.toFixed(2)}`);
+
+        const details = item
+          .append('div')
+          .style('display', 'flex')
+          .style('justify-content', 'space-between')
+          .style('font-size', '14px')
+          .style('color', 'rgba(255, 255, 255, 0.6)');
+
+        // assuming airline isn't in data, adding placeholder
+        details.append('span').text('airline placeholder');
+        details.append('span').text(`${flight.duration.toFixed(1)}h`);
+
+        const flightDate = new Date(flight.date);
+        const formattedDate = flightDate.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        item
+          .append('div')
+          .style('font-size', '14px')
+          .style('color', 'rgba(255, 255, 255, 0.5)')
+          .text(formattedDate);
+      });
+
+      if (flightsToShow.length > numToShow) {
+        flightsListContainer
+          .append('div')
+          .style('color', 'rgba(255, 255, 255, 0.5)')
+          .style('font-size', '14px')
+          .style('text-align', 'center')
+          .style('padding-top', '8px')
+          .text(`... and ${flightsToShow.length - numToShow} more flights`);
+      }
+    }
+    // --- end d3 rendering ---
+  };
 
   useEffect(() => {
     // add guard clause for svg ref
@@ -107,16 +537,22 @@ const WorldMap: React.FC = () => {
     const g = svg.append('g'); // main group for transformations
     gRef.current = g.node();
 
-    // load both data files using Promise.all
+    // load all three data files using Promise.all
     Promise.all([
       d3.json<WorldTopology>('/src/assets/world110.topo.json'),
       d3.json<Airport[]>('/src/assets/airports.json'),
+      d3.json<Flight[]>('/src/assets/flights.json'), // load flight data
     ])
-      .then(([topology, airports]) => {
-        if (!topology || !topology.objects.countries || !airports) {
+      .then(([topology, airports, flights]) => {
+        // add flights to destructuring
+        if (!topology || !topology.objects.countries || !airports || !flights) {
+          // check flights
           console.error('failed to load data.');
           return;
         }
+
+        // setAllFlights(flights); // store all flights in state - changed to ref
+        allFlights.current = flights;
 
         // explicitly type the feature collection
         const geoFeature = topojson.feature(
@@ -195,6 +631,14 @@ const WorldMap: React.FC = () => {
                 event.element.classList.contains('airport') &&
                 event.element !== selectedAirportRef.current // skip if already selected
               ) {
+                const airport = event.element as SVGCircleElement;
+
+                // add to appropriate hand's set
+                if (event.handedness) {
+                  hoveredAirportsRef.current[event.handedness].add(airport);
+                  updateInfoPanel();
+                }
+
                 d3.select(event.element)
                   .attr('fill', airportHighlightFill)
                   .attr('stroke', airportHighlightStroke)
@@ -212,6 +656,14 @@ const WorldMap: React.FC = () => {
                 event.element &&
                 event.element.classList.contains('airport')
               ) {
+                const airport = event.element as SVGCircleElement;
+
+                // remove from appropriate hand's set
+                if (event.handedness) {
+                  hoveredAirportsRef.current[event.handedness].delete(airport);
+                  updateInfoPanel();
+                }
+
                 // only reset if not selected
                 if (event.element !== selectedAirportRef.current) {
                   d3.select(event.element)
@@ -351,243 +803,52 @@ const WorldMap: React.FC = () => {
           width: `${panelWidth}px`,
           background: panelBackground,
           color: panelTextColor,
-          padding: '36px',
+          padding: '24px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           zIndex: 1000,
-          fontSize: '18px',
+          fontSize: '16px',
           border: '1px solid rgba(255, 255, 255, 0.15)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '28px',
+          gap: '16px',
         }}
       >
-        {/* filters section title */}
+        {/* section title - renamed */}
         <h2
           style={{
-            margin: '0 0 -10px 0',
-            fontSize: '24px',
+            margin: '0 0 -8px 0',
+            fontSize: '20px',
             color: 'rgba(255, 255, 255, 0.85)',
             fontWeight: 600,
             textTransform: 'lowercase',
             letterSpacing: '0.05em',
           }}
         >
-          filters
+          flight distributions {/* renamed */}
         </h2>
 
-        {/* sliders section */}
+        {/* distributions section */}
         <div
+          className='distributions-container' // added class for d3 selection
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '24px',
+            gap: '5px', // reduced gap between histograms
+            // fix height to roughly 1/3rd panel height
+            height: `${totalHeight * 0.25}px`, // estimate based on panel height being ~0.6 of totalheight
+            // removed overflow/scrollbar styles
           }}
         >
-          {/* price slider */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
-            <label
-              style={{
-                color: 'rgba(255, 255, 255, 0.75)',
-                fontSize: '18px',
-                fontWeight: 500,
-                textTransform: 'lowercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              price range: $400 - $1,200
-            </label>
-            <div
-              style={{
-                height: '6px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '3px',
-                position: 'relative',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '20%',
-                  right: '30%',
-                  height: '100%',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  borderRadius: '3px',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '20%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '70%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* days from today slider */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
-            <label
-              style={{
-                color: 'rgba(255, 255, 255, 0.75)',
-                fontSize: '18px',
-                fontWeight: 500,
-                textTransform: 'lowercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              days from today: 7 - 14
-            </label>
-            <div
-              style={{
-                height: '6px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '3px',
-                position: 'relative',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '25%',
-                  right: '40%',
-                  height: '100%',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  borderRadius: '3px',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '25%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '60%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* flight time slider */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
-            <label
-              style={{
-                color: 'rgba(255, 255, 255, 0.75)',
-                fontSize: '18px',
-                fontWeight: 500,
-                textTransform: 'lowercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              flight time: 2h - 8h
-            </label>
-            <div
-              style={{
-                height: '6px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '3px',
-                position: 'relative',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '15%',
-                  right: '25%',
-                  height: '100%',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  borderRadius: '3px',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '15%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '75%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '18px',
-                  height: '18px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-            </div>
-          </div>
+          {/* distribution bars rendered by d3 */}
+          {/* placeholder text moved inside d3 rendering logic */}
         </div>
 
         {/* current selections title */}
         <h2
           style={{
-            margin: '5px 0 -10px 0',
-            fontSize: '24px',
+            margin: '0 0 -8px 0',
+            fontSize: '20px',
             color: 'rgba(255, 255, 255, 0.85)',
             fontWeight: 600,
             textTransform: 'lowercase',
@@ -601,26 +862,29 @@ const WorldMap: React.FC = () => {
         <div
           style={{
             display: 'flex',
-            gap: '12px',
-            marginTop: '10px',
+            gap: '8px',
+            marginTop: '8px',
           }}
         >
           {/* origins box */}
           <div
+            className='origins-box'
             style={{
               flex: 1,
-              borderRadius: '8px',
+              borderRadius: '6px',
               background: 'rgba(255, 255, 255, 0.07)',
-              padding: '18px',
+              padding: '12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '8px',
+              height: '220px',
+              overflow: 'hidden',
             }}
           >
             <h3
               style={{
                 margin: 0,
-                fontSize: '20px',
+                fontSize: '16px',
                 color: 'rgba(255, 255, 255, 0.75)',
                 fontWeight: 500,
                 textTransform: 'lowercase',
@@ -629,65 +893,37 @@ const WorldMap: React.FC = () => {
             >
               origins
             </h3>
+            {/* origins box content rendered by d3 */}
             <div
+              className='content'
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '10px',
+                flexDirection: 'column', // changed from wrap to column for consistency
+                gap: '8px',
+                overflow: 'hidden',
               }}
-            >
-              <div
-                style={{
-                  background: 'rgba(232, 27, 35, 0.3)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                }}
-              >
-                JFK
-              </div>
-              <div
-                style={{
-                  background: 'rgba(232, 27, 35, 0.3)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                }}
-              >
-                YYZ
-              </div>
-              <div
-                style={{
-                  background: 'rgba(232, 27, 35, 0.3)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                }}
-              >
-                LAX
-              </div>
-            </div>
+            />
           </div>
 
           {/* destinations box */}
           <div
+            className='destinations-box'
             style={{
               flex: 1,
-              borderRadius: '8px',
+              borderRadius: '6px',
               background: 'rgba(255, 255, 255, 0.07)',
-              padding: '18px',
+              padding: '12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '8px',
+              height: '220px',
+              overflow: 'hidden',
             }}
           >
             <h3
               style={{
                 margin: 0,
-                fontSize: '20px',
+                fontSize: '16px',
                 color: 'rgba(255, 255, 255, 0.75)',
                 fontWeight: 500,
                 textTransform: 'lowercase',
@@ -696,54 +932,38 @@ const WorldMap: React.FC = () => {
             >
               destinations
             </h3>
+            {/* destinations box content rendered by d3 */}
             <div
+              className='content'
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '10px',
+                flexDirection: 'column', // changed from wrap to column
+                gap: '8px',
+                overflow: 'hidden',
               }}
-            >
-              <div
-                style={{
-                  background: 'rgba(0, 174, 243, 0.3)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                }}
-              >
-                LHR
-              </div>
-              <div
-                style={{
-                  background: 'rgba(0, 174, 243, 0.3)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                }}
-              >
-                CDG
-              </div>
-            </div>
+            />
           </div>
         </div>
 
         {/* flights section */}
         <div
           style={{
-            marginTop: '10px',
+            marginTop: '8px',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            gap: '14px',
+            gap: '10px',
             overflow: 'hidden',
+            paddingBottom: '10px',
+            scrollbarWidth: 'thin' /* firefox */,
+            scrollbarColor:
+              'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)' /* firefox */,
           }}
         >
           <h2
             style={{
-              margin: '5px 0 0 0',
-              fontSize: '24px',
+              margin: '0 0 -8px 0',
+              fontSize: '20px',
               color: 'rgba(255, 255, 255, 0.85)',
               fontWeight: 600,
               textTransform: 'lowercase',
@@ -757,219 +977,13 @@ const WorldMap: React.FC = () => {
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '8px',
               overflowY: 'auto',
               flex: 1,
             }}
           >
-            {/* flight items */}
-            <div
-              className='flight-item'
-              style={{
-                padding: '18px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '20px' }}>
-                  JFK → LHR
-                </span>
-                <span
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontWeight: 500,
-                    fontSize: '20px',
-                  }}
-                >
-                  $740
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '18px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                }}
-              >
-                <span>American Airlines</span>
-                <span>7h 20m</span>
-              </div>
-              <div
-                style={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.5)',
-                }}
-              >
-                May 15, 2023 • 9:45 PM
-              </div>
-            </div>
-
-            <div
-              className='flight-item'
-              style={{
-                padding: '18px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '20px' }}>
-                  BOS → CDG
-                </span>
-                <span
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontWeight: 500,
-                    fontSize: '20px',
-                  }}
-                >
-                  $820
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '18px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                }}
-              >
-                <span>Air France</span>
-                <span>6h 55m</span>
-              </div>
-              <div
-                style={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.5)',
-                }}
-              >
-                May 17, 2023 • 7:30 PM
-              </div>
-            </div>
-
-            <div
-              className='flight-item'
-              style={{
-                padding: '18px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '20px' }}>
-                  LAX → LHR
-                </span>
-                <span
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontWeight: 500,
-                    fontSize: '20px',
-                  }}
-                >
-                  $980
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '18px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                }}
-              >
-                <span>British Airways</span>
-                <span>10h 30m</span>
-              </div>
-              <div
-                style={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.5)',
-                }}
-              >
-                May 14, 2023 • 3:15 PM
-              </div>
-            </div>
-
-            <div
-              className='flight-item'
-              style={{
-                padding: '18px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '20px' }}>
-                  JFK → CDG
-                </span>
-                <span
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontWeight: 500,
-                    fontSize: '20px',
-                  }}
-                >
-                  $690
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '18px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                }}
-              >
-                <span>Delta Airlines</span>
-                <span>7h 05m</span>
-              </div>
-              <div
-                style={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.5)',
-                }}
-              >
-                May 19, 2023 • 8:20 PM
-              </div>
-            </div>
+            {/* flight items rendered using react state - removed */}
+            {/* d3 will render content here */}
           </div>
         </div>
       </div>
