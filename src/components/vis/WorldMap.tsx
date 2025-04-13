@@ -49,6 +49,8 @@ const airportStrokeWidth = 1.5;
 const airportHighlightFill = '#1E90FF';
 const airportHighlightStroke = '#FFD580';
 const airportHighlightStrokeWidth = 4;
+const airportSelectedStroke = '#FFB6C1'; // new color for selected state
+const airportSelectedStrokeWidth = 4; // new stroke width for selected state
 
 // constants for panel styling
 const panelWidth = totalWidth / 4; // changed from 1/3 to 1/4
@@ -67,6 +69,8 @@ const WorldMap: React.FC = () => {
   });
   // reference to store animation frame id for cleanup
   const animationFrameRef = useRef<number | null>(null);
+  // reference to store currently selected airport
+  const selectedAirportRef = useRef<SVGCircleElement | null>(null);
 
   useEffect(() => {
     // add guard clause for svg ref
@@ -188,7 +192,8 @@ const WorldMap: React.FC = () => {
               // handle hover over airports
               if (
                 event.element &&
-                event.element.classList.contains('airport')
+                event.element.classList.contains('airport') &&
+                event.element !== selectedAirportRef.current // skip if already selected
               ) {
                 d3.select(event.element)
                   .attr('fill', airportHighlightFill)
@@ -207,13 +212,46 @@ const WorldMap: React.FC = () => {
                 event.element &&
                 event.element.classList.contains('airport')
               ) {
+                // only reset if not selected
+                if (event.element !== selectedAirportRef.current) {
+                  d3.select(event.element)
+                    .attr('fill', airportFill)
+                    .attr('stroke', airportStroke)
+                    .attr(
+                      'stroke-width',
+                      airportStrokeWidth / transformRef.current.k
+                    );
+                }
+              }
+              break;
+
+            case 'pointerselect':
+              // handle airport selection
+              if (
+                event.element &&
+                event.element.classList.contains('airport')
+              ) {
+                // unselect previous airport if exists
+                if (selectedAirportRef.current) {
+                  d3.select(selectedAirportRef.current)
+                    .attr('fill', airportFill)
+                    .attr('stroke', airportStroke)
+                    .attr(
+                      'stroke-width',
+                      airportStrokeWidth / transformRef.current.k
+                    );
+                }
+
+                // select new airport
+                selectedAirportRef.current = event.element as SVGCircleElement;
                 d3.select(event.element)
                   .attr('fill', airportFill)
-                  .attr('stroke', airportStroke)
+                  .attr('stroke', airportSelectedStroke)
                   .attr(
                     'stroke-width',
-                    airportStrokeWidth / transformRef.current.k
-                  );
+                    airportSelectedStrokeWidth / transformRef.current.k
+                  )
+                  .raise(); // bring to front
               }
               break;
 
@@ -249,10 +287,13 @@ const WorldMap: React.FC = () => {
               // adjust airport circle sizes and stroke width inversely to the zoom scale
               g.selectAll('circle.airport')
                 .attr('r', airportRadius / transformRef.current.k)
-                .attr(
-                  'stroke-width',
-                  airportStrokeWidth / transformRef.current.k
-                );
+                .attr('stroke-width', (d, i, nodes) => {
+                  const element = nodes[i];
+                  if (element === selectedAirportRef.current) {
+                    return airportSelectedStrokeWidth / transformRef.current.k;
+                  }
+                  return airportStrokeWidth / transformRef.current.k;
+                });
               break;
 
             default:
