@@ -37,9 +37,9 @@ interface DebugDashboardProps {
   currentPing: number | null;
   pingHistory: number[];
   // visualization selection props
-  selectedVisualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap';
+  selectedVisualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
   onVisualizationSelect: (
-    visualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap'
+    visualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf'
   ) => void;
 }
 
@@ -321,6 +321,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         | 'usmap'
                         | 'ustile'
                         | 'worldmap'
+                        | 'foaf'
                     )
                   }
                   style={{
@@ -341,6 +342,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                   <option value='usmap'>us map</option>
                   <option value='ustile'>us tilemap</option>
                   <option value='worldmap'>world map</option>
+                  <option value='foaf'>friend of a friend</option>
                 </select>
               </div>
             </div>

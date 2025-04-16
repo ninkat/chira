@@ -724,8 +724,6 @@ const WorldMap: React.FC = () => {
                 event.handedness
               ) {
                 const airport = event.element as SVGCircleElement;
-                const otherHand =
-                  event.handedness === 'left' ? 'right' : 'left';
 
                 // add to appropriate hand's set
                 hoveredAirportsRef.current[event.handedness].add(airport);

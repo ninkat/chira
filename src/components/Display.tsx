@@ -27,13 +27,14 @@ import NodeLink from '@/components/vis/NodeLink';
 import USMap from '@/components/vis/USMap';
 import USTile from '@/components/vis/USTile';
 import WorldMap from '@/components/vis/WorldMap';
+import FOAF from '@/components/vis/FOAF';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
 // get the dynamic websocket url
 const WS_URL = getWebsocketUrl();
 
 // available visualizations
-type VisualizationType = 'nodelink' | 'usmap' | 'ustile' | 'worldmap';
+type VisualizationType = 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
 
 // main display component that:
 // - manages webcam feed
@@ -456,6 +457,8 @@ const Display: React.FC = () => {
             <USMap />
           ) : selectedVisualization === 'worldmap' ? (
             <WorldMap />
+          ) : selectedVisualization === 'foaf' ? (
+            <FOAF />
           ) : (
             <USTile />
           ))}
