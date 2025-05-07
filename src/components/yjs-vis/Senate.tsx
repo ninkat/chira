@@ -160,6 +160,12 @@ const Senate: React.FC = () => {
   const [currentTransform, setCurrentTransform] = useState<d3.ZoomTransform>(
     d3.zoomIdentity
   );
+  // ref to track current transform values without triggering effect re-runs
+  const transformRef = useRef<{ k: number; x: number; y: number }>({
+    k: 1,
+    x: 0,
+    y: 0,
+  });
 
   // only keep states for non-d3 related variables
   const [syncStatus, setSyncStatus] = useState<boolean>(false);
@@ -276,6 +282,7 @@ const Senate: React.FC = () => {
       y: (ySharedState.get('panY') as number) || 0,
     };
 
+    transformRef.current = initialTransform;
     setCurrentTransform(
       d3.zoomIdentity
         .translate(initialTransform.x, initialTransform.y)
@@ -290,10 +297,11 @@ const Senate: React.FC = () => {
 
       // only update if values are different to avoid loops
       if (
-        scale !== currentTransform.k ||
-        x !== currentTransform.x ||
-        y !== currentTransform.y
+        scale !== transformRef.current.k ||
+        x !== transformRef.current.x ||
+        y !== transformRef.current.y
       ) {
+        transformRef.current = { k: scale, x, y };
         setCurrentTransform(d3.zoomIdentity.translate(x, y).scale(scale));
 
         // apply transform to root if it exists
@@ -306,7 +314,7 @@ const Senate: React.FC = () => {
 
     ySharedState.observe(observer);
     return () => ySharedState.unobserve(observer);
-  }, [doc, syncStatus, ySharedState, currentTransform]);
+  }, [doc, syncStatus, ySharedState]);
 
   // d3 visualization setup and update
   useEffect(() => {
@@ -346,12 +354,11 @@ const Senate: React.FC = () => {
 
     // Create a custom event handler for gesture interactions
     const handleInteraction = (event: InteractionEvent) => {
-      console.log('interaction event', event);
       switch (event.type) {
         case 'pointerover': {
           // Handle hover events (from handleOne or handleGrabbing)
           const element = event.element;
-          console.log('element', element);
+
           if (!element || !(element instanceof SVGElement)) return;
 
           // Get data from the element if it's a node
@@ -362,7 +369,6 @@ const Senate: React.FC = () => {
             // find the parent node group element that contains the data-id
             const parentNode = element.closest('g.node');
             const nodeId = parentNode?.getAttribute('data-id');
-            console.log('nodeId', nodeId);
             if (nodeId) {
               // get current hovered node ids and add this one if not already in the list
               const currentHoveredNodeIds =
@@ -375,8 +381,6 @@ const Senate: React.FC = () => {
                 updateVisualization();
               }
             }
-          } else {
-            console.log('not a node');
           }
           break;
         }
@@ -404,9 +408,6 @@ const Senate: React.FC = () => {
               ySharedState.set('hoveredNodeIds', updatedHoveredNodeIds);
               updateVisualization();
             }
-          } else {
-            // if not a node element, we don't have a node id to remove
-            console.log('not a node element in pointerout');
           }
           break;
         }
