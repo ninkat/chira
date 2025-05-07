@@ -23,10 +23,7 @@ export const useWebSocket = (
   rtcConnectionState: RTCPeerConnectionState | null;
   rtcDataChannel: RTCDataChannel | null;
   remoteStream: MediaStream | null;
-  isLeader: boolean;
   replaceVideoTrack: (track: MediaStreamTrack) => Promise<void>;
-  sendVisualizationData: (svgString: string) => void;
-  visualizationDataChannel: RTCDataChannel | null;
   currentPing: number | null;
   pingHistory: number[];
 } => {
@@ -45,12 +42,7 @@ export const useWebSocket = (
   const [rtcDataChannel, setRtcDataChannel] = useState<RTCDataChannel | null>(
     null
   );
-  const [visualizationDataChannel, setVisualizationDataChannel] =
-    useState<RTCDataChannel | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-
-  // leader state - client with lowest id is the leader
-  const [isLeader, setIsLeader] = useState<boolean>(false);
 
   // websocket reference
   const socketRef = useRef<WebSocket | null>(null);
@@ -58,7 +50,6 @@ export const useWebSocket = (
   // webrtc references
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
-  const visDataChannelRef = useRef<RTCDataChannel | null>(null);
   const targetClientIdRef = useRef<number | null>(null);
 
   // track refs for managing video tracks
@@ -74,45 +65,6 @@ export const useWebSocket = (
   // add ping state
   const [currentPing, setCurrentPing] = useState<number | null>(null);
   const [pingHistory, setPingHistory] = useState<number[]>([]);
-
-  // function to send visualization data through the data channel
-  const sendVisualizationData = useCallback((svgString: string): void => {
-    if (
-      visDataChannelRef.current &&
-      visDataChannelRef.current.readyState === 'open'
-    ) {
-      // create a message with the SVG data
-      const message = {
-        type: 'visualization',
-        data: svgString,
-      };
-
-      // send the message as a string
-      visDataChannelRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn('cannot send visualization data, channel not open');
-    }
-  }, []);
-
-  // update leader status when users or current user changes
-  useEffect(() => {
-    if (currentUser && connectedUsers.length === 2) {
-      // get both client ids as numbers
-      const currentId = parseInt(currentUser.id, 10);
-      const otherClientId = connectedUsers.find(
-        (user) => user.id !== currentUser.id
-      )?.id;
-
-      if (otherClientId) {
-        const otherId = parseInt(otherClientId, 10);
-        // the client with the lower id is the leader
-        setIsLeader(currentId < otherId);
-      }
-    } else {
-      // default to false when not in a two-user connection
-      setIsLeader(false);
-    }
-  }, [currentUser, connectedUsers]);
 
   // send message to server
   const sendMessage = useCallback((message: Message): void => {
@@ -155,43 +107,6 @@ export const useWebSocket = (
       }
     },
     [rtcConnected]
-  );
-
-  // setup visualization data channel for SVG data
-  const setupVisualizationDataChannel = useCallback(
-    (channel: RTCDataChannel) => {
-      visDataChannelRef.current = channel;
-      setVisualizationDataChannel(channel);
-
-      // handle channel opening
-      channel.onopen = () => {
-        console.log('visualization data channel opened');
-      };
-
-      // handle channel closing
-      channel.onclose = () => {
-        console.log('visualization data channel closed');
-      };
-
-      // handle messages received on the channel
-      channel.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'visualization') {
-            // create a custom event to notify about new visualization data
-            const customEvent = new CustomEvent('visualization-data', {
-              detail: message.data,
-            });
-
-            // dispatch the event on the window so it can be caught by the Display component
-            window.dispatchEvent(customEvent);
-          }
-        } catch (error) {
-          console.error('error parsing visualization data:', error);
-        }
-      };
-    },
-    []
   );
 
   // setup data channel
@@ -262,17 +177,11 @@ export const useWebSocket = (
     // handle data channel
     peerConnection.ondatachannel = (event) => {
       const channel = event.channel;
-
-      // check the label of the channel to determine which one it is
-      if (channel.label === 'visualization') {
-        setupVisualizationDataChannel(channel);
-      } else {
-        setupDataChannel(channel);
-      }
+      setupDataChannel(channel);
     };
 
     return peerConnection;
-  }, [sendMessage, setupDataChannel, setupVisualizationDataChannel]);
+  }, [sendMessage, setupDataChannel]);
 
   // create offer (initiator)
   const createOffer = useCallback(
@@ -313,11 +222,6 @@ export const useWebSocket = (
         const dataChannel = peerConnectionRef.current.createDataChannel('data');
         setupDataChannel(dataChannel);
 
-        // create visualization data channel
-        const visDataChannel =
-          peerConnectionRef.current.createDataChannel('visualization');
-        setupVisualizationDataChannel(visDataChannel);
-
         // create and set local description
         const offer = await peerConnectionRef.current.createOffer();
         await peerConnectionRef.current.setLocalDescription(offer);
@@ -332,12 +236,7 @@ export const useWebSocket = (
         console.error('error creating offer:', error);
       }
     },
-    [
-      sendMessage,
-      setupDataChannel,
-      setupVisualizationDataChannel,
-      selectedDeviceId,
-    ]
+    [sendMessage, setupDataChannel, selectedDeviceId]
   );
 
   // handle incoming messages
@@ -591,7 +490,8 @@ export const useWebSocket = (
         peerConnectionRef.current.close();
       }
     };
-  }, [connect]);
+  }, []);
+  // LEAVE THIS DEPENDENCY EMPTY, IF YOU PUT CONNECT IT WILL MAKE WEBRTC FAIL
 
   // ping monitoring effect
   useEffect(() => {
@@ -645,10 +545,7 @@ export const useWebSocket = (
     rtcConnectionState,
     rtcDataChannel,
     remoteStream,
-    isLeader,
     replaceVideoTrack,
-    sendVisualizationData,
-    visualizationDataChannel,
     currentPing,
     pingHistory,
   };

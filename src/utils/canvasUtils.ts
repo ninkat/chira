@@ -61,7 +61,7 @@ export function processVideoFrame(
 // (30fps)
 export function shouldProcessFrame(
   lastFrameTime: number,
-  minFrameInterval: number = 33
+  minFrameInterval: number = 1000 / 30
 ): boolean {
   const now = Date.now();
   const elapsed = now - lastFrameTime;

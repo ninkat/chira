@@ -23,18 +23,15 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
 import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
-import NodeLink from '@/components/vis/NodeLink';
-import USMap from '@/components/vis/USMap';
-import USTile from '@/components/vis/USTile';
-import WorldMap from '@/components/vis/WorldMap';
-import FOAF from '@/components/vis/FOAF';
+import Senate from '@/components/yjs-vis/Senate';
+import { YjsProvider } from '@/components/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
-// get the dynamic websocket url
-const WS_URL = getWebsocketUrl();
-
-// available visualizations
-type VisualizationType = 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
+// get the dynamic websocket url with connection type parameter
+const baseUrl = getWebsocketUrl();
+const videoUrl = new URL(baseUrl);
+videoUrl.searchParams.set('type', 'video');
+const WS_URL = videoUrl.toString();
 
 // main display component that:
 // - manages webcam feed
@@ -52,7 +49,6 @@ const Display: React.FC = () => {
   const lastFrameTimeRef = useRef<number>(Date.now());
   const overlayRef = useRef<HTMLDivElement>(null);
   const rtcConnectedRef = useRef<boolean>(false);
-  const isLeaderRef = useRef<boolean>(false);
   const remoteStreamRef = useRef<MediaStream | null>(null);
 
   // state for selected camera device
@@ -92,7 +88,7 @@ const Display: React.FC = () => {
     selectedDeviceId
   );
 
-  // websocket connection state
+  // websocket connection state - now only used for video feed
   const {
     isConnected,
     connectionError,
@@ -101,35 +97,17 @@ const Display: React.FC = () => {
     rtcConnected,
     rtcConnectionState,
     remoteStream,
-    isLeader,
-    sendVisualizationData,
-    visualizationDataChannel,
     currentPing,
     pingHistory,
-  } = useWebSocket(WS_URL);
+  } = useWebSocket(WS_URL, selectedDeviceId);
 
   // get memory usage data
   const memoryUsage = useMemoryUsage();
-
-  // state to store SVG data for followers
-  const [receivedSvgData, setReceivedSvgData] = useState<string | null>(null);
-
-  // state for selected visualization
-  const [selectedVisualization, setSelectedVisualization] =
-    useState<VisualizationType>('worldmap');
 
   // handle camera selection
   const handleCameraSelect = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
   }, []);
-
-  // handle visualization selection
-  const handleVisualizationSelect = useCallback(
-    (visualization: VisualizationType) => {
-      setSelectedVisualization(visualization);
-    },
-    []
-  );
 
   // start local webcam feed
   useEffect(() => {
@@ -143,76 +121,10 @@ const Display: React.FC = () => {
     }
   }, [remoteStream]);
 
-  // Handle visualization data for followers
-  useEffect(() => {
-    if (isLeader) return; // Only for followers
-
-    // Set up event listener for visualization data
-    const handleVisualizationData = (event: CustomEvent) => {
-      const svgData = event.detail;
-      setReceivedSvgData(svgData);
-    };
-
-    // Add event listener
-    window.addEventListener(
-      'visualization-data',
-      handleVisualizationData as EventListener
-    );
-
-    // Clean up
-    return () => {
-      window.removeEventListener(
-        'visualization-data',
-        handleVisualizationData as EventListener
-      );
-    };
-  }, [isLeader]);
-
-  // capture and send the svg visualization data for leader
-  useEffect(() => {
-    if (
-      !isLeader ||
-      !rtcConnected ||
-      !overlayRef.current ||
-      !visualizationDataChannel
-    ) {
-      return;
-    }
-
-    // create a function to capture and send the visualization
-    const captureAndSendVisualization = () => {
-      // get the svg element from the overlay
-      const svgElement = overlayRef.current?.querySelector('svg');
-      if (!svgElement) return;
-
-      // serialize the svg to a string
-      const serializer = new XMLSerializer();
-      const svgString = serializer.serializeToString(svgElement);
-
-      // send the SVG data through the data channel
-      sendVisualizationData(svgString);
-    };
-
-    // Capture and send initially
-    captureAndSendVisualization();
-
-    // set up an interval to capture and send regularly
-    const streamInterval = setInterval(captureAndSendVisualization, 1000 / 33); // 30fps
-
-    // clean up
-    return () => {
-      clearInterval(streamInterval);
-    };
-  }, [isLeader, rtcConnected, visualizationDataChannel, sendVisualizationData]);
-
-  // add an effect to update the refs when rtcConnected or isLeader change
+  // add an effect to update the refs when rtcConnected changes
   useEffect(() => {
     rtcConnectedRef.current = rtcConnected;
   }, [rtcConnected]);
-
-  useEffect(() => {
-    isLeaderRef.current = isLeader;
-  }, [isLeader]);
 
   useEffect(() => {
     remoteStreamRef.current = remoteStream;
@@ -222,8 +134,6 @@ const Display: React.FC = () => {
   useEffect(() => {
     // combined webcam processing loop for both local and remote feeds
     const processWebcams = () => {
-      // draw only if we are in multiplayer and not the leader
-      const drawOnly = rtcConnectedRef.current && !isLeaderRef.current;
       // process local webcam feed first
       if (localVideoRef.current && gestureRecognizer && canvasRef.current) {
         // check frame rate for local feed
@@ -279,8 +189,7 @@ const Display: React.FC = () => {
                 results,
                 rect,
                 dimensions,
-                handleInteraction,
-                drawOnly
+                handleInteraction
               );
 
               // process "grabbing" gesture for area hovering
@@ -289,8 +198,7 @@ const Display: React.FC = () => {
                 results,
                 rect,
                 dimensions,
-                handleInteraction,
-                drawOnly
+                handleInteraction
               );
 
               // process "thumb_index" gesture for selection
@@ -299,8 +207,7 @@ const Display: React.FC = () => {
                 results,
                 rect,
                 dimensions,
-                handleInteraction,
-                drawOnly
+                handleInteraction
               );
 
               // process "ok" gesture for dragging and zooming
@@ -309,8 +216,7 @@ const Display: React.FC = () => {
                 results,
                 rect,
                 dimensions,
-                handleInteraction,
-                drawOnly
+                handleInteraction
               );
             }
 
@@ -354,62 +260,17 @@ const Display: React.FC = () => {
             const rect =
               overlayRef.current?.getBoundingClientRect() || new DOMRect();
 
-            // this function sends events to the overlay
-            const handleInteraction: InteractionEventHandler = (event) => {
-              // dispatch custom event that bubbles up through the overlay
-              if (overlayRef.current) {
-                const customEvent = new CustomEvent('interaction', {
-                  bubbles: true,
-                  composed: true,
-                  detail: event,
-                });
-                // find the current visualization element
-                const visElement = overlayRef.current.firstElementChild;
-                if (visElement) {
-                  visElement.dispatchEvent(customEvent);
-                }
-              }
-            };
-
             // process "one" gesture for hovering
-            handleSvgOneRemote(
-              canvasCtx,
-              results,
-              rect,
-              dimensions,
-              handleInteraction,
-              drawOnly
-            );
+            handleSvgOneRemote(canvasCtx, results, rect, dimensions);
 
             // process "grabbing" gesture for area hovering
-            handleSvgGrabbingRemote(
-              canvasCtx,
-              results,
-              rect,
-              dimensions,
-              handleInteraction,
-              drawOnly
-            );
+            handleSvgGrabbingRemote(canvasCtx, results, rect, dimensions);
 
             // process "thumb_index" gesture for selection
-            handleSvgThumbIndexRemote(
-              canvasCtx,
-              results,
-              rect,
-              dimensions,
-              handleInteraction,
-              drawOnly
-            );
+            handleSvgThumbIndexRemote(canvasCtx, results, rect, dimensions);
 
             // process "ok" gesture for dragging and zooming
-            handleSvgDragRemote(
-              canvasCtx,
-              results,
-              rect,
-              dimensions,
-              handleInteraction,
-              drawOnly
-            );
+            handleSvgDragRemote(canvasCtx, results, rect, dimensions);
           }
           canvasCtx.restore();
         }
@@ -436,41 +297,25 @@ const Display: React.FC = () => {
     >
       {!isVideoFeedStarted && <p>Loading video feed...</p>}
 
-      {/* visualization layer */}
-      <div
-        ref={overlayRef}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 4,
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        {/* render visualization based on selection */}
-        {(!rtcConnectedRef.current || isLeaderRef.current) &&
-          (selectedVisualization === 'nodelink' ? (
-            <NodeLink />
-          ) : selectedVisualization === 'usmap' ? (
-            <USMap />
-          ) : selectedVisualization === 'worldmap' ? (
-            <WorldMap />
-          ) : selectedVisualization === 'foaf' ? (
-            <FOAF />
-          ) : (
-            <USTile />
-          ))}
-
-        {/* For follower: render the received SVG directly */}
-        {!isLeaderRef.current && rtcConnectedRef.current && receivedSvgData && (
-          <div
-            style={{ width: '100%', height: '100%' }}
-            dangerouslySetInnerHTML={{ __html: receivedSvgData }}
-          />
-        )}
-      </div>
+      {/* YjsProvider wraps the visualization for syncing */}
+      <YjsProvider>
+        {/* visualization layer */}
+        <div
+          ref={overlayRef}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 4,
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          {/* Use Senate visualization from yjs-vis */}
+          <Senate />
+        </div>
+      </YjsProvider>
 
       {/* canvas for local hand tracking visualization */}
       <canvas
@@ -569,7 +414,6 @@ const Display: React.FC = () => {
         connectedUsers={connectedUsers}
         rtcConnected={rtcConnected}
         rtcConnectionState={rtcConnectionState}
-        isLeader={isLeader}
         showDebug={showDebug}
         onToggleDebug={() => setShowDebug(!showDebug)}
         onCameraSelect={handleCameraSelect}
@@ -579,8 +423,6 @@ const Display: React.FC = () => {
         remoteRightGestureData={remoteRightGestureData}
         currentPing={currentPing}
         pingHistory={pingHistory}
-        selectedVisualization={selectedVisualization}
-        onVisualizationSelect={handleVisualizationSelect}
       />
     </div>
   );

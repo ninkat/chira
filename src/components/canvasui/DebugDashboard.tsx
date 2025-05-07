@@ -24,7 +24,6 @@ interface DebugDashboardProps {
   // webrtc props
   rtcConnected: boolean;
   rtcConnectionState: RTCPeerConnectionState | null;
-  isLeader: boolean;
   // visibility props
   showDebug: boolean;
   onToggleDebug: () => void;
@@ -36,9 +35,9 @@ interface DebugDashboardProps {
   // ping props
   currentPing: number | null;
   pingHistory: number[];
-  // visualization selection props
-  selectedVisualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
-  onVisualizationSelect: (
+  // visualization selection props - now optional
+  selectedVisualization?: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
+  onVisualizationSelect?: (
     visualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf'
   ) => void;
 }
@@ -206,7 +205,6 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
   connectedUsers,
   rtcConnected,
   rtcConnectionState,
-  isLeader,
   showDebug,
   onToggleDebug,
   onCameraSelect,
@@ -292,60 +290,66 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
 
         {showDebug && (
           <>
-            {/* visualization selection section */}
-            <div
-              style={{
-                marginBottom: '16px',
-                marginTop: '8px',
-                padding: '8px 12px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '40px',
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
-                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
-              }}
-            >
-              <h3
-                style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#888' }}
+            {/* visualization selection section - only render if props are provided */}
+            {selectedVisualization && onVisualizationSelect && (
+              <div
+                style={{
+                  marginBottom: '16px',
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                  minHeight: '40px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '8px',
+                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                }}
               >
-                visualization selection
-              </h3>
-              <div style={{ fontSize: '12px' }}>
-                <select
-                  id='visualization-select'
-                  value={selectedVisualization}
-                  onChange={(e) =>
-                    onVisualizationSelect(
-                      e.target.value as
-                        | 'nodelink'
-                        | 'usmap'
-                        | 'ustile'
-                        | 'worldmap'
-                        | 'foaf'
-                    )
-                  }
+                <h3
                   style={{
-                    width: '100%',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    color: '#e0e0e0',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
-                    transition: 'all 0.2s ease',
+                    margin: '0 0 4px 0',
+                    fontSize: '14px',
+                    color: '#888',
                   }}
                 >
-                  <option value='nodelink'>node link diagram</option>
-                  <option value='usmap'>us map</option>
-                  <option value='ustile'>us tilemap</option>
-                  <option value='worldmap'>world map</option>
-                  <option value='foaf'>friend of a friend</option>
-                </select>
+                  visualization selection
+                </h3>
+                <div style={{ fontSize: '12px' }}>
+                  <select
+                    id='visualization-select'
+                    value={selectedVisualization}
+                    onChange={(e) =>
+                      onVisualizationSelect(
+                        e.target.value as
+                          | 'nodelink'
+                          | 'usmap'
+                          | 'ustile'
+                          | 'worldmap'
+                          | 'foaf'
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: '#e0e0e0',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <option value='nodelink'>node link diagram</option>
+                    <option value='usmap'>us map</option>
+                    <option value='ustile'>us tilemap</option>
+                    <option value='worldmap'>world map</option>
+                    <option value='foaf'>foaf visualization</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* camera selection section */}
             <div
@@ -670,37 +674,6 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     {rtcConnected ? 'active' : 'inactive'}
                   </span>
                 </div>
-
-                {/* leader indicator - show only when connected and there are two users */}
-                {rtcConnected && connectedUsers.length === 2 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '12px',
-                      backgroundColor: isLeader
-                        ? 'rgba(255, 215, 0, 0.15)'
-                        : 'rgba(158, 158, 158, 0.15)',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      border: `1px solid ${isLeader ? '#FFD700' : '#9E9E9E'}`,
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: isLeader ? '#FFD700' : '#9E9E9E',
-                      }}
-                    />
-                    <span style={{ color: isLeader ? '#FFD700' : '#9E9E9E' }}>
-                      {isLeader ? 'leader' : 'follower'}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {rtcConnectionState && (

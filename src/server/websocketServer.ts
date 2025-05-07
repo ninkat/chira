@@ -12,11 +12,29 @@ const SSL_KEY_PATH = process.env.SSL_KEY_PATH || './certificates/key.pem';
 // maximum number of allowed clients
 const MAX_CLIENTS = 2;
 
+// connection types to distinguish between different websocket purposes
+enum ConnectionType {
+  VIDEO = 'video', // for webrtc video connections
+  YJS = 'yjs', // for y-webrtc/yjs connections
+  UNKNOWN = 'unknown', // default type
+}
+
 class GestARServer {
   private wss: WebSocketServer;
   private httpsServer: https.Server;
   private clients: Set<ConnectedClient> = new Set();
   private nextClientId = 1;
+
+  // track client ip addresses to identify unique clients
+  private clientIps = new Map<string, number>();
+
+  // for y-webrtc signaling
+  private rooms = new Map<string, Set<WebSocket>>();
+  private topics = new Map<WebSocket, Set<string>>();
+
+  // for webrtc video signaling
+  private videoRooms = new Map<string, Set<WebSocket>>();
+  private videoClients = new Map<string, WebSocket>();
 
   constructor() {
     // create https server with ssl certificates
@@ -42,8 +60,47 @@ class GestARServer {
     // do this when connection attempt happens
     this.wss.on('connection', (ws: WebSocket, req) => {
       // log connection attempt with ip address
-      const ip = req.socket.remoteAddress;
-      console.log(`[server] connection attempt from ${ip}`);
+      const ip = req.socket.remoteAddress || 'unknown';
+      const url = new URL(req.url || '', `https://${req.headers.host}`);
+
+      // determine connection type from query parameter
+      let connectionType = ConnectionType.UNKNOWN;
+      if (url.searchParams.has('type')) {
+        const type = url.searchParams.get('type');
+        if (type === ConnectionType.YJS) {
+          connectionType = ConnectionType.YJS;
+        } else if (type === ConnectionType.VIDEO) {
+          connectionType = ConnectionType.VIDEO;
+        }
+      }
+
+      console.log(`[server] connection attempt from ${ip} (${connectionType})`);
+
+      // handle y-webrtc connections differently
+      if (connectionType === ConnectionType.YJS) {
+        // initialize client's topics set for y-webrtc
+        this.topics.set(ws, new Set());
+
+        // handle messages from client
+        ws.on('message', (message: string) => {
+          try {
+            const data = JSON.parse(message.toString()) as Message;
+            this.handleYjsMessage(ws, data);
+          } catch (error) {
+            console.error('error processing y-webrtc message:', error);
+          }
+        });
+
+        // handle client disconnect
+        ws.on('close', () => {
+          this.handleYjsDisconnect(ws);
+        });
+
+        return; // exit early, don't count YJS connections as clients
+      }
+
+      // create a client id to check for duplicate connections
+      const clientId = this.nextClientId++;
 
       // check if max clients reached
       if (this.clients.size >= MAX_CLIENTS) {
@@ -59,11 +116,20 @@ class GestARServer {
       }
 
       // create new client
-      const clientId = this.nextClientId++;
       const client: ConnectedClient = {
         id: clientId,
         ws,
       };
+
+      // assign a unique id for video signaling
+      const videoClientId = Math.random().toString(36).substring(2, 15);
+      this.videoClients.set(videoClientId, ws);
+
+      // send the client its video client id
+      this.sendToClient(ws, {
+        type: MessageType.CONNECTION,
+        data: { id: videoClientId },
+      });
 
       // add to clients set
       this.clients.add(client);
@@ -110,6 +176,88 @@ class GestARServer {
     });
   }
 
+  // handle y-webrtc messages
+  private handleYjsMessage(ws: WebSocket, message: Message): void {
+    switch (message.type) {
+      case MessageType.PUBLISH: {
+        const { topic, data } = message;
+        if (!topic) return;
+
+        // add client to the room
+        if (!this.rooms.has(topic)) {
+          this.rooms.set(topic, new Set());
+        }
+        this.rooms.get(topic)!.add(ws);
+        this.topics.get(ws)!.add(topic);
+
+        // broadcast the message to all other clients in the room
+        for (const roomClient of this.rooms.get(topic)!) {
+          if (roomClient !== ws && roomClient.readyState === WebSocket.OPEN) {
+            this.sendToClient(roomClient, {
+              type: MessageType.PUBLISH,
+              topic,
+              data: data,
+            });
+          }
+        }
+        break;
+      }
+
+      case MessageType.SUBSCRIBE: {
+        const subscribeTopic = message.topic;
+        if (!subscribeTopic) return;
+
+        // add client to the room
+        if (!this.rooms.has(subscribeTopic)) {
+          this.rooms.set(subscribeTopic, new Set());
+        }
+        this.rooms.get(subscribeTopic)!.add(ws);
+        this.topics.get(ws)!.add(subscribeTopic);
+
+        // acknowledge subscription
+        this.sendToClient(ws, {
+          type: MessageType.SUBSCRIBE,
+          topic: subscribeTopic,
+        });
+        break;
+      }
+
+      case MessageType.UNSUBSCRIBE: {
+        const unsubscribeTopic = message.topic;
+        if (!unsubscribeTopic) return;
+
+        // remove client from the room
+        if (this.rooms.has(unsubscribeTopic)) {
+          this.rooms.get(unsubscribeTopic)!.delete(ws);
+        }
+        this.topics.get(ws)!.delete(unsubscribeTopic);
+        break;
+      }
+
+      case MessageType.PING:
+        // respond to ping with pong for y-webrtc connections
+        this.sendToClient(ws, { type: MessageType.PONG });
+        break;
+
+      default:
+        console.log('received unhandled y-webrtc message:', message);
+    }
+  }
+
+  // handle y-webrtc client disconnect
+  private handleYjsDisconnect(ws: WebSocket): void {
+    // clean up y-webrtc topics
+    const clientTopics = this.topics.get(ws);
+    if (clientTopics) {
+      for (const topic of clientTopics) {
+        if (this.rooms.has(topic)) {
+          this.rooms.get(topic)!.delete(ws);
+        }
+      }
+    }
+    this.topics.delete(ws);
+  }
+
   // initiate webrtc connection between the two clients
   private initiateWebRTCConnection(): void {
     // get the two clients
@@ -137,6 +285,8 @@ class GestARServer {
 
   // handle messages from clients
   private handleClientMessage(client: ConnectedClient, message: Message): void {
+    const ws = client.ws;
+
     // handle different message types
     switch (message.type) {
       case MessageType.RTC_OFFER:
@@ -155,10 +305,115 @@ class GestARServer {
         }
         break;
 
-      case MessageType.PING:
-        // respond to ping with pong
-        this.sendToClient(client.ws, { type: MessageType.PONG });
+      case MessageType.JOIN_VIDEO_ROOM: {
+        const roomId = message.roomId;
+        if (!roomId) return;
+
+        // create room if it doesn't exist
+        if (!this.videoRooms.has(roomId)) {
+          this.videoRooms.set(roomId, new Set());
+        }
+
+        const room = this.videoRooms.get(roomId)!;
+
+        // add this client to the room
+        room.add(ws);
+
+        // find this client's video id
+        let videoId = '';
+        for (const [id, socket] of this.videoClients.entries()) {
+          if (socket === ws) {
+            videoId = id;
+            break;
+          }
+        }
+
+        // notify this client about existing peers
+        const peers = Array.from(room).filter((peer) => peer !== ws);
+        if (peers.length > 0) {
+          this.sendToClient(ws, {
+            type: MessageType.EXISTING_PEERS,
+            peerIds: Array.from(peers)
+              .map((peer) => {
+                // find clientId for this peer
+                for (const [id, socket] of this.videoClients.entries()) {
+                  if (socket === peer) return id;
+                }
+                return null;
+              })
+              .filter(Boolean) as string[],
+          });
+        }
+
+        // notify room that a new peer joined
+        for (const roomClient of room) {
+          if (roomClient !== ws && roomClient.readyState === WebSocket.OPEN) {
+            this.sendToClient(roomClient, {
+              type: MessageType.NEW_PEER,
+              peerId: videoId,
+            });
+          }
+        }
         break;
+      }
+
+      case MessageType.LEAVE_VIDEO_ROOM: {
+        const leaveRoomId = message.roomId;
+        if (!leaveRoomId) return;
+
+        if (this.videoRooms.has(leaveRoomId)) {
+          const leaveRoom = this.videoRooms.get(leaveRoomId)!;
+          leaveRoom.delete(ws);
+
+          // find client's video id
+          let leaveVideoId = '';
+          for (const [id, socket] of this.videoClients.entries()) {
+            if (socket === ws) {
+              leaveVideoId = id;
+              break;
+            }
+          }
+
+          // notify others that peer left
+          for (const roomClient of leaveRoom) {
+            if (roomClient.readyState === WebSocket.OPEN) {
+              this.sendToClient(roomClient, {
+                type: MessageType.PEER_LEFT,
+                peerId: leaveVideoId,
+              });
+            }
+          }
+        }
+        break;
+      }
+
+      case MessageType.VIDEO_OFFER:
+      case MessageType.VIDEO_ANSWER:
+      case MessageType.ICE_CANDIDATE: {
+        // forward these messages to the specific peer
+        const { peerId } = message;
+        if (!peerId) return;
+
+        const targetPeer = this.videoClients.get(peerId);
+
+        // find sender's video id
+        let senderVideoId = '';
+        for (const [id, socket] of this.videoClients.entries()) {
+          if (socket === ws) {
+            senderVideoId = id;
+            break;
+          }
+        }
+
+        if (targetPeer && targetPeer.readyState === WebSocket.OPEN) {
+          this.sendToClient(targetPeer, {
+            type: message.type,
+            peerId: senderVideoId, // who the message is from
+            data: message.data,
+          });
+        }
+        break;
+      }
 
       default:
         console.log(
@@ -170,6 +425,9 @@ class GestARServer {
 
   // handle client disconnect
   private handleClientDisconnect(client: ConnectedClient): void {
+    const ws = client.ws;
+
+    // remove from clients collection
     this.clients.delete(client);
     console.log(
       `[server] client ${client.id} disconnected. total clients: ${this.clients.size}`
@@ -183,6 +441,34 @@ class GestARServer {
 
     // broadcast updated client list
     this.broadcastClientList();
+
+    // clean up video rooms
+    // find client's video id
+    let videoId = '';
+    for (const [id, socket] of this.videoClients.entries()) {
+      if (socket === ws) {
+        videoId = id;
+        this.videoClients.delete(id);
+        break;
+      }
+    }
+
+    // notify all video rooms that this client left
+    for (const room of this.videoRooms.values()) {
+      if (room.has(ws)) {
+        room.delete(ws);
+
+        // notify others in room
+        for (const roomClient of room) {
+          if (roomClient.readyState === WebSocket.OPEN) {
+            this.sendToClient(roomClient, {
+              type: MessageType.PEER_LEFT,
+              peerId: videoId,
+            });
+          }
+        }
+      }
+    }
   }
 
   // send message to specific client
