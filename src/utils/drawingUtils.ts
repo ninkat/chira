@@ -92,6 +92,29 @@ export function drawOneGestureFeedback(
 }
 
 /**
+ * draws visual feedback for "fist" gesture used for panning and zooming
+ * @param ctx canvas context
+ * @param point interaction point location (palm center)
+ */
+export function drawFistGestureFeedback(
+  ctx: CanvasRenderingContext2D,
+  point: InteractionPoint
+): void {
+  // draw visual feedback for palm center point
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 12, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgb(50, 205, 50)'; // lime green
+  ctx.fill();
+
+  // draw a ring around the point
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 16, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(50, 205, 50, 0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+/**
  * draws circle hover area for "grabbing" gesture
  * @param ctx canvas context
  * @param circle circle definition with center and radius

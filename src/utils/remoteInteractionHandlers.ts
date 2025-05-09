@@ -13,6 +13,7 @@ import {
   drawThumbIndexGestureFeedback,
   drawOkGestureFeedback,
   drawZoomFeedback,
+  drawFistGestureFeedback,
 } from '@/utils/drawingUtils';
 
 // converts a mediapipe landmark to our interaction point format
@@ -161,8 +162,8 @@ export function handleThumbIndex(
   });
 }
 
-// remote handler for "ok" gesture (drag/zoom) - purely visual with no event dispatching
-export function handleDrag(
+// remote handler for "ok" gesture - purely visual with no event dispatching
+export function handleOk(
   ctx: CanvasRenderingContext2D,
   results: GestureRecognizerResult,
   rect: DOMRect,
@@ -177,11 +178,9 @@ export function handleDrag(
   }
 
   // Draw orange points for any hand doing "ok" gesture
-  const okHandIndices: number[] = [];
   results.handedness.forEach((hand, index) => {
     const gesture = results.gestures![index][0].categoryName;
     if (gesture === 'ok') {
-      okHandIndices.push(index);
       const landmarks = results.landmarks![index];
 
       // Get fingertip positions
@@ -200,20 +199,54 @@ export function handleDrag(
       drawOkGestureFeedback(ctx, indexTip, thumbTip);
     }
   });
+}
 
-  // If we have two hands with "ok" gesture, draw a zoom feedback
-  if (okHandIndices.length === 2) {
-    const hand1 = results.landmarks![okHandIndices[0]];
-    const hand2 = results.landmarks![okHandIndices[1]];
+// remote handler for "fist" gesture - purely visual with no event dispatching
+export function handleFist(
+  ctx: CanvasRenderingContext2D,
+  results: GestureRecognizerResult,
+  rect: DOMRect,
+  dimensions: CanvasDimensions
+): void {
+  if (
+    !results.landmarks?.length ||
+    !results.handedness?.length ||
+    !results.gestures?.length
+  ) {
+    return;
+  }
 
-    // get thumb positions for both hands
+  // Draw fist gesture visualizations
+  const fistHandIndices: number[] = [];
+  results.handedness.forEach((hand, index) => {
+    const gesture = results.gestures![index][0].categoryName;
+    if (gesture === 'fist') {
+      fistHandIndices.push(index);
+
+      // Draw visual feedback for the palm center
+      const landmarks = results.landmarks![index];
+      const palmCenter = landmarkToInteractionPoint(
+        landmarks[0],
+        dimensions,
+        rect
+      );
+      drawFistGestureFeedback(ctx, palmCenter);
+    }
+  });
+
+  // If we have two hands with "fist" gesture, draw a zoom feedback
+  if (fistHandIndices.length === 2) {
+    const hand1 = results.landmarks![fistHandIndices[0]];
+    const hand2 = results.landmarks![fistHandIndices[1]];
+
+    // get center of palm positions for both hands
     const point1 = getLandmarkPosition(
-      hand1[4],
+      hand1[0], // palm center
       dimensions.width,
       dimensions.height
     );
     const point2 = getLandmarkPosition(
-      hand2[4],
+      hand2[0], // palm center
       dimensions.width,
       dimensions.height
     );

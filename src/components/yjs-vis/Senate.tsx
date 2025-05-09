@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
 import senateData from '@/assets/foafagain.json';
-import { InteractionEvent } from '@/types/interactionTypes';
+import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
 
 // define shared value types for y.map
 type NodeMapValue = string | number | boolean | undefined;
@@ -165,6 +165,21 @@ const Senate: React.FC = () => {
     k: 1,
     x: 0,
     y: 0,
+  });
+
+  // add drag state ref to track which nodes are being dragged by which hand
+  const dragStateRef = useRef<{
+    left: {
+      nodeMap: Y.Map<NodeMapValue> | null;
+      offset: { x: number; y: number } | null;
+    };
+    right: {
+      nodeMap: Y.Map<NodeMapValue> | null;
+      offset: { x: number; y: number } | null;
+    };
+  }>({
+    left: { nodeMap: null, offset: null },
+    right: { nodeMap: null, offset: null },
   });
 
   // only keep states for non-d3 related variables
@@ -352,9 +367,112 @@ const Senate: React.FC = () => {
     const linkGroup = root.append('g').attr('class', 'links');
     const nodeGroup = root.append('g').attr('class', 'nodes');
 
+    // helper function to handle node dragging
+    const handleNodeDrag = (
+      point: InteractionPoint,
+      handedness: 'left' | 'right',
+      svgRect: DOMRect
+    ) => {
+      const dragState = dragStateRef.current[handedness];
+      if (!dragState.nodeMap || !dragState.offset) return;
+
+      // calculate simulation coordinates
+      const simulationX =
+        (point.clientX - svgRect.left - transformRef.current.x) /
+        transformRef.current.k;
+      const simulationY =
+        (point.clientY - svgRect.top - transformRef.current.y) /
+        transformRef.current.k;
+
+      // update node position in yjs
+      const newX = simulationX + dragState.offset.x;
+      const newY = simulationY + dragState.offset.y;
+
+      doc!.transact(() => {
+        dragState.nodeMap?.set('x', newX);
+        dragState.nodeMap?.set('y', newY);
+      });
+
+      // update visualization immediately for smooth dragging
+      updateVisualization();
+    };
+
     // Create a custom event handler for gesture interactions
     const handleInteraction = (event: InteractionEvent) => {
+      // get svg bounding rect for coordinate calculations
+      const svgRect =
+        d3Container.current?.getBoundingClientRect() || new DOMRect();
+
       switch (event.type) {
+        case 'pointerdown': {
+          // handle start of drag operation
+          const { element, point, handedness } = event;
+          if (!handedness) return;
+
+          // find the parent node group element that contains the data-id
+          const parentNode = element?.closest('g.node');
+          if (!parentNode) return;
+
+          const nodeId = parentNode.getAttribute('data-id');
+          if (!nodeId) return;
+
+          // find the Y.Map for this node
+          let nodeMap: Y.Map<NodeMapValue> | null = null;
+          for (let i = 0; i < yNodes.length; i++) {
+            const node = yNodes.get(i);
+            if (node.get('id') === nodeId) {
+              nodeMap = node;
+              break;
+            }
+          }
+
+          if (!nodeMap) return;
+
+          // calculate offset between pointer and node center
+          const nodeX = (nodeMap.get('x') as number) || 0;
+          const nodeY = (nodeMap.get('y') as number) || 0;
+
+          // convert client coordinates to simulation space
+          const simulationX =
+            (point.clientX - svgRect.left - transformRef.current.x) /
+            transformRef.current.k;
+          const simulationY =
+            (point.clientY - svgRect.top - transformRef.current.y) /
+            transformRef.current.k;
+
+          // save drag state
+          dragStateRef.current[handedness] = {
+            nodeMap,
+            offset: {
+              x: nodeX - simulationX,
+              y: nodeY - simulationY,
+            },
+          };
+          break;
+        }
+
+        case 'pointermove': {
+          // handle drag movement
+          const { point, handedness } = event;
+          if (!handedness) return;
+
+          handleNodeDrag(point, handedness, svgRect);
+          break;
+        }
+
+        case 'pointerup': {
+          // handle end of drag operation
+          const { handedness } = event;
+          if (!handedness) return;
+
+          // clear drag state for this hand
+          dragStateRef.current[handedness] = {
+            nodeMap: null,
+            offset: null,
+          };
+          break;
+        }
+
         case 'pointerover': {
           // Handle hover events (from handleOne or handleGrabbing)
           const element = event.element;

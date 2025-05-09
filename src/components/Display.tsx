@@ -9,13 +9,15 @@ import {
   handleOne as handleSvgOne,
   handleGrabbing as handleSvgGrabbing,
   handleThumbIndex as handleSvgThumbIndex,
-  handleDrag as handleSvgDrag,
+  handleOk as handleSvgOk,
+  handleFist as handleSvgFist,
 } from '@/utils/interactionHandlers';
 import {
   handleOne as handleSvgOneRemote,
   handleGrabbing as handleSvgGrabbingRemote,
   handleThumbIndex as handleSvgThumbIndexRemote,
-  handleDrag as handleSvgDragRemote,
+  handleOk as handleSvgOkRemote,
+  handleFist as handleSvgFistRemote,
 } from '@/utils/remoteInteractionHandlers';
 import { InteractionEventHandler } from '@/types/interactionTypes';
 import DebugDashboard from '@/components/canvasui/DebugDashboard';
@@ -210,8 +212,17 @@ const Display: React.FC = () => {
                 handleInteraction
               );
 
-              // process "ok" gesture for dragging and zooming
-              handleSvgDrag(
+              // process "ok" gesture for dragging elements
+              handleSvgOk(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction
+              );
+
+              // process "fist" gesture for zooming and panning
+              handleSvgFist(
                 canvasCtx,
                 results,
                 rect,
@@ -269,8 +280,11 @@ const Display: React.FC = () => {
             // process "thumb_index" gesture for selection
             handleSvgThumbIndexRemote(canvasCtx, results, rect, dimensions);
 
-            // process "ok" gesture for dragging and zooming
-            handleSvgDragRemote(canvasCtx, results, rect, dimensions);
+            // process "ok" gesture for element dragging
+            handleSvgOkRemote(canvasCtx, results, rect, dimensions);
+
+            // process "fist" gesture for zooming and panning
+            handleSvgFistRemote(canvasCtx, results, rect, dimensions);
           }
           canvasCtx.restore();
         }

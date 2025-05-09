@@ -16,6 +16,7 @@ import {
   drawThumbIndexGestureFeedback,
   drawOkGestureFeedback,
   drawZoomFeedback,
+  drawFistGestureFeedback,
 } from '@/utils/drawingUtils';
 
 // converts a mediapipe landmark to our interaction point format
@@ -117,24 +118,12 @@ const fineSelectDragState = {
   },
 };
 
-// track where two-handed zoom gestures started
-const twoHandedZoomState = {
-  active: false,
-  startedInsideBox: false,
-};
-
 // track when transitioning from two hands to one hand to prevent jumps
 let wasZooming = false;
 let lastZoomCenter: Point | null = null;
-let lastHandCount = 0; // track the number of hands with "ok" gesture
+let lastHandCount = 0; // track the number of hands with gesture
 let initialDragPosition: Point | null = null; // track initial position for smooth transition
 let transitionInProgress = false; // track if we're in the middle of a transition
-
-// state for tracking where each hand's ok gesture started
-const gestureStartLocation = {
-  left: { active: false, startedInside: false },
-  right: { active: false, startedInside: false },
-};
 
 // helper function to check if element is interactable
 // covers all common svg elements typically used in d3 visualizations
@@ -634,38 +623,10 @@ export function handleThumbIndex(
 }
 
 /**
- * handles all drag-based interactions using the "ok" gesture. the behavior depends on the number
- * of hands making the gesture and their positions relative to the visualization bounding box:
- *
- * important constraint:
- * - if an 'ok' gesture starts inside the visualization box, that hand is locked to element
- *   manipulation only until the gesture is released and started again
- * - this prevents accidental switching between element dragging and visualization manipulation
- *
- * single hand interactions:
- * - inside visualization box: can grab and drag individual elements (nodes)
- * - outside visualization box: drags the entire visualization (only if gesture started outside)
- *
- * two hand interactions:
- * - both hands outside box: performs zooming operation on visualization (only if both gestures started outside)
- * - both hands inside box: each hand can independently grab and drag elements
- * - mixed (one in, one out): hands work independently based on where each gesture started
- *   - inside hand: can grab and drag elements
- *   - outside hand: can drag the entire visualization (only if gesture started outside)
- *
- * visual feedback:
- * - orange circles show finger positions for drag operations
- * - yellow line shows distance between hands during zoom
- * - red circle shows zoom center point
- *
- * state management:
- * - tracks drag state per hand
- * - maintains zoom state for smooth transitions
- * - handles transitions between zoom and drag operations
- * - tracks where each gesture started (inside/outside box)
- * - automatically resets states when gestures end
+ * handles 'ok' gesture for dragging elements
+ * uses the 'ok' hand gesture to grab and manipulate individual elements
  */
-export function handleDrag(
+export function handleOk(
   ctx: CanvasRenderingContext2D,
   results: GestureRecognizerResult,
   rect: DOMRect,
@@ -699,30 +660,18 @@ export function handleDrag(
           dragState.active = false;
           dragState.element = null;
         }
-        // reset gesture start location state
-        gestureStartLocation[handLabel] = {
-          active: false,
-          startedInside: false,
-        };
       }
-
-      if (!wasZooming) {
-        resetZoomState();
-      }
-
-      twoHandedZoomState.active = false;
-      twoHandedZoomState.startedInsideBox = false;
     }
     return;
   }
 
-  // Draw orange points for any hand doing "ok" gesture
+  // draw orange points for any hand doing "ok" gesture
   results.handedness.forEach((hand, index) => {
     const gesture = results.gestures![index][0].categoryName;
     if (gesture === 'ok') {
       const landmarks = results.landmarks![index];
 
-      // Get fingertip positions
+      // get fingertip positions
       const indexTip = landmarkToInteractionPoint(
         landmarks[8],
         dimensions,
@@ -734,160 +683,41 @@ export function handleDrag(
         rect
       );
 
-      // Use drawing utility for fingertips
+      // use drawing utility for fingertips
       drawOkGestureFeedback(ctx, indexTip, thumbTip);
     }
   });
 
-  // Skip all interaction logic if in drawOnly mode
+  // skip all interaction logic if in drawOnly mode
   if (drawOnly) return;
 
-  // get current hand states and update gesture start locations
+  // get current hand states
   const currentHands = results.handedness.map((hand, idx) => ({
     handedness: hand[0].displayName.toLowerCase() as 'left' | 'right',
     gesture: results.gestures![idx][0].categoryName,
     landmarks: results.landmarks![idx],
   }));
 
-  // update gesture start locations for each hand
+  // process each hand with 'ok' gesture for element dragging
   currentHands.forEach((hand) => {
-    const handLabel = hand.handedness;
-    const isOk = hand.gesture === 'ok';
-    const gestureState = gestureStartLocation[handLabel];
+    if (hand.gesture === 'ok') {
+      const handLabel = hand.handedness;
 
-    // if not making ok gesture, reset the state
-    if (!isOk) {
-      gestureState.active = false;
-      gestureState.startedInside = false;
-      return;
-    }
-
-    // if this is the start of an ok gesture, record where it started
-    if (!gestureState.active) {
-      const indexTip = hand.landmarks[8];
-      const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
-      const isInside = isPointInsideVisualization(point);
-      gestureState.active = true;
-      gestureState.startedInside = isInside;
-    }
-  });
-
-  // count hands making "ok" gesture
-  const okHands = currentHands
-    .filter((hand) => hand.gesture === 'ok')
-    .map((hand) => ({
-      index: currentHands.indexOf(hand),
-      handedness: hand.handedness,
-    }));
-
-  // Check for transition from two hands to one hand
-  if (lastHandCount === 2 && okHands.length === 1) {
-    wasZooming = true;
-    transitionInProgress = true;
-    if (!lastZoomCenter && zoomState.startCenter) {
-      lastZoomCenter = { ...zoomState.startCenter };
-    }
-    initialDragPosition = null;
-  }
-
-  lastHandCount = okHands.length;
-
-  // handle two-handed "ok" gesture
-  if (okHands.length === 2) {
-    okHands.sort((a, b) => a.handedness.localeCompare(b.handedness));
-    const handLandmarks = okHands.map((hand) => results.landmarks![hand.index]);
-
-    const hand1IndexTip = landmarkToInteractionPoint(
-      handLandmarks[0][8],
-      dimensions,
-      rect
-    );
-    const hand2IndexTip = landmarkToInteractionPoint(
-      handLandmarks[1][8],
-      dimensions,
-      rect
-    );
-
-    const hand1Inside = isPointInsideVisualization(hand1IndexTip);
-    const hand2Inside = isPointInsideVisualization(hand2IndexTip);
-
-    // Check if either hand started inside
-    const hand1StartedInside =
-      gestureStartLocation[okHands[0].handedness].startedInside;
-    const hand2StartedInside =
-      gestureStartLocation[okHands[1].handedness].startedInside;
-
-    // both hands started outside - can zoom
-    if (
-      !hand1StartedInside &&
-      !hand2StartedInside &&
-      !hand1Inside &&
-      !hand2Inside
-    ) {
-      handleTwoHandedZoom(
-        ctx,
-        handLandmarks,
-        dimensions,
-        onInteraction,
-        drawOnly
-      );
-    } else {
-      // handle each hand based on where it started
-      if (hand1StartedInside || hand1Inside) {
-        handleSingleHandDragInside(
-          handLandmarks[0],
-          dimensions,
-          rect,
-          okHands[0].handedness,
-          onInteraction
-        );
-      } else if (!hand1StartedInside) {
-        handleSingleHandedDrag(handLandmarks[0], dimensions, onInteraction);
-      }
-
-      if (hand2StartedInside || hand2Inside) {
-        handleSingleHandDragInside(
-          handLandmarks[1],
-          dimensions,
-          rect,
-          okHands[1].handedness,
-          onInteraction
-        );
-      } else if (!hand2StartedInside) {
-        handleSingleHandedDrag(handLandmarks[1], dimensions, onInteraction);
-      }
-    }
-  }
-  // handle single-handed "ok" gesture
-  else if (okHands.length === 1) {
-    const hand = okHands[0];
-    const handLabel = hand.handedness;
-    const landmarks = results.landmarks![hand.index];
-    const indexTip = landmarks[8];
-    const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
-
-    const isInsideVis = isPointInsideVisualization(point);
-    const startedInside = gestureStartLocation[handLabel].startedInside;
-
-    // if started inside or currently inside, only allow element manipulation
-    if (startedInside || isInsideVis) {
+      // handle element dragging with 'ok' gesture
       handleSingleHandDragInside(
-        landmarks,
+        hand.landmarks,
         dimensions,
         rect,
         handLabel,
         onInteraction
       );
-    } else if (!startedInside) {
-      // only allow visualization drag if started outside
-      handleSingleHandedDrag(landmarks, dimensions, onInteraction);
-    }
-  }
-  // No "ok" gestures - reset all states
-  else {
-    for (const handLabel of ['left', 'right'] as const) {
+    } else {
+      // if not making 'ok' gesture, reset drag state for this hand
+      const handLabel = hand.handedness;
       const dragState = fineSelectDragState[handLabel];
+
       if (dragState.active && dragState.element) {
+        // send pointerup to end the drag when gesture ends
         onInteraction({
           type: 'pointerup',
           point: { x: 0, y: 0, clientX: 0, clientY: 0 },
@@ -899,38 +729,106 @@ export function handleDrag(
         dragState.active = false;
         dragState.element = null;
       }
-      // reset gesture start location state
-      gestureStartLocation[handLabel] = { active: false, startedInside: false };
     }
-    resetZoomState();
-    twoHandedZoomState.active = false;
-    twoHandedZoomState.startedInsideBox = false;
-    wasZooming = false;
-    lastZoomCenter = null;
-    initialDragPosition = null;
-    transitionInProgress = false;
-  }
+  });
 }
 
-// simplified helper to check if a point is inside the visualization
-// in a real implementation, this would use the actual visualization dimensions
-// note: you will explicitly need to set the bounding box for the visualization
-// otherwise, it will return false
-function isPointInsideVisualization(point: InteractionPoint): boolean {
-  // Get the visualization element
-  const visElement = document.querySelector('.vis-bounding-box');
-  if (visElement instanceof SVGElement) {
-    const bbox = visElement.getBoundingClientRect();
-    return (
-      point.clientX >= bbox.left &&
-      point.clientX <= bbox.right &&
-      point.clientY >= bbox.top &&
-      point.clientY <= bbox.bottom
-    );
+/**
+ * handles 'fist' gesture for panning and zooming
+ * single fist: pans the visualization
+ * two fists: zooms the visualization
+ */
+export function handleFist(
+  ctx: CanvasRenderingContext2D,
+  results: GestureRecognizerResult,
+  rect: DOMRect,
+  dimensions: CanvasDimensions,
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
+): void {
+  if (
+    !results.landmarks?.length ||
+    !results.handedness?.length ||
+    !results.gestures?.length
+  ) {
+    // reset states when no hands are detected
+    if (!drawOnly) {
+      if (!wasZooming) {
+        resetZoomState();
+      }
+
+      lastHandCount = 0;
+    }
+    return;
   }
 
-  // for visualizations that don't need bounding box calcs (pan+zoom only)
-  return false;
+  // get current hands making fist gesture
+  const fistHands = results.handedness
+    .map((hand, idx) => ({
+      index: idx,
+      handedness: hand[0].displayName.toLowerCase() as 'left' | 'right',
+      gesture: results.gestures![idx][0].categoryName,
+    }))
+    .filter((hand) => hand.gesture === 'fist');
+
+  // skip if no fist gestures detected
+  if (fistHands.length === 0) {
+    if (!drawOnly) {
+      resetZoomState();
+      wasZooming = false;
+      lastZoomCenter = null;
+      initialDragPosition = null;
+      transitionInProgress = false;
+      lastHandCount = 0;
+    }
+    return;
+  }
+
+  // Draw visual feedback for each fist
+  fistHands.forEach((hand) => {
+    const landmarks = results.landmarks![hand.index];
+    const palmCenter = landmarkToInteractionPoint(
+      landmarks[0],
+      dimensions,
+      rect
+    );
+    drawFistGestureFeedback(ctx, palmCenter);
+  });
+
+  // check for transition from two hands to one hand
+  if (lastHandCount === 2 && fistHands.length === 1) {
+    wasZooming = true;
+    transitionInProgress = true;
+    if (!lastZoomCenter && zoomState.startCenter) {
+      lastZoomCenter = { ...zoomState.startCenter };
+    }
+    initialDragPosition = null;
+  }
+
+  lastHandCount = fistHands.length;
+
+  // handle two-handed fist gesture (zooming)
+  if (fistHands.length === 2) {
+    fistHands.sort((a, b) => a.handedness.localeCompare(b.handedness));
+    const handLandmarks = fistHands.map(
+      (hand) => results.landmarks![hand.index]
+    );
+
+    handleTwoHandedZoom(
+      ctx,
+      handLandmarks,
+      dimensions,
+      onInteraction,
+      drawOnly
+    );
+  }
+  // handle single-handed fist gesture (panning)
+  else if (fistHands.length === 1) {
+    const hand = fistHands[0];
+    const landmarks = results.landmarks![hand.index];
+
+    handleSingleHandedDrag(landmarks, dimensions, onInteraction);
+  }
 }
 
 // handles two-handed zoom operation
@@ -950,12 +848,12 @@ function handleTwoHandedZoom(
 
   // get index fingertip positions for both hands
   const point1 = getLandmarkPosition(
-    hands[0][4],
+    hands[0][0],
     dimensions.width,
     dimensions.height
   );
   const point2 = getLandmarkPosition(
-    hands[1][4],
+    hands[1][0],
     dimensions.width,
     dimensions.height
   );
@@ -1023,7 +921,7 @@ function handleSingleHandedDrag(
   onInteraction: InteractionEventHandler
 ): void {
   const currentPosition = getLandmarkPosition(
-    hand[4],
+    hand[0],
     dimensions.width,
     dimensions.height
   );
