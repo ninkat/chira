@@ -55,6 +55,37 @@ const hoveredElementsByHand = {
   right: new Set<Element>(),
 };
 
+// state machine for tracking clicks (thumb_index to one gesture)
+type GestureState = 'idle' | 'potential_click';
+interface GestureClickState {
+  state: GestureState;
+  startTime: number;
+  startElement: Element | null;
+  point: InteractionPoint | null;
+}
+
+// click gesture state tracking per hand
+const gestureClickState: {
+  left: GestureClickState;
+  right: GestureClickState;
+} = {
+  left: {
+    state: 'idle',
+    startTime: 0,
+    startElement: null,
+    point: null,
+  },
+  right: {
+    state: 'idle',
+    startTime: 0,
+    startElement: null,
+    point: null,
+  },
+};
+
+// time constraint for the click gesture (thumb_index → one) in milliseconds
+const CLICK_GESTURE_TIME_CONSTRAINT = 200;
+
 // transform state management
 let currentTransform = {
   scale: 1,
@@ -151,15 +182,65 @@ export function handleOne(
   results.handedness.forEach((hand, index) => {
     const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
     const gesture = results.gestures![index][0].categoryName;
+    const clickState = gestureClickState[handLabel];
+    const now = Date.now();
 
-    // only process if gesture is "one"
-    if (gesture !== 'one') return;
+    // only process hovering if gesture is "one"
+    if (gesture !== 'one') {
+      // for any other gesture, check if we need to expire a potential click
+      if (!drawOnly && clickState.state === 'potential_click') {
+        const elapsedTime = now - clickState.startTime;
+
+        // if we exceeded the time constraint, reset the click state
+        if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
+          clickState.state = 'idle';
+          clickState.startElement = null;
+          clickState.point = null;
+        }
+      }
+      return;
+    }
 
     const landmarks = results.landmarks![index];
 
     // get index fingertip position
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
+
+    // if we were in potential click state and now see "one", complete the click gesture
+    if (!drawOnly && clickState.state === 'potential_click') {
+      const elapsedTime = now - clickState.startTime;
+
+      // check if the transition happened within the time constraint
+      if (
+        elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT &&
+        clickState.startElement
+      ) {
+        // get current element at position to verify we're still over the same element
+        const currentElement = document.elementFromPoint(
+          point.clientX,
+          point.clientY
+        );
+        const isSameElement = currentElement === clickState.startElement;
+
+        // complete click if we're on the same element or close enough
+        if (isSameElement && clickState.point) {
+          onInteraction({
+            type: 'pointerselect',
+            point: clickState.point, // use the original point from thumb_index
+            timestamp: now,
+            sourceType: 'gesture',
+            handedness: handLabel,
+            element: clickState.startElement,
+          });
+        }
+      }
+
+      // reset click state after handling
+      clickState.state = 'idle';
+      clickState.startElement = null;
+      clickState.point = null;
+    }
 
     // handle hover state based on hand if not in drawOnly mode
     if (!drawOnly) {
@@ -474,42 +555,79 @@ export function handleThumbIndex(
   results.handedness.forEach((hand, index) => {
     const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
     const gesture = results.gestures![index][0].categoryName;
-
-    // only process if gesture is "thumb_index"
-    if (gesture !== 'thumb_index') return;
+    const clickState = gestureClickState[handLabel];
+    const now = Date.now();
 
     const landmarks = results.landmarks![index];
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    // draw visual indicator using the drawing utility
-    drawThumbIndexGestureFeedback(ctx, point);
+    if (gesture === 'thumb_index') {
+      // draw visual indicator using the drawing utility
+      drawThumbIndexGestureFeedback(ctx, point);
 
-    // handle selection if not in drawOnly mode
-    if (!drawOnly) {
-      const element = document.elementFromPoint(point.clientX, point.clientY);
-      const lastSelected = lastSelectedElementByHand[handLabel];
+      // handle gesture state tracking if not in drawOnly mode
+      if (!drawOnly) {
+        // get element at current position
+        const element = document.elementFromPoint(point.clientX, point.clientY);
+        const interactableElement = isInteractableElement(element)
+          ? element
+          : null;
 
-      // check if the element is interactable
-      const interactableElement = isInteractableElement(element)
-        ? element
-        : null;
+        // if we're in idle state and see thumb_index, start potential click
+        if (clickState.state === 'idle' && interactableElement) {
+          clickState.state = 'potential_click';
+          clickState.startTime = now;
+          clickState.startElement = interactableElement;
+          clickState.point = { ...point };
+        }
+      }
+    } else if (gesture === 'one') {
+      // if we were in potential click state and now see "one", complete the click gesture
+      if (!drawOnly && clickState.state === 'potential_click') {
+        const elapsedTime = now - clickState.startTime;
 
-      // if the interactable element under the pointer has changed for this hand
-      if (interactableElement !== lastSelected) {
-        // if there's a new interactable element, send select event
-        if (interactableElement) {
-          onInteraction({
-            type: 'pointerselect',
-            point,
-            timestamp: Date.now(),
-            sourceType: 'gesture',
-            handedness: handLabel,
-            element: interactableElement, // use the validated interactable element
-          });
+        // check if the transition happened within the time constraint
+        if (
+          elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT &&
+          clickState.startElement
+        ) {
+          // get current element at position to verify we're still over the same element
+          const currentElement = document.elementFromPoint(
+            point.clientX,
+            point.clientY
+          );
+          const isSameElement = currentElement === clickState.startElement;
+
+          // complete click if we're on the same element or close enough
+          if (isSameElement && clickState.point) {
+            onInteraction({
+              type: 'pointerselect',
+              point: clickState.point, // use the original point from thumb_index
+              timestamp: now,
+              sourceType: 'gesture',
+              handedness: handLabel,
+              element: clickState.startElement,
+            });
+          }
         }
 
-        lastSelectedElementByHand[handLabel] = interactableElement;
+        // reset click state after handling
+        clickState.state = 'idle';
+        clickState.startElement = null;
+        clickState.point = null;
+      }
+    } else {
+      // for any other gesture, check if we need to expire a potential click
+      if (!drawOnly && clickState.state === 'potential_click') {
+        const elapsedTime = now - clickState.startTime;
+
+        // if we exceeded the time constraint, reset the click state
+        if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
+          clickState.state = 'idle';
+          clickState.startElement = null;
+          clickState.point = null;
+        }
       }
     }
   });
@@ -874,7 +992,7 @@ function handleTwoHandedZoom(
   // calculate and dispatch zoom transform - only if not in drawOnly mode
   if (!drawOnly && zoomState.lastDistance) {
     const scale = currentDistance / zoomState.lastDistance;
-    const newScale = Math.max(0.5, Math.min(8, currentTransform.scale * scale));
+    const newScale = Math.max(1, Math.min(4, currentTransform.scale * scale));
 
     if (zoomState.fixedPoint) {
       const fp = zoomState.fixedPoint;

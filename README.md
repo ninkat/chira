@@ -56,6 +56,8 @@ src
 |
 +-- components        # shared components used across the entire application
 |
++-- context           # context is used as entry point for y-webrtc
+|
 +-- hooks             # shared hooks used across the entire application
 |
 +-- server            # websocket server implementation

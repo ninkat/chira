@@ -24,7 +24,7 @@ import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
 import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import Senate from '@/components/yjs-vis/Senate';
-import { YjsProvider } from '@/components/context/YjsContext';
+import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
 // get the dynamic websocket url with connection type parameter
@@ -72,11 +72,11 @@ const Display: React.FC = () => {
     useState<GestureData | null>(null);
 
   // canvas dimensions
-  const canvasWidth = 1920;
-  const canvasHeight = 1080;
+  const canvasWidth = 1280;
+  const canvasHeight = 720;
 
   // debug visibility state
-  const [showDebug, setShowDebug] = useState<boolean>(true);
+  const [showDebug, setShowDebug] = useState<boolean>(false);
 
   // get gesture recognizer instances. one is for the local hands and the other is for the remote hands
   const gestureRecognizer = useGestureRecognizer();

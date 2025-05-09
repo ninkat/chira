@@ -2,7 +2,7 @@ import React from 'react';
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
 import { Awareness } from 'y-protocols/awareness';
-import getWebsocketUrl from '../../utils/websocketUtils';
+import getWebsocketUrl from '@/utils/websocketUtils';
 
 // create a shared y.doc instance
 const doc = new Y.Doc();

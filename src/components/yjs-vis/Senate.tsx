@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
-import { YjsContext } from '../context/YjsContext';
+import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
-import senateData from '../../assets/foafagain.json';
+import senateData from '@/assets/foafagain.json';
 import { InteractionEvent } from '@/types/interactionTypes';
 
 // define shared value types for y.map
@@ -172,8 +172,8 @@ const Senate: React.FC = () => {
   const [userId] = useState<string>(() => crypto.randomUUID());
 
   // fixed dimensions for the svg canvas
-  const fixedWidth = 1920;
-  const fixedHeight = 1080;
+  const fixedWidth = 1280;
+  const fixedHeight = 720;
 
   // left panel width for tooltip/info
   const tooltipWidth = fixedWidth * 0.25;
