@@ -17,6 +17,7 @@ import {
   drawOkGestureFeedback,
   drawZoomFeedback,
   drawFistGestureFeedback,
+  drawRippleEffect,
 } from '@/utils/drawingUtils';
 
 // converts a mediapipe landmark to our interaction point format
@@ -56,13 +57,41 @@ const hoveredElementsByHand = {
   right: new Set<Element>(),
 };
 
+// ripple effect animation state
+interface RippleState {
+  active: boolean;
+  point: InteractionPoint | null;
+  startTime: number;
+  progress: number;
+}
+
+// ripple state tracking per hand
+const rippleState: {
+  left: RippleState;
+  right: RippleState;
+} = {
+  left: {
+    active: false,
+    point: null,
+    startTime: 0,
+    progress: 0,
+  },
+  right: {
+    active: false,
+    point: null,
+    startTime: 0,
+    progress: 0,
+  },
+};
+
+// duration of ripple animation in milliseconds
+const RIPPLE_ANIMATION_DURATION = 400;
+
 // state machine for tracking clicks (thumb_index to one gesture)
 type GestureState = 'idle' | 'potential_click';
 interface GestureClickState {
   state: GestureState;
   startTime: number;
-  startElement: Element | null;
-  point: InteractionPoint | null;
 }
 
 // click gesture state tracking per hand
@@ -73,19 +102,15 @@ const gestureClickState: {
   left: {
     state: 'idle',
     startTime: 0,
-    startElement: null,
-    point: null,
   },
   right: {
     state: 'idle',
     startTime: 0,
-    startElement: null,
-    point: null,
   },
 };
 
 // time constraint for the click gesture (thumb_index → one) in milliseconds
-const CLICK_GESTURE_TIME_CONSTRAINT = 200;
+const CLICK_GESTURE_TIME_CONSTRAINT = 500;
 
 // transform state management
 let currentTransform = {
@@ -124,6 +149,23 @@ let lastZoomCenter: Point | null = null;
 let lastHandCount = 0; // track the number of hands with gesture
 let initialDragPosition: Point | null = null; // track initial position for smooth transition
 let transitionInProgress = false; // track if we're in the middle of a transition
+
+// state for tracking fist gesture dwell time per hand
+const fistDwellState = {
+  left: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+  },
+  right: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+  },
+};
+
+// dwell time in milliseconds before fist gesture can be used for navigation
+const FIST_DWELL_TIME = 500;
 
 // helper function to check if element is interactable
 // covers all common svg elements typically used in d3 visualizations
@@ -174,6 +216,25 @@ export function handleOne(
     const clickState = gestureClickState[handLabel];
     const now = Date.now();
 
+    // Check and update ripple animation if active
+    const handRippleState = rippleState[handLabel];
+    if (handRippleState.active && handRippleState.point) {
+      const rippleElapsed = now - handRippleState.startTime;
+      handRippleState.progress = Math.min(
+        1,
+        rippleElapsed / RIPPLE_ANIMATION_DURATION
+      );
+
+      // Draw the ripple effect
+      drawRippleEffect(ctx, handRippleState.point, handRippleState.progress);
+
+      // Deactivate ripple when animation completes
+      if (handRippleState.progress >= 1) {
+        handRippleState.active = false;
+        handRippleState.point = null;
+      }
+    }
+
     // only process hovering if gesture is "one"
     if (gesture !== 'one') {
       // for any other gesture, check if we need to expire a potential click
@@ -183,8 +244,6 @@ export function handleOne(
         // if we exceeded the time constraint, reset the click state
         if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
           clickState.state = 'idle';
-          clickState.startElement = null;
-          clickState.point = null;
         }
       }
       return;
@@ -201,34 +260,30 @@ export function handleOne(
       const elapsedTime = now - clickState.startTime;
 
       // check if the transition happened within the time constraint
-      if (
-        elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT &&
-        clickState.startElement
-      ) {
-        // get current element at position to verify we're still over the same element
-        const currentElement = document.elementFromPoint(
-          point.clientX,
-          point.clientY
-        );
-        const isSameElement = currentElement === clickState.startElement;
+      if (elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT) {
+        // Get the element at the current position
+        const element = document.elementFromPoint(point.clientX, point.clientY);
 
-        // complete click if we're on the same element or close enough
-        if (isSameElement && clickState.point) {
+        // Complete the click regardless of whether we're over the same element
+        if (element && isInteractableElement(element)) {
           onInteraction({
             type: 'pointerselect',
-            point: clickState.point, // use the original point from thumb_index
+            point: point, // use current index finger position instead of stored point
             timestamp: now,
             sourceType: 'gesture',
             handedness: handLabel,
-            element: clickState.startElement,
+            element: element,
           });
         }
+        // Start ripple animation at the click point (current position)
+        handRippleState.active = true;
+        handRippleState.point = { ...point }; // use current position for ripple
+        handRippleState.startTime = now;
+        handRippleState.progress = 0;
       }
 
       // reset click state after handling
       clickState.state = 'idle';
-      clickState.startElement = null;
-      clickState.point = null;
     }
 
     // handle hover state based on hand if not in drawOnly mode
@@ -547,6 +602,25 @@ export function handleThumbIndex(
     const clickState = gestureClickState[handLabel];
     const now = Date.now();
 
+    // Check and update ripple animation if active
+    const handRippleState = rippleState[handLabel];
+    if (handRippleState.active && handRippleState.point) {
+      const rippleElapsed = now - handRippleState.startTime;
+      handRippleState.progress = Math.min(
+        1,
+        rippleElapsed / RIPPLE_ANIMATION_DURATION
+      );
+
+      // Draw the ripple effect
+      drawRippleEffect(ctx, handRippleState.point, handRippleState.progress);
+
+      // Deactivate ripple when animation completes
+      if (handRippleState.progress >= 1) {
+        handRippleState.active = false;
+        handRippleState.point = null;
+      }
+    }
+
     const landmarks = results.landmarks![index];
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
@@ -557,18 +631,10 @@ export function handleThumbIndex(
 
       // handle gesture state tracking if not in drawOnly mode
       if (!drawOnly) {
-        // get element at current position
-        const element = document.elementFromPoint(point.clientX, point.clientY);
-        const interactableElement = isInteractableElement(element)
-          ? element
-          : null;
-
         // if we're in idle state and see thumb_index, start potential click
-        if (clickState.state === 'idle' && interactableElement) {
+        if (clickState.state === 'idle') {
           clickState.state = 'potential_click';
           clickState.startTime = now;
-          clickState.startElement = interactableElement;
-          clickState.point = { ...point };
         }
       }
     } else if (gesture === 'one') {
@@ -577,34 +643,44 @@ export function handleThumbIndex(
         const elapsedTime = now - clickState.startTime;
 
         // check if the transition happened within the time constraint
-        if (
-          elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT &&
-          clickState.startElement
-        ) {
-          // get current element at position to verify we're still over the same element
-          const currentElement = document.elementFromPoint(
+        if (elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT) {
+          // Get the element at the current position
+          const element = document.elementFromPoint(
             point.clientX,
             point.clientY
           );
-          const isSameElement = currentElement === clickState.startElement;
 
-          // complete click if we're on the same element or close enough
-          if (isSameElement && clickState.point) {
+          // Complete the click regardless of whether we're over the same element
+          if (element && isInteractableElement(element)) {
             onInteraction({
               type: 'pointerselect',
-              point: clickState.point, // use the original point from thumb_index
+              point: point, // use current index finger position instead of stored point
               timestamp: now,
               sourceType: 'gesture',
               handedness: handLabel,
-              element: clickState.startElement,
+              element: element,
             });
+
+            // Start ripple animation at the click point (current position)
+            handRippleState.active = true;
+            handRippleState.point = { ...point }; // use current position for ripple
+            handRippleState.startTime = now;
+            handRippleState.progress = 0;
           }
         }
 
         // reset click state after handling
         clickState.state = 'idle';
-        clickState.startElement = null;
-        clickState.point = null;
+      } else {
+        // for any other gesture, check if we need to expire a potential click
+        if (!drawOnly && clickState.state === 'potential_click') {
+          const elapsedTime = now - clickState.startTime;
+
+          // if we exceeded the time constraint, reset the click state
+          if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
+            clickState.state = 'idle';
+          }
+        }
       }
     } else {
       // for any other gesture, check if we need to expire a potential click
@@ -614,8 +690,6 @@ export function handleThumbIndex(
         // if we exceeded the time constraint, reset the click state
         if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
           clickState.state = 'idle';
-          clickState.startElement = null;
-          clickState.point = null;
         }
       }
     }
@@ -737,6 +811,7 @@ export function handleOk(
  * handles 'fist' gesture for panning and zooming
  * single fist: pans the visualization
  * two fists: zooms the visualization
+ * requires 500ms dwell time before gesture becomes active
  */
 export function handleFist(
   ctx: CanvasRenderingContext2D,
@@ -758,9 +833,17 @@ export function handleFist(
       }
 
       lastHandCount = 0;
+
+      // Reset dwell states
+      fistDwellState.left.active = false;
+      fistDwellState.left.dwellComplete = false;
+      fistDwellState.right.active = false;
+      fistDwellState.right.dwellComplete = false;
     }
     return;
   }
+
+  const currentTime = Date.now();
 
   // get current hands making fist gesture
   const fistHands = results.handedness
@@ -768,8 +851,21 @@ export function handleFist(
       index: idx,
       handedness: hand[0].displayName.toLowerCase() as 'left' | 'right',
       gesture: results.gestures![idx][0].categoryName,
+      landmarks: results.landmarks![idx],
     }))
     .filter((hand) => hand.gesture === 'fist');
+
+  // Track hands that are not making fist gesture to reset their dwell state
+  results.handedness.forEach((hand, idx) => {
+    const handedness = hand[0].displayName.toLowerCase() as 'left' | 'right';
+    const gesture = results.gestures![idx][0].categoryName;
+
+    // If hand is not making fist gesture, reset its dwell state
+    if (gesture !== 'fist' && fistDwellState[handedness].active) {
+      fistDwellState[handedness].active = false;
+      fistDwellState[handedness].dwellComplete = false;
+    }
+  });
 
   // skip if no fist gestures detected
   if (fistHands.length === 0) {
@@ -784,19 +880,131 @@ export function handleFist(
     return;
   }
 
-  // Draw visual feedback for each fist
+  // Get hands that have completed the dwell time
+  const activeFistHands = fistHands.filter(
+    (hand) => fistDwellState[hand.handedness].dwellComplete
+  );
+
+  // Check dwell time and update states for each fist hand
   fistHands.forEach((hand) => {
-    const landmarks = results.landmarks![hand.index];
+    const handedness = hand.handedness;
+    const dwellState = fistDwellState[handedness];
+
+    // Start timer if this is a new fist gesture
+    if (!dwellState.active) {
+      dwellState.startTime = currentTime;
+      dwellState.active = true;
+      dwellState.dwellComplete = false;
+    }
+    // Check if dwell time is complete
+    else if (!dwellState.dwellComplete) {
+      const elapsedTime = currentTime - dwellState.startTime;
+      if (elapsedTime >= FIST_DWELL_TIME) {
+        dwellState.dwellComplete = true;
+      }
+    }
+
+    // Draw feedback for this fist
     const palmCenter = landmarkToInteractionPoint(
-      landmarks[0],
+      hand.landmarks[0],
       dimensions,
       rect
     );
-    drawFistGestureFeedback(ctx, palmCenter);
+
+    // Draw dwell progress indicator along with fist feedback
+    if (dwellState.active && !dwellState.dwellComplete) {
+      // Calculate progress as a value between 0 and 1
+      const progress = Math.min(
+        1,
+        (currentTime - dwellState.startTime) / FIST_DWELL_TIME
+      );
+
+      // For in-progress dwell, draw a partial circle that fills up
+      const radius = 12; // Same radius as in drawFistGestureFeedback
+
+      // First draw the outline circle
+      ctx.beginPath();
+      ctx.arc(palmCenter.x, palmCenter.y, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(50, 205, 50, 0.8)'; // Green outline
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Then draw the progress as a filled sector
+      ctx.beginPath();
+      ctx.moveTo(palmCenter.x, palmCenter.y);
+      ctx.arc(
+        palmCenter.x,
+        palmCenter.y,
+        radius,
+        -Math.PI / 2, // start at 12 o'clock position
+        -Math.PI / 2 + progress * 2 * Math.PI, // end based on progress
+        false // draw clockwise
+      );
+      ctx.fillStyle = 'rgba(50, 205, 50, 0.6)'; // Lighter green fill
+      ctx.fill();
+
+      // Draw the outer ring
+      ctx.beginPath();
+      ctx.arc(palmCenter.x, palmCenter.y, radius + 4, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(50, 205, 50, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else if (dwellState.dwellComplete) {
+      // When dwell is complete, use the normal feedback which is a solid circle
+      drawFistGestureFeedback(ctx, palmCenter);
+
+      // If in zoom mode (two active fists), we'll draw the zoom indicator at the center point later
+      // Only draw move indicator for single hand panning
+      if (activeFistHands.length === 1) {
+        drawMoveToolIndicator(ctx, palmCenter);
+      }
+    } else {
+      // Shouldn't reach here, but just in case, draw basic feedback
+      drawFistGestureFeedback(ctx, palmCenter);
+    }
   });
 
+  // Skip interaction logic if no hands have completed dwell time
+  if (activeFistHands.length === 0) {
+    return;
+  }
+
+  // If we have two active fists, calculate and draw the zoom center indicator
+  if (activeFistHands.length === 2) {
+    activeFistHands.sort((a, b) => a.handedness.localeCompare(b.handedness));
+    const handLandmarks = activeFistHands.map(
+      (hand) => results.landmarks![hand.index]
+    );
+
+    // Calculate the center point between the two hands
+    const point1 = getLandmarkPosition(
+      handLandmarks[0][0], // palm center of first hand
+      dimensions.width,
+      dimensions.height
+    );
+    const point2 = getLandmarkPosition(
+      handLandmarks[1][0], // palm center of second hand
+      dimensions.width,
+      dimensions.height
+    );
+
+    // Calculate the zoom center point
+    const zoomCenter: InteractionPoint = {
+      x: (point1.x + point2.x) / 2,
+      y: (point1.y + point2.y) / 2,
+      clientX: 0, // not needed for drawing
+      clientY: 0, // not needed for drawing
+    };
+
+    // Draw the zoom tool indicator at the center point with arrows aligned with hand positions
+    drawZoomToolIndicator(ctx, zoomCenter, point1, point2);
+  }
+
+  // The rest of the function remains unchanged, but we now use activeFistHands
+  // instead of fistHands to only consider hands that have completed the dwell time
+
   // check for transition from two hands to one hand
-  if (lastHandCount === 2 && fistHands.length === 1) {
+  if (lastHandCount === 2 && activeFistHands.length === 1) {
     wasZooming = true;
     transitionInProgress = true;
     if (!lastZoomCenter && zoomState.startCenter) {
@@ -805,12 +1013,12 @@ export function handleFist(
     initialDragPosition = null;
   }
 
-  lastHandCount = fistHands.length;
+  lastHandCount = activeFistHands.length;
 
   // handle two-handed fist gesture (zooming)
-  if (fistHands.length === 2) {
-    fistHands.sort((a, b) => a.handedness.localeCompare(b.handedness));
-    const handLandmarks = fistHands.map(
+  if (activeFistHands.length === 2) {
+    activeFistHands.sort((a, b) => a.handedness.localeCompare(b.handedness));
+    const handLandmarks = activeFistHands.map(
       (hand) => results.landmarks![hand.index]
     );
 
@@ -823,8 +1031,8 @@ export function handleFist(
     );
   }
   // handle single-handed fist gesture (panning)
-  else if (fistHands.length === 1) {
-    const hand = fistHands[0];
+  else if (activeFistHands.length === 1) {
+    const hand = activeFistHands[0];
     const landmarks = results.landmarks![hand.index];
 
     handleSingleHandedDrag(landmarks, dimensions, onInteraction);
@@ -1047,5 +1255,193 @@ function handleSingleHandDragInside(
         handedness: handLabel,
       });
     }
+  }
+}
+
+// helper function to draw a move tool indicator (four cardinal arrows)
+function drawMoveToolIndicator(
+  ctx: CanvasRenderingContext2D,
+  point: InteractionPoint
+): void {
+  const arrowLength = 14;
+  const arrowWidth = 6;
+  const centerOffset = 8; // offset from center point
+
+  // draw arrows in four directions
+  // up arrow
+  ctx.beginPath();
+  ctx.moveTo(point.x, point.y - centerOffset);
+  ctx.lineTo(point.x, point.y - centerOffset - arrowLength);
+  ctx.lineTo(
+    point.x - arrowWidth,
+    point.y - centerOffset - arrowLength + arrowWidth
+  );
+  ctx.moveTo(point.x, point.y - centerOffset - arrowLength);
+  ctx.lineTo(
+    point.x + arrowWidth,
+    point.y - centerOffset - arrowLength + arrowWidth
+  );
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // down arrow
+  ctx.beginPath();
+  ctx.moveTo(point.x, point.y + centerOffset);
+  ctx.lineTo(point.x, point.y + centerOffset + arrowLength);
+  ctx.lineTo(
+    point.x - arrowWidth,
+    point.y + centerOffset + arrowLength - arrowWidth
+  );
+  ctx.moveTo(point.x, point.y + centerOffset + arrowLength);
+  ctx.lineTo(
+    point.x + arrowWidth,
+    point.y + centerOffset + arrowLength - arrowWidth
+  );
+  ctx.stroke();
+
+  // left arrow
+  ctx.beginPath();
+  ctx.moveTo(point.x - centerOffset, point.y);
+  ctx.lineTo(point.x - centerOffset - arrowLength, point.y);
+  ctx.lineTo(
+    point.x - centerOffset - arrowLength + arrowWidth,
+    point.y - arrowWidth
+  );
+  ctx.moveTo(point.x - centerOffset - arrowLength, point.y);
+  ctx.lineTo(
+    point.x - centerOffset - arrowLength + arrowWidth,
+    point.y + arrowWidth
+  );
+  ctx.stroke();
+
+  // right arrow
+  ctx.beginPath();
+  ctx.moveTo(point.x + centerOffset, point.y);
+  ctx.lineTo(point.x + centerOffset + arrowLength, point.y);
+  ctx.lineTo(
+    point.x + centerOffset + arrowLength - arrowWidth,
+    point.y - arrowWidth
+  );
+  ctx.moveTo(point.x + centerOffset + arrowLength, point.y);
+  ctx.lineTo(
+    point.x + centerOffset + arrowLength - arrowWidth,
+    point.y + arrowWidth
+  );
+  ctx.stroke();
+}
+
+// helper function to draw a zoom tool indicator with arrows aligned with the hand positions
+function drawZoomToolIndicator(
+  ctx: CanvasRenderingContext2D,
+  center: InteractionPoint,
+  point1: Point,
+  point2: Point
+): void {
+  const arrowLength = 14;
+  const arrowWidth = 6;
+
+  // Calculate the direction vector from center to each hand
+  const dir1 = {
+    x: point1.x - center.x,
+    y: point1.y - center.y,
+  };
+
+  const dir2 = {
+    x: point2.x - center.x,
+    y: point2.y - center.y,
+  };
+
+  // Normalize the direction vectors
+  const length1 = Math.sqrt(dir1.x * dir1.x + dir1.y * dir1.y);
+  const length2 = Math.sqrt(dir2.x * dir2.x + dir2.y * dir2.y);
+
+  if (length1 > 0 && length2 > 0) {
+    const normalizedDir1 = {
+      x: dir1.x / length1,
+      y: dir1.y / length1,
+    };
+
+    const normalizedDir2 = {
+      x: dir2.x / length2,
+      y: dir2.y / length2,
+    };
+
+    // Calculate start points for arrows (slightly offset from center)
+    const startOffset = 8; // Same as centerOffset in other functions
+
+    const start1 = {
+      x: center.x + normalizedDir1.x * startOffset,
+      y: center.y + normalizedDir1.y * startOffset,
+    };
+
+    const start2 = {
+      x: center.x + normalizedDir2.x * startOffset,
+      y: center.y + normalizedDir2.y * startOffset,
+    };
+
+    // Calculate end points for arrows
+    const end1 = {
+      x: start1.x + normalizedDir1.x * arrowLength,
+      y: start1.y + normalizedDir1.y * arrowLength,
+    };
+
+    const end2 = {
+      x: start2.x + normalizedDir2.x * arrowLength,
+      y: start2.y + normalizedDir2.y * arrowLength,
+    };
+
+    // Calculate arrow head points for first arrow
+    // Perpendicular to direction vector
+    const perpDir1 = {
+      x: -normalizedDir1.y,
+      y: normalizedDir1.x,
+    };
+
+    const arrow1Point1 = {
+      x: end1.x - normalizedDir1.x * arrowWidth + perpDir1.x * arrowWidth,
+      y: end1.y - normalizedDir1.y * arrowWidth + perpDir1.y * arrowWidth,
+    };
+
+    const arrow1Point2 = {
+      x: end1.x - normalizedDir1.x * arrowWidth - perpDir1.x * arrowWidth,
+      y: end1.y - normalizedDir1.y * arrowWidth - perpDir1.y * arrowWidth,
+    };
+
+    // Calculate arrow head points for second arrow
+    const perpDir2 = {
+      x: -normalizedDir2.y,
+      y: normalizedDir2.x,
+    };
+
+    const arrow2Point1 = {
+      x: end2.x - normalizedDir2.x * arrowWidth + perpDir2.x * arrowWidth,
+      y: end2.y - normalizedDir2.y * arrowWidth + perpDir2.y * arrowWidth,
+    };
+
+    const arrow2Point2 = {
+      x: end2.x - normalizedDir2.x * arrowWidth - perpDir2.x * arrowWidth,
+      y: end2.y - normalizedDir2.y * arrowWidth - perpDir2.y * arrowWidth,
+    };
+
+    // Draw first arrow
+    ctx.beginPath();
+    ctx.moveTo(start1.x, start1.y);
+    ctx.lineTo(end1.x, end1.y);
+    ctx.lineTo(arrow1Point1.x, arrow1Point1.y);
+    ctx.moveTo(end1.x, end1.y);
+    ctx.lineTo(arrow1Point2.x, arrow1Point2.y);
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw second arrow
+    ctx.beginPath();
+    ctx.moveTo(start2.x, start2.y);
+    ctx.lineTo(end2.x, end2.y);
+    ctx.lineTo(arrow2Point1.x, arrow2Point1.y);
+    ctx.moveTo(end2.x, end2.y);
+    ctx.lineTo(arrow2Point2.x, arrow2Point2.y);
+    ctx.stroke();
   }
 }

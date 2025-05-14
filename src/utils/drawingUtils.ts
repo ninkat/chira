@@ -179,14 +179,46 @@ export function drawOkGestureFeedback(
 ): void {
   // draw index fingertip (landmark 8)
   ctx.beginPath();
-  ctx.arc(indexTip.x, indexTip.y, 10, 0, 2 * Math.PI);
+  ctx.arc(indexTip.x, indexTip.y, 6, 0, 2 * Math.PI);
   ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
   ctx.fill();
 
   // draw thumb tip (landmark 4)
   ctx.beginPath();
-  ctx.arc(thumbTip.x, thumbTip.y, 10, 0, 2 * Math.PI);
+  ctx.arc(thumbTip.x, thumbTip.y, 6, 0, 2 * Math.PI);
   ctx.fillStyle = 'rgb(255, 140, 0)'; // solid dark orange
+  ctx.fill();
+}
+
+/**
+ * draws a ripple effect animation at the click point
+ * @param ctx canvas context
+ * @param point interaction point where the click occurred
+ * @param progress animation progress from 0 to 1
+ */
+export function drawRippleEffect(
+  ctx: CanvasRenderingContext2D,
+  point: InteractionPoint,
+  progress: number
+): void {
+  // maximum radius the ripple will expand to
+  const maxRadius = 40;
+
+  // calculate current radius based on progress
+  const radius = maxRadius * progress;
+
+  // calculate opacity that fades out as the circle grows
+  const opacity = Math.max(0, 1 - progress);
+
+  // draw expanding circle
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+  ctx.strokeStyle = `rgba(147, 112, 219, ${opacity})`; // purple color matching thumb_index
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // add subtle fill
+  ctx.fillStyle = `rgba(147, 112, 219, ${opacity * 0.3})`;
   ctx.fill();
 }
 
