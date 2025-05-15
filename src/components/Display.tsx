@@ -26,6 +26,7 @@ import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
 import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import Senate from '@/components/yjs-vis/Senate';
+import WorldMap from '@/components/yjs-vis/WorldMap';
 import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
@@ -58,6 +59,11 @@ const Display: React.FC = () => {
 
   // state for feed toggle when remote feed is available
   const [showLocalFeed, setShowLocalFeed] = useState<boolean>(false);
+
+  // state for selected visualization
+  const [currentVisualization, setCurrentVisualization] = useState<
+    'senate' | 'worldmap'
+  >('worldmap');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
@@ -326,8 +332,9 @@ const Display: React.FC = () => {
             height: '100%',
           }}
         >
-          {/* Use Senate visualization from yjs-vis */}
-          <Senate />
+          {/* conditionally render selected visualization */}
+          {currentVisualization === 'senate' && <Senate />}
+          {currentVisualization === 'worldmap' && <WorldMap />}
         </div>
       </YjsProvider>
 
@@ -437,6 +444,8 @@ const Display: React.FC = () => {
         remoteRightGestureData={remoteRightGestureData}
         currentPing={currentPing}
         pingHistory={pingHistory}
+        selectedVisualization={currentVisualization}
+        onVisualizationSelect={setCurrentVisualization}
       />
     </div>
   );

@@ -35,11 +35,9 @@ interface DebugDashboardProps {
   // ping props
   currentPing: number | null;
   pingHistory: number[];
-  // visualization selection props - now optional
-  selectedVisualization?: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf';
-  onVisualizationSelect?: (
-    visualization: 'nodelink' | 'usmap' | 'ustile' | 'worldmap' | 'foaf'
-  ) => void;
+  // visualization selection props
+  selectedVisualization: 'senate' | 'worldmap';
+  onVisualizationSelect: (visualization: 'senate' | 'worldmap') => void;
 }
 
 // helper function to render gesture data
@@ -157,7 +155,7 @@ const renderPingChart = (pingHistory: number[]) => {
         const y = height - (normalizedPing * (height - padding * 2) + padding);
 
         return (
-          <circle key={i} cx={x} cy={y} r={1} fill='#2196F3' opacity={0.7} />
+          <circle key={i} cx={x} cy={y} r={1} fill='#2196f3' opacity={0.7} />
         );
       })}
       {pingHistory.length > 1 &&
@@ -183,7 +181,7 @@ const renderPingChart = (pingHistory: number[]) => {
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke='#2196F3'
+              stroke='#2196f3'
               strokeWidth={0.5}
               opacity={0.3}
             />
@@ -290,66 +288,56 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
 
         {showDebug && (
           <>
-            {/* visualization selection section - only render if props are provided */}
-            {selectedVisualization && onVisualizationSelect && (
-              <div
+            {/* visualization selection section */}
+            <div
+              style={{
+                marginBottom: '16px',
+                marginTop: '8px',
+                padding: '8px 12px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                minHeight: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '8px',
+                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+              }}
+            >
+              <h3
                 style={{
-                  marginBottom: '16px',
-                  marginTop: '8px',
-                  padding: '8px 12px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                  minHeight: '40px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '8px',
-                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                  margin: '0 0 4px 0',
+                  fontSize: '14px',
+                  color: '#888',
                 }}
               >
-                <h3
+                visualization
+              </h3>
+              <div style={{ fontSize: '12px' }}>
+                <select
+                  id='visualization-select'
+                  value={selectedVisualization}
+                  onChange={(e) =>
+                    onVisualizationSelect(
+                      e.target.value as 'senate' | 'worldmap'
+                    )
+                  }
                   style={{
-                    margin: '0 0 4px 0',
-                    fontSize: '14px',
-                    color: '#888',
+                    width: '100%',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    color: '#e0e0e0',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+                    transition: 'all 0.2s ease',
                   }}
                 >
-                  visualization selection
-                </h3>
-                <div style={{ fontSize: '12px' }}>
-                  <select
-                    id='visualization-select'
-                    value={selectedVisualization}
-                    onChange={(e) =>
-                      onVisualizationSelect(
-                        e.target.value as
-                          | 'nodelink'
-                          | 'usmap'
-                          | 'ustile'
-                          | 'worldmap'
-                          | 'foaf'
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      color: '#e0e0e0',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      padding: '6px 8px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                      cursor: 'pointer',
-                      boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <option value='nodelink'>node link diagram</option>
-                    <option value='usmap'>us map</option>
-                    <option value='ustile'>us tilemap</option>
-                    <option value='worldmap'>world map</option>
-                    <option value='foaf'>foaf visualization</option>
-                  </select>
-                </div>
+                  <option value='senate'>senate diagram</option>
+                  <option value='worldmap'>world map</option>
+                </select>
               </div>
-            )}
+            </div>
 
             {/* camera selection section */}
             <div
