@@ -27,6 +27,8 @@ import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import Senate from '@/components/yjs-vis/Senate';
 import WorldMap from '@/components/yjs-vis/WorldMap';
+import Movies from '@/components/yjs-vis/Movies';
+import Court from '@/components/yjs-vis/Court';
 import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
@@ -35,6 +37,9 @@ const baseUrl = getWebsocketUrl();
 const videoUrl = new URL(baseUrl);
 videoUrl.searchParams.set('type', 'video');
 const WS_URL = videoUrl.toString();
+
+// define the type for visualization selection
+type VisualizationType = 'senate' | 'worldmap' | 'movies' | 'court';
 
 // main display component that:
 // - manages webcam feed
@@ -61,9 +66,8 @@ const Display: React.FC = () => {
   const [showLocalFeed, setShowLocalFeed] = useState<boolean>(false);
 
   // state for selected visualization
-  const [currentVisualization, setCurrentVisualization] = useState<
-    'senate' | 'worldmap'
-  >('worldmap');
+  const [currentVisualization, setCurrentVisualization] =
+    useState<VisualizationType>('worldmap');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
@@ -335,6 +339,8 @@ const Display: React.FC = () => {
           {/* conditionally render selected visualization */}
           {currentVisualization === 'senate' && <Senate />}
           {currentVisualization === 'worldmap' && <WorldMap />}
+          {currentVisualization === 'movies' && <Movies />}
+          {currentVisualization === 'court' && <Court />}
         </div>
       </YjsProvider>
 
@@ -445,7 +451,9 @@ const Display: React.FC = () => {
         currentPing={currentPing}
         pingHistory={pingHistory}
         selectedVisualization={currentVisualization}
-        onVisualizationSelect={setCurrentVisualization}
+        onVisualizationSelect={(vis: VisualizationType) =>
+          setCurrentVisualization(vis)
+        }
       />
     </div>
   );

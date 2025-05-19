@@ -1098,10 +1098,7 @@ function handleTwoHandedZoom(
   // calculate and dispatch zoom transform - only if not in drawOnly mode
   if (!drawOnly && zoomState.lastDistance) {
     const scale = currentDistance / zoomState.lastDistance;
-    const newScale = Math.max(
-      0.75,
-      Math.min(4, currentTransform.scale * scale)
-    );
+    const newScale = Math.max(0.4, Math.min(4, currentTransform.scale * scale));
 
     if (zoomState.fixedPoint) {
       const fp = zoomState.fixedPoint;

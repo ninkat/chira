@@ -36,8 +36,10 @@ interface DebugDashboardProps {
   currentPing: number | null;
   pingHistory: number[];
   // visualization selection props
-  selectedVisualization: 'senate' | 'worldmap';
-  onVisualizationSelect: (visualization: 'senate' | 'worldmap') => void;
+  selectedVisualization: 'senate' | 'worldmap' | 'movies' | 'court';
+  onVisualizationSelect: (
+    visualization: 'senate' | 'worldmap' | 'movies' | 'court'
+  ) => void;
 }
 
 // helper function to render gesture data
@@ -316,7 +318,11 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                   value={selectedVisualization}
                   onChange={(e) =>
                     onVisualizationSelect(
-                      e.target.value as 'senate' | 'worldmap'
+                      e.target.value as
+                        | 'senate'
+                        | 'worldmap'
+                        | 'movies'
+                        | 'court'
                     )
                   }
                   style={{
@@ -335,6 +341,8 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 >
                   <option value='senate'>senate diagram</option>
                   <option value='worldmap'>world map</option>
+                  <option value='movies'>movie graph</option>
+                  <option value='court'>court visualization</option>
                 </select>
               </div>
             </div>
