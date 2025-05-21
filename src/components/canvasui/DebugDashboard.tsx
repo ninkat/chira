@@ -36,9 +36,23 @@ interface DebugDashboardProps {
   currentPing: number | null;
   pingHistory: number[];
   // visualization selection props
-  selectedVisualization: 'senate' | 'worldmap' | 'movies' | 'court';
+  selectedVisualization:
+    | 'senate'
+    | 'worldmap'
+    | 'movies'
+    | 'court'
+    | 'subreddit'
+    | 'ustileyjs'
+    | 'auspol';
   onVisualizationSelect: (
-    visualization: 'senate' | 'worldmap' | 'movies' | 'court'
+    visualization:
+      | 'senate'
+      | 'worldmap'
+      | 'movies'
+      | 'court'
+      | 'subreddit'
+      | 'ustileyjs'
+      | 'auspol'
   ) => void;
 }
 
@@ -323,6 +337,9 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         | 'worldmap'
                         | 'movies'
                         | 'court'
+                        | 'subreddit'
+                        | 'ustileyjs'
+                        | 'auspol'
                     )
                   }
                   style={{
@@ -339,10 +356,13 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     transition: 'all 0.2s ease',
                   }}
                 >
-                  <option value='senate'>senate diagram</option>
-                  <option value='worldmap'>world map</option>
+                  <option value='senate'>us senate</option>
+                  <option value='worldmap'>travel map</option>
                   <option value='movies'>movie graph</option>
                   <option value='court'>court visualization</option>
+                  <option value='subreddit'>subreddit</option>
+                  <option value='ustileyjs'>us migration</option>
+                  <option value='auspol'>australian house</option>
                 </select>
               </div>
             </div>

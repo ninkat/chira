@@ -29,6 +29,9 @@ import Senate from '@/components/yjs-vis/Senate';
 import WorldMap from '@/components/yjs-vis/WorldMap';
 import Movies from '@/components/yjs-vis/Movies';
 import Court from '@/components/yjs-vis/Court';
+import Subreddit from '@/components/yjs-vis/Subreddit';
+import USTileYjs from '@/components/yjs-vis/USTileYjs';
+import AusPol from '@/components/yjs-vis/AusPol';
 import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
@@ -39,7 +42,14 @@ videoUrl.searchParams.set('type', 'video');
 const WS_URL = videoUrl.toString();
 
 // define the type for visualization selection
-type VisualizationType = 'senate' | 'worldmap' | 'movies' | 'court';
+type VisualizationType =
+  | 'senate'
+  | 'worldmap'
+  | 'movies'
+  | 'court'
+  | 'subreddit'
+  | 'ustileyjs'
+  | 'auspol';
 
 // main display component that:
 // - manages webcam feed
@@ -341,6 +351,9 @@ const Display: React.FC = () => {
           {currentVisualization === 'worldmap' && <WorldMap />}
           {currentVisualization === 'movies' && <Movies />}
           {currentVisualization === 'court' && <Court />}
+          {currentVisualization === 'subreddit' && <Subreddit />}
+          {currentVisualization === 'ustileyjs' && <USTileYjs />}
+          {currentVisualization === 'auspol' && <AusPol />}
         </div>
       </YjsProvider>
 
