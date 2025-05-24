@@ -11,6 +11,7 @@ import {
   handleThumbIndex as handleSvgThumbIndex,
   handleOk as handleSvgOk,
   handleFist as handleSvgFist,
+  handleNone as handleSvgNone,
 } from '@/utils/interactionHandlers';
 import {
   handleOne as handleSvgOneRemote,
@@ -77,7 +78,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [currentVisualization, setCurrentVisualization] =
-    useState<VisualizationType>('worldmap');
+    useState<VisualizationType>('ustileyjs');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
@@ -204,7 +205,7 @@ const Display: React.FC = () => {
                   }
                 }
               };
-
+              console.log(results.gestures);
               // process "one" gesture for hovering
               handleSvgOne(
                 canvasCtx,
@@ -243,6 +244,15 @@ const Display: React.FC = () => {
 
               // process "fist" gesture for zooming and panning
               handleSvgFist(
+                canvasCtx,
+                results,
+                rect,
+                dimensions,
+                handleInteraction
+              );
+
+              // process "none" gesture for cleanup
+              handleSvgNone(
                 canvasCtx,
                 results,
                 rect,

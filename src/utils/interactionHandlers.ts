@@ -1445,3 +1445,112 @@ function drawZoomToolIndicator(
     ctx.stroke();
   }
 }
+
+/**
+ * handles 'none' gesture or undetected hands for cleanup.
+ * this function is responsible for sending 'pointerout' events to elements
+ * that were previously hovered by 'one' (via lastHoveredElementLeft/Right)
+ * or 'grabbing' (via hoveredElementsByHand) gestures when a hand
+ * is no longer actively gesturing or is not detected.
+ * it does not draw any visual feedback.
+ */
+export function handleNone(
+  ctx: CanvasRenderingContext2D, // unused in this handler, kept for signature consistency
+  results: GestureRecognizerResult,
+  rect: DOMRect, // unused in this handler, kept for signature consistency
+  dimensions: CanvasDimensions, // unused in this handler, kept for signature consistency
+  onInteraction: InteractionEventHandler,
+  drawOnly = false
+): void {
+  if (drawOnly) {
+    return;
+  }
+
+  const handsToClean: Array<'left' | 'right'> = ['left', 'right'];
+
+  // determine current gestures (or lack thereof) for each hand from the results
+  const handGestures: { left?: string; right?: string } = {};
+  if (results.handedness && results.gestures) {
+    results.handedness.forEach((hand, index) => {
+      // ensure gestures array is valid for this index
+      if (
+        results.gestures &&
+        results.gestures[index] &&
+        results.gestures[index][0]
+      ) {
+        const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
+        const gesture = results.gestures[index][0].categoryName.toLowerCase();
+        handGestures[handLabel] = gesture;
+      }
+    });
+  }
+
+  handsToClean.forEach((handLabel) => {
+    const currentGesture = handGestures[handLabel]; // will be undefined if hand not in results or results.gestures is missing data
+
+    let needsCleanup = false;
+    // cleanup if gesture is 'none', empty, or hand is not detected (currentgesture is undefined)
+    if (
+      currentGesture === '' ||
+      currentGesture === 'none' ||
+      currentGesture === undefined
+    ) {
+      needsCleanup = true;
+    }
+
+    if (needsCleanup) {
+      // cleanup for 'one' gesture hover state (single pointer hover)
+      const lastHoveredOne =
+        handLabel === 'left' ? lastHoveredElementLeft : lastHoveredElementRight;
+      if (lastHoveredOne && isInteractableElement(lastHoveredOne)) {
+        const elementRect = lastHoveredOne.getBoundingClientRect();
+        const point: InteractionPoint = {
+          x: 0, // canvas x coordinate, not critical for pointerout
+          y: 0, // canvas y coordinate, not critical for pointerout
+          clientX: elementRect.left + elementRect.width / 2, // client x based on element center
+          clientY: elementRect.top + elementRect.height / 2, // client y based on element center
+        };
+        onInteraction({
+          type: 'pointerout',
+          point,
+          timestamp: Date.now(),
+          sourceType: 'gesture',
+          handedness: handLabel,
+          element: lastHoveredOne,
+        });
+        // reset the hover state for this hand
+        if (handLabel === 'left') {
+          lastHoveredElementLeft = null;
+        } else {
+          lastHoveredElementRight = null;
+        }
+      }
+
+      // cleanup for 'grabbing' gesture hover state (area hover)
+      const currentlyHoveredGrabbing = hoveredElementsByHand[handLabel];
+      if (currentlyHoveredGrabbing.size > 0) {
+        Array.from(currentlyHoveredGrabbing).forEach((element) => {
+          if (isInteractableElement(element)) {
+            const elementRect = element.getBoundingClientRect();
+            const point: InteractionPoint = {
+              x: 0, // canvas x coordinate
+              y: 0, // canvas y coordinate
+              clientX: elementRect.left + elementRect.width / 2, // client x based on element center
+              clientY: elementRect.top + elementRect.height / 2, // client y based on element center
+            };
+            onInteraction({
+              type: 'pointerout',
+              point,
+              timestamp: Date.now(),
+              sourceType: 'gesture',
+              handedness: handLabel,
+              element,
+            });
+          }
+        });
+        // clear all hovered elements for this hand's grabbing gesture
+        currentlyHoveredGrabbing.clear();
+      }
+    }
+  });
+}

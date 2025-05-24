@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
 
 // paths to required assets for mediapipe gesture recognition
-const MODEL_ASSET_PATH = './src/assets/models/testdog2.task';
+const MODEL_ASSET_PATH = './src/assets/models/may25.task';
 const WASM_PATH = 'node_modules/@mediapipe/tasks-vision/wasm';
 
 // custom hook for initializing and managing the mediapipe gesture recognizer
