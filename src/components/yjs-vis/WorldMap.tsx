@@ -113,6 +113,34 @@ const WorldMap: React.FC = () => {
     y: 0,
   });
 
+  // ref to track scroll drag state for flights list
+  const scrollDragStateRef = useRef<{
+    left: {
+      active: boolean;
+      startY: number;
+      startScrollTop: number;
+    };
+    right: {
+      active: boolean;
+      startY: number;
+      startScrollTop: number;
+    };
+  }>({
+    left: {
+      active: false,
+      startY: 0,
+      startScrollTop: 0,
+    },
+    right: {
+      active: false,
+      startY: 0,
+      startScrollTop: 0,
+    },
+  });
+
+  // ref for the flights list element
+  const flightsListRef = useRef<HTMLDivElement>(null);
+
   // state for sync status
   const [syncStatus, setSyncStatus] = useState<boolean>(false);
 
@@ -657,7 +685,6 @@ const WorldMap: React.FC = () => {
       infoPanel.select<HTMLDivElement>('.flights-list');
     flightsListContainer.selectAll('*').remove();
     const flightsToShow = currentFilteredFlights;
-    const numToShow = 10;
 
     if (!displayOriginsSelected || !displayDestinationsSelected) {
       flightsListContainer
@@ -665,6 +692,7 @@ const WorldMap: React.FC = () => {
         .style('color', 'rgba(255, 255, 255, 0.5)')
         .style('text-align', 'center')
         .style('padding-top', '20px')
+        .style('pointer-events', 'none') // disable pointer events so gestures reach the flights-list container
         .text(
           'select origins (left) and destinations (right) to see available flights.'
         );
@@ -674,9 +702,10 @@ const WorldMap: React.FC = () => {
         .style('color', 'rgba(255, 255, 255, 0.5)')
         .style('text-align', 'center')
         .style('padding-top', '20px')
+        .style('pointer-events', 'none') // disable pointer events so gestures reach the flights-list container
         .text('no direct flights found for the current selection.');
     } else {
-      flightsToShow.slice(0, numToShow).forEach((flight) => {
+      flightsToShow.forEach((flight) => {
         const item = flightsListContainer
           .append('div')
           .attr('class', 'flight-item')
@@ -685,7 +714,8 @@ const WorldMap: React.FC = () => {
           .style('background', 'rgba(255, 255, 255, 0.07)')
           .style('display', 'flex')
           .style('flex-direction', 'column')
-          .style('gap', '2px');
+          .style('gap', '2px')
+          .style('pointer-events', 'none'); // disable pointer events so gestures reach the flights-list container
         const header = item
           .append('div')
           .style('display', 'flex')
@@ -722,15 +752,6 @@ const WorldMap: React.FC = () => {
           .style('color', 'rgba(255, 255, 255, 0.5)')
           .text(formattedDate);
       });
-      if (flightsToShow.length > numToShow) {
-        flightsListContainer
-          .append('div')
-          .style('color', 'rgba(255, 255, 255, 0.5)')
-          .style('font-size', '14px')
-          .style('text-align', 'center')
-          .style('padding-top', '8px')
-          .text(`... and ${flightsToShow.length - numToShow} more flights`);
-      }
     }
   };
 
@@ -889,7 +910,10 @@ const WorldMap: React.FC = () => {
           if (
             event.type === 'pointerover' ||
             event.type === 'pointerout' ||
-            event.type === 'pointerselect'
+            event.type === 'pointerselect' ||
+            event.type === 'pointerdown' ||
+            event.type === 'pointermove' ||
+            event.type === 'pointerup'
           ) {
             const pointerEvent = event as InteractionEvent & {
               element?: Element;
@@ -995,6 +1019,61 @@ const WorldMap: React.FC = () => {
                   yWorldMapState.set('zoomScale', event.transform.scale);
                 }
                 break;
+
+              case 'pointerdown': {
+                // handle start of scroll operation for flights list
+                const { point, handedness, element } = event;
+                if (!handedness || !element) return;
+
+                // check if the element is the flights list
+                if (
+                  element.classList.contains('flights-list') &&
+                  flightsListRef.current
+                ) {
+                  const scrollState = scrollDragStateRef.current[handedness];
+                  scrollState.active = true;
+                  scrollState.startY = point.clientY;
+                  scrollState.startScrollTop = flightsListRef.current.scrollTop;
+                }
+                break;
+              }
+
+              case 'pointermove': {
+                // handle scroll movement for flights list
+                const { point, handedness } = event;
+                if (!handedness) return;
+
+                const scrollState = scrollDragStateRef.current[handedness];
+                if (scrollState.active && flightsListRef.current) {
+                  const deltaY = point.clientY - scrollState.startY;
+                  // invert the delta to make dragging down scroll down (natural scrolling)
+                  const newScrollTop = scrollState.startScrollTop - deltaY;
+
+                  // clamp scroll position to valid range
+                  const maxScroll =
+                    flightsListRef.current.scrollHeight -
+                    flightsListRef.current.clientHeight;
+                  const clampedScrollTop = Math.max(
+                    0,
+                    Math.min(maxScroll, newScrollTop)
+                  );
+
+                  flightsListRef.current.scrollTop = clampedScrollTop;
+                }
+                break;
+              }
+
+              case 'pointerup': {
+                // handle end of scroll operation for flights list
+                const { handedness } = event;
+                if (!handedness) return;
+
+                const scrollState = scrollDragStateRef.current[handedness];
+                if (scrollState.active) {
+                  scrollState.active = false;
+                }
+                break;
+              }
             }
           });
         };
@@ -1043,6 +1122,10 @@ const WorldMap: React.FC = () => {
       yHoveredAirportIATAsRight?.unobserveDeep(yjsObserver);
       ySelectedAirportIATAsLeft?.unobserveDeep(yjsObserver);
       ySelectedAirportIATAsRight?.unobserveDeep(yjsObserver);
+
+      // cleanup scroll drag state
+      scrollDragStateRef.current.left.active = false;
+      scrollDragStateRef.current.right.active = false;
 
       // cleanup interaction listener
       if (parentElementForListener && interactionHandlerRef.current) {
@@ -1187,6 +1270,7 @@ const WorldMap: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
+          pointerEvents: 'none', // disable pointer events for the entire panel
         }}
       >
         {/* section 1: current selections */}
@@ -1329,6 +1413,7 @@ const WorldMap: React.FC = () => {
             available flights
           </h2>
           <div
+            ref={flightsListRef}
             className='flights-list'
             style={{
               display: 'flex',
@@ -1340,6 +1425,8 @@ const WorldMap: React.FC = () => {
               scrollbarWidth: 'thin',
               scrollbarColor:
                 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)',
+              position: 'relative', // for positioning the scroll indicator
+              pointerEvents: 'all', // re-enable pointer events for the flights list
             }}
           ></div>
         </div>

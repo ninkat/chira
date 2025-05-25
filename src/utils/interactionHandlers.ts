@@ -169,6 +169,7 @@ const FIST_DWELL_TIME = 500;
 
 // helper function to check if element is interactable
 // covers all common svg elements typically used in d3 visualizations
+// and html elements with specific classes for scrolling/interaction
 // note: we don't do text or 'g' because they intercept the event instead of the child elements
 function isInteractableElement(element: Element | null): boolean {
   if (!element) return false;
@@ -185,10 +186,30 @@ function isInteractableElement(element: Element | null): boolean {
     'ellipse', // oval shapes
   ];
 
-  return (
+  // check for svg elements
+  if (
     isSvgElement &&
     interactableSvgElements.includes(element.tagName.toLowerCase())
-  );
+  ) {
+    return true;
+  }
+
+  // check for html elements with specific classes that should be interactable
+  const isHtmlElement = element instanceof HTMLElement;
+
+  if (isHtmlElement) {
+    // check if element has classes that make it interactable for scrolling
+    const interactableClasses = [
+      'flights-list', // worldmap flights list for scrolling
+      'scrollable-content', // generic scrollable content
+    ];
+
+    return interactableClasses.some((className) =>
+      element.classList.contains(className)
+    );
+  }
+
+  return false;
 }
 
 // handles "one" gesture (replaces neutral mode)

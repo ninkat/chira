@@ -205,7 +205,7 @@ const Display: React.FC = () => {
                   }
                 }
               };
-              console.log(results.gestures);
+
               // process "one" gesture for hovering
               handleSvgOne(
                 canvasCtx,
@@ -339,6 +339,14 @@ const Display: React.FC = () => {
         transform: 'translate(-50%, -50%)',
       }}
     >
+      {/* 
+        z-index layering structure:
+        - video feed layer: zIndex: 1 (bottom layer - background video)
+        - remote hands canvas: zIndex: 3 (behind visualization)
+        - visualization layer: zIndex: 4 (middle layer - the interactive content)
+        - local hands canvas: zIndex: 5 (above visualization - so local hands appear on top)
+      */}
+
       {!isVideoFeedStarted && <p>Loading video feed...</p>}
 
       {/* YjsProvider wraps the visualization for syncing */}
@@ -367,20 +375,21 @@ const Display: React.FC = () => {
         </div>
       </YjsProvider>
 
-      {/* canvas for local hand tracking visualization */}
+      {/* canvas for local hand tracking visualization - above visualization */}
       <canvas
         ref={canvasRef}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 3,
+          zIndex: 5,
           width: '100%',
           height: '100%',
+          pointerEvents: 'none',
         }}
       />
 
-      {/* canvas for remote hand tracking visualization - same z-index as local */}
+      {/* canvas for remote hand tracking visualization - behind visualization */}
       <canvas
         ref={remoteCanvasRef}
         style={{
