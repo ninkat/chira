@@ -63,11 +63,11 @@ const renderGestureSection = (
 ) => {
   if (!gestureData) {
     return (
-      <div className='gesture-section' style={{ minHeight: '40px' }}>
+      <div className='gesture-section' style={{ minHeight: '15px' }}>
         <h4
           style={{
-            margin: '0 0 4px 0',
-            fontSize: '12px',
+            margin: '0 0 1px 0',
+            fontSize: '8px',
             whiteSpace: 'nowrap',
             color: '#888',
           }}
@@ -77,7 +77,7 @@ const renderGestureSection = (
         <p
           style={{
             margin: '0',
-            fontSize: '11px',
+            fontSize: '7px',
             opacity: 0.7,
             fontStyle: 'italic',
           }}
@@ -89,34 +89,34 @@ const renderGestureSection = (
   }
 
   return (
-    <div className='gesture-section' style={{ minHeight: '40px' }}>
+    <div className='gesture-section' style={{ minHeight: '15px' }}>
       <h4
         style={{
-          margin: '0 0 4px 0',
-          fontSize: '12px',
+          margin: '0 0 1px 0',
+          fontSize: '8px',
           whiteSpace: 'nowrap',
           color: '#888',
         }}
       >
         {handLabel}
       </h4>
-      <div style={{ height: '24px' }}>
+      <div style={{ height: '10px' }}>
         <p
           style={{
-            margin: '0 0 6px 0',
-            fontSize: '11px',
+            margin: '0 0 1px 0',
+            fontSize: '7px',
             whiteSpace: 'nowrap',
           }}
         >
           {gestureData.categoryName}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
           <div
             style={{
               flex: 1,
               background: 'rgba(255, 255, 255, 0.1)',
-              height: '4px',
-              borderRadius: '2px',
+              height: '1.5px',
+              borderRadius: '0.5px',
               overflow: 'hidden',
             }}
           >
@@ -125,15 +125,15 @@ const renderGestureSection = (
                 width: `${gestureData.confidence * 100}%`,
                 height: '100%',
                 background: '#4CAF50',
-                boxShadow: '0 0 4px rgba(76, 175, 80, 0.5)',
+                boxShadow: '0 0 1px rgba(76, 175, 80, 0.5)',
               }}
             />
           </div>
           <span
             style={{
-              fontSize: '10px',
+              fontSize: '6px',
               opacity: 0.7,
-              width: '22px',
+              width: '14px',
               textAlign: 'right',
             }}
           >
@@ -151,9 +151,9 @@ const renderPingChart = (pingHistory: number[]) => {
 
   const maxPing = Math.max(...pingHistory);
   const minPing = Math.min(...pingHistory);
-  const height = 40;
-  const width = 120;
-  const padding = 2;
+  const height = 20;
+  const width = 60;
+  const padding = 1;
 
   return (
     <svg
@@ -171,7 +171,7 @@ const renderPingChart = (pingHistory: number[]) => {
         const y = height - (normalizedPing * (height - padding * 2) + padding);
 
         return (
-          <circle key={i} cx={x} cy={y} r={1} fill='#2196f3' opacity={0.7} />
+          <circle key={i} cx={x} cy={y} r={0.5} fill='#2196f3' opacity={0.7} />
         );
       })}
       {pingHistory.length > 1 &&
@@ -198,7 +198,7 @@ const renderPingChart = (pingHistory: number[]) => {
               x2={x2}
               y2={y2}
               stroke='#2196f3'
-              strokeWidth={0.5}
+              strokeWidth={0.25}
               opacity={0.3}
             />
           );
@@ -259,13 +259,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
         right: 0,
         backgroundColor: 'rgba(17, 17, 17, 0.95)',
         color: '#e0e0e0',
-        padding: '8px 16px',
-        borderTopLeftRadius: '12px',
+        padding: '4px 8px',
+        borderTopLeftRadius: '6px',
         fontFamily: 'monospace',
         zIndex: 4,
         width: '280px',
-        boxShadow:
-          '0 -4px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(0, 0, 0, 0.2)',
         border: '1px solid rgba(255, 255, 255, 0.15)',
         borderRight: 'none',
         borderBottom: 'none',
@@ -278,21 +277,21 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
           onClick={onToggleDebug}
           style={{
             position: 'absolute',
-            top: '-36px',
+            top: '-18px',
             left: 0,
-            padding: '8px 14px',
-            borderTopLeftRadius: '12px',
-            borderTopRightRadius: '12px',
+            padding: '4px 7px',
+            borderTopLeftRadius: '6px',
+            borderTopRightRadius: '6px',
             border: '1px solid rgba(255, 255, 255, 0.15)',
             borderBottom: 'none',
             backgroundColor: 'rgba(17, 17, 17, 0.95)',
             cursor: 'pointer',
             color: '#e0e0e0',
             fontFamily: 'monospace',
-            fontSize: '12px',
+            fontSize: '10px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '4px',
             transition: 'all 0.2s ease',
             boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.3)',
             backdropFilter: 'blur(8px)',
@@ -307,20 +306,20 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* visualization selection section */}
             <div
               style={{
-                marginBottom: '16px',
-                marginTop: '8px',
-                padding: '8px 12px',
+                marginBottom: '8px',
+                marginTop: '4px',
+                padding: '4px 6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '40px',
+                minHeight: '20px',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
                 style={{
-                  margin: '0 0 4px 0',
-                  fontSize: '14px',
+                  margin: '0 0 2px 0',
+                  fontSize: '12px',
                   color: '#888',
                 }}
               >
@@ -347,9 +346,9 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     background: 'rgba(0, 0, 0, 0.3)',
                     color: '#e0e0e0',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
+                    padding: '3px 4px',
+                    borderRadius: '3px',
+                    fontSize: '10px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
                     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
@@ -370,21 +369,21 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* camera selection section */}
             <div
               style={{
-                marginBottom: '16px',
-                padding: '8px 12px',
+                marginBottom: '8px',
+                padding: '4px 6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '40px',
+                minHeight: '20px',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
-                style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#888' }}
+                style={{ margin: '0 0 2px 0', fontSize: '12px', color: '#888' }}
               >
                 camera selection
               </h3>
-              <div style={{ fontSize: '12px' }}>
+              <div style={{ fontSize: '10px' }}>
                 <select
                   id='camera-select'
                   value={selectedDevice}
@@ -394,9 +393,9 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     background: 'rgba(0, 0, 0, 0.3)',
                     color: '#e0e0e0',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
+                    padding: '3px 4px',
+                    borderRadius: '3px',
+                    fontSize: '10px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
                     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
@@ -414,8 +413,8 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                   <div
                     style={{
                       color: '#F44336',
-                      fontSize: '11px',
-                      marginTop: '4px',
+                      fontSize: '9px',
+                      marginTop: '2px',
                     }}
                   >
                     {cameraError}
@@ -427,17 +426,17 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* memory section */}
             <div
               style={{
-                marginBottom: '16px',
-                padding: '8px 12px',
+                marginBottom: '8px',
+                padding: '4px 6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '40px',
+                minHeight: '20px',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
-                style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#888' }}
+                style={{ margin: '0 0 2px 0', fontSize: '12px', color: '#888' }}
               >
                 memory usage
               </h3>
@@ -445,7 +444,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontSize: '12px',
+                  fontSize: '10px',
                 }}
               >
                 <span>
@@ -462,25 +461,25 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* gesture section */}
             <div
               style={{
-                marginBottom: '16px',
-                padding: '8px 12px',
+                marginBottom: '8px',
+                padding: '4px 6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '80px',
+                minHeight: '45px',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
               <h3
-                style={{ margin: '0 0 6px 0', fontSize: '14px', color: '#888' }}
+                style={{ margin: '0 0 3px 0', fontSize: '12px', color: '#888' }}
               >
                 gesture detection (local)
               </h3>
-              <div style={{ display: 'flex', minHeight: '50px' }}>
-                <div style={{ width: '50%', paddingRight: '8px' }}>
+              <div style={{ display: 'flex', minHeight: '30px' }}>
+                <div style={{ width: '50%', paddingRight: '3px' }}>
                   {renderGestureSection(leftGestureData, 'left hand')}
                 </div>
-                <div style={{ width: '50%', paddingLeft: '8px' }}>
+                <div style={{ width: '50%', paddingLeft: '3px' }}>
                   {renderGestureSection(rightGestureData, 'right hand')}
                 </div>
               </div>
@@ -490,29 +489,29 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {rtcConnected && (
               <div
                 style={{
-                  marginBottom: '16px',
-                  padding: '8px 12px',
+                  marginBottom: '8px',
+                  padding: '4px 6px',
                   borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                  minHeight: '80px',
+                  minHeight: '45px',
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '8px',
+                  borderRadius: '4px',
                   boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                 }}
               >
                 <h3
                   style={{
-                    margin: '0 0 6px 0',
-                    fontSize: '14px',
+                    margin: '0 0 3px 0',
+                    fontSize: '12px',
                     color: '#888',
                   }}
                 >
                   gesture detection (remote)
                 </h3>
-                <div style={{ display: 'flex', minHeight: '50px' }}>
-                  <div style={{ width: '50%', paddingRight: '8px' }}>
+                <div style={{ display: 'flex', minHeight: '30px' }}>
+                  <div style={{ width: '50%', paddingRight: '3px' }}>
                     {renderGestureSection(remoteLeftGestureData, 'left hand')}
                   </div>
-                  <div style={{ width: '50%', paddingLeft: '8px' }}>
+                  <div style={{ width: '50%', paddingLeft: '3px' }}>
                     {renderGestureSection(remoteRightGestureData, 'right hand')}
                   </div>
                 </div>
@@ -522,12 +521,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* connection section */}
             <div
               style={{
-                padding: '8px 12px',
-                minHeight: '40px',
-                marginBottom: '16px',
+                padding: '4px 6px',
+                minHeight: '20px',
+                marginBottom: '8px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
@@ -535,32 +534,32 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '6px',
+                  gap: '4px',
+                  marginBottom: '3px',
                 }}
               >
-                <h3 style={{ margin: '0', fontSize: '14px', color: '#888' }}>
+                <h3 style={{ margin: '0', fontSize: '12px', color: '#888' }}>
                   websocket
                 </h3>
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
+                    gap: '2px',
+                    fontSize: '10px',
                     backgroundColor: isConnected
                       ? 'rgba(76, 175, 80, 0.15)'
                       : 'rgba(244, 67, 54, 0.15)',
-                    padding: '4px 8px',
-                    borderRadius: '6px',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
                     border: `1px solid ${isConnected ? '#4CAF50' : '#F44336'}`,
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <div
                     style={{
-                      width: '6px',
-                      height: '6px',
+                      width: '4px',
+                      height: '4px',
                       borderRadius: '50%',
                       backgroundColor: isConnected ? '#4CAF50' : '#F44336',
                     }}
@@ -575,11 +574,11 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 <div
                   style={{
                     color: '#F44336',
-                    fontSize: '11px',
-                    marginBottom: '6px',
-                    padding: '6px 8px',
+                    fontSize: '9px',
+                    marginBottom: '3px',
+                    padding: '3px 4px',
                     backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                    borderRadius: '6px',
+                    borderRadius: '3px',
                     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
@@ -588,22 +587,22 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               )}
 
               {connectedUsers.length > 0 && (
-                <div style={{ fontSize: '12px' }}>
+                <div style={{ fontSize: '10px' }}>
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      marginBottom: '4px',
+                      gap: '2px',
+                      marginBottom: '2px',
                     }}
                   >
                     <span style={{ color: '#888' }}>users online:</span>
                     <span
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                        padding: '0 4px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                        padding: '0 2px',
+                        borderRadius: '2px',
+                        fontSize: '9px',
                       }}
                     >
                       {connectedUsers.length}
@@ -613,8 +612,8 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     style={{
                       display: 'flex',
                       flexWrap: 'wrap',
-                      gap: '4px',
-                      fontSize: '11px',
+                      gap: '2px',
+                      fontSize: '9px',
                     }}
                   >
                     {connectedUsers.map((user) => (
@@ -622,8 +621,8 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         key={user.id}
                         style={{
                           backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
+                          padding: '1px 3px',
+                          borderRadius: '2px',
                           color:
                             currentUser && user.id === currentUser.id
                               ? '#4CAF50'
@@ -643,12 +642,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
             {/* webrtc section */}
             <div
               style={{
-                marginBottom: '16px',
-                padding: '8px 12px 4px',
+                marginBottom: '8px',
+                padding: '4px 6px 2px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                minHeight: '40px',
+                minHeight: '20px',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
               }}
             >
@@ -656,32 +655,32 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '6px',
+                  gap: '4px',
+                  marginBottom: '3px',
                 }}
               >
-                <h3 style={{ margin: '0', fontSize: '14px', color: '#888' }}>
+                <h3 style={{ margin: '0', fontSize: '12px', color: '#888' }}>
                   webrtc
                 </h3>
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
+                    gap: '2px',
+                    fontSize: '10px',
                     backgroundColor: rtcConnected
                       ? 'rgba(33, 150, 243, 0.15)'
                       : 'rgba(158, 158, 158, 0.15)',
-                    padding: '4px 8px',
-                    borderRadius: '6px',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
                     border: `1px solid ${rtcConnected ? '#2196F3' : '#9E9E9E'}`,
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <div
                     style={{
-                      width: '6px',
-                      height: '6px',
+                      width: '4px',
+                      height: '4px',
                       borderRadius: '50%',
                       backgroundColor: rtcConnected ? '#2196F3' : '#9E9E9E',
                     }}
@@ -693,21 +692,21 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               </div>
 
               {rtcConnectionState && (
-                <div style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <div style={{ fontSize: '10px', marginBottom: '1px' }}>
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '2px',
                     }}
                   >
                     <span style={{ color: '#888' }}>state:</span>
                     <span
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                        padding: '1px 3px',
+                        borderRadius: '2px',
+                        fontSize: '9px',
                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                         color:
                           rtcConnectionState === 'connected'
@@ -733,26 +732,26 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               {rtcConnected && (
                 <div
                   style={{
-                    fontSize: '12px',
-                    marginTop: '6px',
-                    marginBottom: '2px',
+                    fontSize: '10px',
+                    marginTop: '3px',
+                    marginBottom: '1px',
                   }}
                 >
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      marginBottom: '4px',
+                      gap: '2px',
+                      marginBottom: '2px',
                     }}
                   >
                     <span style={{ color: '#888' }}>active feed:</span>
                     <span
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                        padding: '1px 3px',
+                        borderRadius: '2px',
+                        fontSize: '9px',
                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                       }}
                     >
@@ -769,12 +768,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         : 'rgba(158, 158, 158, 0.08)',
                       border: `1px solid ${rtcConnected ? '#2196F3' : '#9E9E9E'}`,
                       color: rtcConnected ? '#e0e0e0' : '#9E9E9E',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
+                      padding: '3px 5px',
+                      borderRadius: '3px',
                       cursor: rtcConnected ? 'pointer' : 'not-allowed',
-                      fontSize: '11px',
+                      fontSize: '9px',
                       fontFamily: 'monospace',
-                      marginTop: '4px',
+                      marginTop: '2px',
                       boxShadow: rtcConnected
                         ? '0 1px 3px rgba(0, 0, 0, 0.2)'
                         : 'none',
@@ -789,12 +788,12 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               {!rtcConnected && connectedUsers.length === 2 && (
                 <div
                   style={{
-                    fontSize: '11px',
+                    fontSize: '9px',
                     backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    marginTop: '6px',
-                    marginBottom: '2px',
+                    padding: '3px 5px',
+                    borderRadius: '3px',
+                    marginTop: '3px',
+                    marginBottom: '1px',
                     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                   }}
                 >
@@ -806,26 +805,26 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
               {rtcConnected && (
                 <div
                   style={{
-                    fontSize: '12px',
-                    marginTop: '6px',
-                    marginBottom: '2px',
+                    fontSize: '10px',
+                    marginTop: '3px',
+                    marginBottom: '1px',
                   }}
                 >
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '4px',
+                      gap: '4px',
+                      marginBottom: '2px',
                     }}
                   >
                     <span style={{ color: '#888' }}>ping:</span>
                     <span
                       style={{
                         backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                        padding: '1px 3px',
+                        borderRadius: '2px',
+                        fontSize: '9px',
                         color: currentPing === null ? '#9E9E9E' : '#2196F3',
                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                       }}

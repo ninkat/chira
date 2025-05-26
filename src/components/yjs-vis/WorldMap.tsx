@@ -55,8 +55,8 @@ interface WorldMapProps {
 }
 
 // constants for styling
-const totalWidth = window.innerWidth;
-const totalHeight = window.innerHeight;
+const totalWidth = 1280;
+const totalHeight = 720;
 const defaultFill = 'rgba(170, 170, 170, 0.6)';
 const strokeColor = '#fff';
 const defaultStrokeWidth = 0.5;

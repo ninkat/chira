@@ -65,14 +65,30 @@ const remoteRippleState: {
 // duration of ripple animation in milliseconds
 const RIPPLE_ANIMATION_DURATION = 500;
 
-// click state tracking for remote hands
-const remoteClickState: {
-  left: { active: boolean };
-  right: { active: boolean };
+// state machine for tracking clicks (thumb_index to one gesture) - matching local implementation
+type RemoteGestureState = 'idle' | 'potential_click';
+interface RemoteGestureClickState {
+  state: RemoteGestureState;
+  startTime: number;
+}
+
+// click gesture state tracking per remote hand - matching local implementation
+const remoteGestureClickState: {
+  left: RemoteGestureClickState;
+  right: RemoteGestureClickState;
 } = {
-  left: { active: false },
-  right: { active: false },
+  left: {
+    state: 'idle',
+    startTime: 0,
+  },
+  right: {
+    state: 'idle',
+    startTime: 0,
+  },
 };
+
+// time constraint for the click gesture (thumb_index → one) in milliseconds - matching local implementation
+const CLICK_GESTURE_TIME_CONSTRAINT = 500;
 
 // state for tracking remote fist gesture dwell time per hand
 const remoteFistDwellState = {
@@ -271,19 +287,6 @@ export function handleOne(
 
     // draw visual feedback using the drawing utility - this is all we do for remote
     drawOneGestureFeedback(ctx, point);
-
-    // Check if we need to trigger a ripple effect for a click transition
-    const clickInfo = remoteClickState[handLabel];
-    if (clickInfo.active) {
-      // Start ripple animation at the current index finger position
-      handRippleState.active = true;
-      handRippleState.point = { ...point };
-      handRippleState.startTime = now;
-      handRippleState.progress = 0;
-
-      // Reset click state
-      clickInfo.active = false;
-    }
   });
 }
 
@@ -395,6 +398,7 @@ export function handleThumbIndex(
   results.handedness.forEach((hand, index) => {
     const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
     const gesture = results.gestures![index][0].categoryName;
+    const clickState = remoteGestureClickState[handLabel];
 
     // Check and update ripple animation if active
     const handRippleState = remoteRippleState[handLabel];
@@ -415,23 +419,48 @@ export function handleThumbIndex(
       }
     }
 
-    // only process if gesture is "thumb_index"
-    if (gesture !== 'thumb_index') {
-      // If we were previously in thumb_index and now we're in "one" gesture,
-      // simulate a click transition by marking active (point will be taken from current position)
-      if (gesture === 'one') {
-        const clickInfo = remoteClickState[handLabel];
-        clickInfo.active = true;
-      }
-      return;
-    }
-
     const landmarks = results.landmarks![index];
     const indexTip = landmarks[8];
     const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
 
-    // draw visual indicator only - this is all we do for remote
-    drawThumbIndexGestureFeedback(ctx, point);
+    if (gesture === 'thumb_index') {
+      // draw visual indicator using the drawing utility
+      drawThumbIndexGestureFeedback(ctx, point);
+
+      // handle gesture state tracking - matching local implementation
+      // if we're in idle state and see thumb_index, start potential click
+      if (clickState.state === 'idle') {
+        clickState.state = 'potential_click';
+        clickState.startTime = now;
+      }
+    } else if (gesture === 'one') {
+      // if we were in potential click state and now see "one", complete the click gesture
+      if (clickState.state === 'potential_click') {
+        const elapsedTime = now - clickState.startTime;
+
+        // check if the transition happened within the time constraint
+        if (elapsedTime <= CLICK_GESTURE_TIME_CONSTRAINT) {
+          // start ripple animation at the click point (current position) - matching local behavior
+          handRippleState.active = true;
+          handRippleState.point = { ...point }; // use current position for ripple
+          handRippleState.startTime = now;
+          handRippleState.progress = 0;
+        }
+
+        // reset click state after handling
+        clickState.state = 'idle';
+      }
+    } else {
+      // for any other gesture, check if we need to expire a potential click
+      if (clickState.state === 'potential_click') {
+        const elapsedTime = now - clickState.startTime;
+
+        // if we exceeded the time constraint, reset the click state
+        if (elapsedTime > CLICK_GESTURE_TIME_CONSTRAINT) {
+          clickState.state = 'idle';
+        }
+      }
+    }
   });
 }
 
