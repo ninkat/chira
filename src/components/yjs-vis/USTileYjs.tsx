@@ -14,6 +14,7 @@ import {
 import * as Y from 'yjs';
 import { YjsContext } from '@/context/YjsContext';
 import { InteractionEvent } from '@/types/interactionTypes';
+import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
 // local interface to handle potentially varying event detail structure for pointerover
 interface PointerOverDetail {
@@ -157,7 +158,15 @@ interface MigrationLinkInfo {
   value: number;
 }
 
-const USTileYjs: React.FC = () => {
+// define a non-null version of geojsonproperties for extension
+// yjs shared value types (removed unused types)
+
+// props interface for the USTileYjs component
+interface USTileYjsProps {
+  getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
+}
+
+const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const migrationDataByEra = useRef<Record<Era, Migration[]>>({
     '1960s': [],
@@ -171,6 +180,7 @@ const USTileYjs: React.FC = () => {
   const buttonContainerRef = useRef<SVGGElement | null>(null);
   const currentEraRef = useRef<Era>('2020s');
   const calculateAndStoreMigrationsRef = useRef<(() => void) | null>(null);
+  // removed unused gRef
 
   const yjsContext = useContext(YjsContext);
   const doc = yjsContext?.doc;
@@ -188,9 +198,33 @@ const USTileYjs: React.FC = () => {
   const yTotalMigrationValue = doc?.getMap<string | number>(
     'usTileTotalMigrationValue'
   );
+  const ySharedState = doc?.getMap<string | boolean | null | string[] | number>(
+    'usTileSharedState'
+  );
 
   const width = totalWidth;
   const height = totalHeight;
+
+  // ref to track current transform from yjs or local updates before sync
+  const transformRef = useRef<{ k: number; x: number; y: number }>({
+    k: 1,
+    x: 0,
+    y: 0,
+  });
+
+  // set up the getCurrentTransform function for interaction handlers
+  useEffect(() => {
+    getCurrentTransformRef.current = () => ({
+      scale: transformRef.current.k,
+      x: transformRef.current.x,
+      y: transformRef.current.y,
+    });
+
+    // cleanup function to clear the ref when component unmounts
+    return () => {
+      getCurrentTransformRef.current = null;
+    };
+  }, [getCurrentTransformRef]);
 
   useEffect(() => {
     if (!doc) return;
@@ -200,6 +234,32 @@ const USTileYjs: React.FC = () => {
     }, 1500);
     return () => clearTimeout(timeout);
   }, [doc]);
+
+  // effect to sync transform state from yjs (for consistency with other components)
+  useEffect(() => {
+    if (!doc || !syncStatus || !ySharedState) return;
+
+    const updateLocalTransform = () => {
+      const scale = (ySharedState.get('zoomScale') as number) || 1;
+      const x = (ySharedState.get('panX') as number) || 0;
+      const y = (ySharedState.get('panY') as number) || 0;
+
+      if (
+        scale !== transformRef.current.k ||
+        x !== transformRef.current.x ||
+        y !== transformRef.current.y
+      ) {
+        transformRef.current = { k: scale, x, y };
+        // note: ustile doesn't currently use pan/zoom transforms on the map group
+        // but this maintains consistency with other components
+      }
+    };
+
+    ySharedState.observe(updateLocalTransform);
+    updateLocalTransform(); // initial sync
+
+    return () => ySharedState.unobserve(updateLocalTransform);
+  }, [doc, syncStatus, ySharedState]);
 
   // load all three era migration files
   useEffect(() => {

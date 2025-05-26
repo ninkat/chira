@@ -4,6 +4,7 @@ import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
 // import senateData from '@/assets/foafagain.json'; // removed senate data
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
+import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
 // define shared value types for y.map
 type NodeMapValue = string | number | boolean | undefined;
@@ -20,6 +21,11 @@ interface D3Node extends d3.SimulationNodeDatum {
 
 interface D3Link extends d3.SimulationLinkDatum<D3Node> {
   type: string; // kept for potential future use
+}
+
+// props interface for the Court component
+interface CourtProps {
+  getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
 }
 
 // helper function to compact/prune the yjs document
@@ -123,7 +129,7 @@ function pruneYDoc(doc: Y.Doc) {
   }
 }
 
-const Court: React.FC = () => {
+const Court: React.FC<CourtProps> = ({ getCurrentTransformRef }) => {
   const yjsContext = useContext(YjsContext);
   const doc = yjsContext?.doc;
   const d3Container = useRef<HTMLDivElement | null>(null);
@@ -283,13 +289,19 @@ const Court: React.FC = () => {
       .attr('viewBox', [0, 0, fixedWidth, fixedHeight])
       .attr('style', 'background: transparent; max-width: 100%; height: auto;');
 
+    // apply initial transform from yjs state or default
+    const initialScale = (ySharedState.get('zoomScale') as number) || 1;
+    const initialX = (ySharedState.get('panX') as number) || 0;
+    const initialY = (ySharedState.get('panY') as number) || 0;
+    transformRef.current = { k: initialScale, x: initialX, y: initialY };
+
     const root = svg
       .append('g')
       .attr('class', 'root')
       .attr('id', 'court-root')
       .attr(
         'transform',
-        `translate(${currentTransform.x}, ${currentTransform.y}) scale(${currentTransform.k})`
+        `translate(${initialX}, ${initialY}) scale(${initialScale})`
       );
 
     // add court.svg content as backdrop within the root group and scale it
@@ -957,6 +969,13 @@ const Court: React.FC = () => {
       });
     }
 
+    // set up the getCurrentTransform function for interaction handlers
+    getCurrentTransformRef.current = () => ({
+      scale: transformRef.current.k,
+      x: transformRef.current.x,
+      y: transformRef.current.y,
+    });
+
     return () => {
       yNodes.unobserveDeep(observer);
       yLinks.unobserveDeep(observer);
@@ -967,6 +986,8 @@ const Court: React.FC = () => {
           e: CustomEvent<InteractionEvent>
         ) => handleInteraction(e.detail)) as EventListener);
       }
+      // cleanup function to clear the ref when component unmounts
+      getCurrentTransformRef.current = null;
     };
   }, [
     syncStatus,
@@ -976,6 +997,7 @@ const Court: React.FC = () => {
     ySharedState,
     userId,
     yClientClickSelections,
+    getCurrentTransformRef,
   ]);
 
   if (!syncStatus) {

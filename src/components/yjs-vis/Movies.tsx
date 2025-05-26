@@ -4,6 +4,7 @@ import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
 import moviesData from '@/assets/movies2.json'; // updated data import
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
+import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
 // define shared value types for y.map
 type NodeMapValue = string | number | boolean | undefined | string[]; // allow string arrays for genres etc.
@@ -48,6 +49,11 @@ const DEFAULT_LINK_STROKE_WIDTH = 3; // increased thickness
 const HIGHLIGHTED_LINK_COLOR = '#FFD700'; // gold
 const HIGHLIGHTED_LINK_OPACITY = 1;
 const HIGHLIGHTED_LINK_STROKE_WIDTH = 4; // increased thickness
+
+// props interface for the Movies component
+interface MoviesProps {
+  getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
+}
 
 // helper function to get node id from a link's source or target
 function getNodeIdFromLinkEnd(node: D3Node | string | number): string {
@@ -225,7 +231,7 @@ function pruneYDoc(doc: Y.Doc) {
   }
 }
 
-const Movies: React.FC = () => {
+const Movies: React.FC<MoviesProps> = ({ getCurrentTransformRef }) => {
   // updated component name
   // get doc from context (no awareness)
   const yjsContext = useContext(YjsContext);
@@ -287,6 +293,20 @@ const Movies: React.FC = () => {
 
   // left panel width for tooltip/info
   const tooltipWidth = fixedWidth * 0.25; // keep tooltip for now
+
+  // set up the getCurrentTransform function for interaction handlers
+  useEffect(() => {
+    getCurrentTransformRef.current = () => ({
+      scale: transformRef.current.k,
+      x: transformRef.current.x,
+      y: transformRef.current.y,
+    });
+
+    // cleanup function to clear the ref when component unmounts
+    return () => {
+      getCurrentTransformRef.current = null;
+    };
+  }, [getCurrentTransformRef]);
 
   // track sync status (simple timeout approach)
   useEffect(() => {
@@ -496,6 +516,12 @@ const Movies: React.FC = () => {
       .attr('viewBox', [0, 0, fixedWidth, fixedHeight])
       .attr('style', 'background: transparent; max-width: 100%; height: auto;');
 
+    // apply initial transform from yjs state or default
+    const initialScale = (ySharedState.get('zoomScale') as number) || 1;
+    const initialX = (ySharedState.get('panX') as number) || 0;
+    const initialY = (ySharedState.get('panY') as number) || 0;
+    transformRef.current = { k: initialScale, x: initialX, y: initialY };
+
     // create a root group for all content that will be transformed
     const root = svg
       .append('g')
@@ -503,7 +529,7 @@ const Movies: React.FC = () => {
       .attr('id', 'movie-root') // updated root id
       .attr(
         'transform',
-        `translate(${currentTransform.x}, ${currentTransform.y}) scale(${currentTransform.k})`
+        `translate(${initialX}, ${initialY}) scale(${initialScale})`
       );
 
     // create groups for links and nodes

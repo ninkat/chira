@@ -4,6 +4,7 @@ import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
 import subredditData from '@/assets/subreddit.json'; // data import for subreddits
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
+import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
 // define shared value types for y.map
 type NodeMapValue = string | number | boolean | undefined;
@@ -37,6 +38,11 @@ const DEFAULT_LINK_STROKE_WIDTH = 1.5;
 const HIGHLIGHTED_LINK_COLOR = '#FFD700'; // gold
 const HIGHLIGHTED_LINK_OPACITY = 1;
 const HIGHLIGHTED_LINK_STROKE_WIDTH = 3;
+
+// props interface for the Subreddit component
+interface SubredditProps {
+  getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
+}
 
 // helper function to get node id from a link's source or target
 function getNodeIdFromLinkEnd(node: D3Node | string | number): string {
@@ -173,7 +179,7 @@ function pruneYDoc(doc: Y.Doc) {
   }
 }
 
-const Subreddit: React.FC = () => {
+const Subreddit: React.FC<SubredditProps> = ({ getCurrentTransformRef }) => {
   const yjsContext = useContext(YjsContext);
   const doc = yjsContext?.doc;
   const d3Container = useRef<HTMLDivElement | null>(null);
@@ -355,13 +361,19 @@ const Subreddit: React.FC = () => {
       .attr('viewBox', [0, 0, fixedWidth, fixedHeight])
       .attr('style', 'background: transparent; max-width: 100%; height: auto;');
 
+    // apply initial transform from yjs state or default
+    const initialScale = (ySharedState.get('zoomScale') as number) || 1;
+    const initialX = (ySharedState.get('panX') as number) || 0;
+    const initialY = (ySharedState.get('panY') as number) || 0;
+    transformRef.current = { k: initialScale, x: initialX, y: initialY };
+
     const root = svg
       .append('g')
       .attr('class', 'root')
       .attr('id', 'subreddit-root')
       .attr(
         'transform',
-        `translate(${currentTransform.x}, ${currentTransform.y}) scale(${currentTransform.k})`
+        `translate(${initialX}, ${initialY}) scale(${initialScale})`
       );
 
     const linkGroup = root.append('g').attr('class', 'links');
@@ -994,6 +1006,19 @@ const Subreddit: React.FC = () => {
     yClientClickSelections,
     colorScale, // added colorScale to dependency array
   ]);
+
+  useEffect(() => {
+    getCurrentTransformRef.current = () => ({
+      scale: transformRef.current.k,
+      x: transformRef.current.x,
+      y: transformRef.current.y,
+    });
+
+    // cleanup function to clear the ref when component unmounts
+    return () => {
+      getCurrentTransformRef.current = null;
+    };
+  }, [getCurrentTransformRef]);
 
   if (!syncStatus) {
     return (

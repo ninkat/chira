@@ -20,6 +20,13 @@ import {
   drawRippleEffect,
 } from '@/utils/drawingUtils';
 
+// type for getting current transform from the active visualization
+export type GetCurrentTransformFn = () => {
+  scale: number;
+  x: number;
+  y: number;
+};
+
 // converts a mediapipe landmark to our interaction point format
 // this handles the coordinate space conversion from normalized (0-1) to pixel space
 // and calculates both canvas and client coordinates
@@ -112,7 +119,7 @@ const gestureClickState: {
 // time constraint for the click gesture (thumb_index → one) in milliseconds
 const CLICK_GESTURE_TIME_CONSTRAINT = 500;
 
-// transform state management
+// transform state management - now uses current transform from visualization
 let currentTransform = {
   scale: 1,
   x: 0,
@@ -840,7 +847,8 @@ export function handleFist(
   rect: DOMRect,
   dimensions: CanvasDimensions,
   onInteraction: InteractionEventHandler,
-  drawOnly = false
+  drawOnly = false,
+  getCurrentTransform?: GetCurrentTransformFn
 ): void {
   if (
     !results.landmarks?.length ||
@@ -862,6 +870,16 @@ export function handleFist(
       fistDwellState.right.dwellComplete = false;
     }
     return;
+  }
+
+  // get current transform from the active visualization if available
+  if (getCurrentTransform && !drawOnly) {
+    const visualizationTransform = getCurrentTransform();
+    currentTransform = {
+      scale: visualizationTransform.scale,
+      x: visualizationTransform.x,
+      y: visualizationTransform.y,
+    };
   }
 
   const currentTime = Date.now();

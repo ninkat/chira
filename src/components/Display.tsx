@@ -12,6 +12,7 @@ import {
   handleOk as handleSvgOk,
   handleFist as handleSvgFist,
   handleNone as handleSvgNone,
+  GetCurrentTransformFn,
 } from '@/utils/interactionHandlers';
 import {
   handleOne as handleSvgOneRemote,
@@ -69,6 +70,9 @@ const Display: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const rtcConnectedRef = useRef<boolean>(false);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+
+  // ref for getting current transform from active visualization
+  const getCurrentTransformRef = useRef<GetCurrentTransformFn | null>(null);
 
   // state for selected camera device
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -248,7 +252,9 @@ const Display: React.FC = () => {
                 results,
                 rect,
                 dimensions,
-                handleInteraction
+                handleInteraction,
+                false, // drawOnly
+                getCurrentTransformRef.current || undefined // pass current transform function
               );
 
               // process "none" gesture for cleanup
@@ -365,13 +371,27 @@ const Display: React.FC = () => {
           }}
         >
           {/* conditionally render selected visualization */}
-          {currentVisualization === 'senate' && <Senate />}
-          {currentVisualization === 'worldmap' && <WorldMap />}
-          {currentVisualization === 'movies' && <Movies />}
-          {currentVisualization === 'court' && <Court />}
-          {currentVisualization === 'subreddit' && <Subreddit />}
-          {currentVisualization === 'ustileyjs' && <USTileYjs />}
-          {currentVisualization === 'auspol' && <AusPol />}
+          {currentVisualization === 'senate' && (
+            <Senate getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'worldmap' && (
+            <WorldMap getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'movies' && (
+            <Movies getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'court' && (
+            <Court getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'subreddit' && (
+            <Subreddit getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'ustileyjs' && (
+            <USTileYjs getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'auspol' && (
+            <AusPol getCurrentTransformRef={getCurrentTransformRef} />
+          )}
         </div>
       </YjsProvider>
 

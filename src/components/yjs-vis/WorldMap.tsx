@@ -12,6 +12,7 @@ import {
 } from '@/types/interactionTypes';
 // import * as Y from 'yjs'; // removing to check if unused
 import { YjsContext } from '@/context/YjsContext';
+import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
 // define a non-null version of geojsonproperties for extension
 type definedgeojsonproperties = Exclude<GeoJsonProperties, null>;
@@ -48,6 +49,11 @@ interface Flight {
 // yjs shared value types
 type WorldMapStateValue = string | number | boolean | null; // arrays will be y.array, not directly in map value for this type
 
+// props interface for the WorldMap component
+interface WorldMapProps {
+  getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
+}
+
 // constants for styling
 const totalWidth = window.innerWidth;
 const totalHeight = window.innerHeight;
@@ -78,7 +84,7 @@ const panelWidth = totalWidth / 4;
 const panelBackground = 'rgba(33, 33, 33, 0.65)';
 const panelTextColor = 'white';
 
-const WorldMap: React.FC = () => {
+const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement | null>(null); // main group for d3 transformations
   const animationFrameRef = useRef<number | null>(null);
@@ -148,6 +154,20 @@ const WorldMap: React.FC = () => {
   const allFlights = useRef<Flight[]>([]);
   // all airport data loaded once, used to map iatas to airport objects
   const allAirports = useRef<Airport[]>([]);
+
+  // set up the getCurrentTransform function for interaction handlers
+  useEffect(() => {
+    getCurrentTransformRef.current = () => ({
+      scale: transformRef.current.k,
+      x: transformRef.current.x,
+      y: transformRef.current.y,
+    });
+
+    // cleanup function to clear the ref when component unmounts
+    return () => {
+      getCurrentTransformRef.current = null;
+    };
+  }, [getCurrentTransformRef]);
 
   // track sync status (simple timeout approach)
   useEffect(() => {
@@ -813,8 +833,8 @@ const WorldMap: React.FC = () => {
 
     Promise.all([
       d3.json<WorldTopology>('/src/assets/world110.topo.json'),
-      d3.json<Airport[]>('/src/assets/airports.json'),
-      d3.json<Flight[]>('/src/assets/flights.json'),
+      d3.json<Airport[]>('/src/assets/airports2.json'),
+      d3.json<Flight[]>('/src/assets/flights2.json'),
     ])
       .then(([topology, airportsData, flightsData]) => {
         if (
@@ -1191,7 +1211,7 @@ const WorldMap: React.FC = () => {
               color: '#333', // Match Senate
             }}
           >
-            travel map visualization
+            Travel Map Visualization
           </div>
           <div
             style={{
