@@ -1,0 +1,729 @@
+{
+  "party_vote_counts": {
+    "Republican": {
+      "Yea": 49,
+      "Abs": 1,
+      "Present": 1
+    },
+    "Independent": {
+      "Nay": 2
+    },
+    "Democrat": {
+      "Yea": 1,
+      "Nay": 46
+    }
+  },
+  "vote_title": "Confirmation of Brett Kavanaugh to be an Associate Justice of the Supreme Court of the United States",
+  "summary": "Confirmed Brett Kavanaugh to the Supreme Court, replacing retiring swing-vote Justice Anthony Kennedy and solidifying a conservative majority.",
+  "bill_number": "PN2259",
+  "id": "RS1150548",
+  "votes": [
+    {
+      "first_name": "Lamar",
+      "last_name": "Alexander",
+      "party_short_name": "Republican",
+      "icpsr": 40304,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Tammy",
+      "last_name": "Baldwin",
+      "party_short_name": "Democrat",
+      "icpsr": 29940,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Barrasso",
+      "party_short_name": "Republican",
+      "icpsr": 40707,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Michael",
+      "last_name": "Bennet",
+      "party_short_name": "Democrat",
+      "icpsr": 40910,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Richard",
+      "last_name": "Blumenthal",
+      "party_short_name": "Democrat",
+      "icpsr": 41101,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Roy",
+      "last_name": "Blunt",
+      "party_short_name": "Republican",
+      "icpsr": 29735,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Cory",
+      "last_name": "Booker",
+      "party_short_name": "Democrat",
+      "icpsr": 41308,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Boozman",
+      "party_short_name": "Republican",
+      "icpsr": 20101,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Sherrod",
+      "last_name": "Brown",
+      "party_short_name": "Democrat",
+      "icpsr": 29389,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Richard",
+      "last_name": "Burr",
+      "party_short_name": "Republican",
+      "icpsr": 29548,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Maria",
+      "last_name": "Cantwell",
+      "party_short_name": "Democrat",
+      "icpsr": 39310,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Shelley",
+      "last_name": "Capito",
+      "party_short_name": "Republican",
+      "icpsr": 20146,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Ben",
+      "last_name": "Cardin",
+      "party_short_name": "Democrat",
+      "icpsr": 15408,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Thomas",
+      "last_name": "Carper",
+      "party_short_name": "Democrat",
+      "icpsr": 15015,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Bob",
+      "last_name": "Casey",
+      "party_short_name": "Democrat",
+      "icpsr": 40703,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Bill",
+      "last_name": "Cassidy",
+      "party_short_name": "Republican",
+      "icpsr": 20919,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Susan",
+      "last_name": "Collins",
+      "party_short_name": "Republican",
+      "icpsr": 49703,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Christopher",
+      "last_name": "Coons",
+      "party_short_name": "Democrat",
+      "icpsr": 40916,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Bob",
+      "last_name": "Corker",
+      "party_short_name": "Republican",
+      "icpsr": 40705,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Cornyn",
+      "party_short_name": "Republican",
+      "icpsr": 40305,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Catherine",
+      "last_name": "Cortez Masto",
+      "party_short_name": "Democrat",
+      "icpsr": 41700,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Tom",
+      "last_name": "Cotton",
+      "party_short_name": "Republican",
+      "icpsr": 21301,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Mike",
+      "last_name": "Crapo",
+      "party_short_name": "Republican",
+      "icpsr": 29345,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Ted",
+      "last_name": "Cruz",
+      "party_short_name": "Republican",
+      "icpsr": 41304,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Steve",
+      "last_name": "Daines",
+      "party_short_name": "Republican",
+      "icpsr": 21338,
+      "vote": "Abs"
+    },
+    {
+      "first_name": "Joe",
+      "last_name": "Donnelly",
+      "party_short_name": "Democrat",
+      "icpsr": 20717,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Tammy",
+      "last_name": "Duckworth",
+      "party_short_name": "Democrat",
+      "icpsr": 21325,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Richard",
+      "last_name": "Durbin",
+      "party_short_name": "Democrat",
+      "icpsr": 15021,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Mike",
+      "last_name": "Enzi",
+      "party_short_name": "Republican",
+      "icpsr": 49706,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Joni",
+      "last_name": "Ernst",
+      "party_short_name": "Republican",
+      "icpsr": 41502,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Dianne",
+      "last_name": "Feinstein",
+      "party_short_name": "Democrat",
+      "icpsr": 49300,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Deb",
+      "last_name": "Fischer",
+      "party_short_name": "Republican",
+      "icpsr": 41302,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Jeff",
+      "last_name": "Flake",
+      "party_short_name": "Republican",
+      "icpsr": 20100,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Cory",
+      "last_name": "Gardner",
+      "party_short_name": "Republican",
+      "icpsr": 21112,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Kirsten",
+      "last_name": "Gillibrand",
+      "party_short_name": "Democrat",
+      "icpsr": 20735,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Lindsey",
+      "last_name": "Graham",
+      "party_short_name": "Republican",
+      "icpsr": 29566,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Charles",
+      "last_name": "Grassley",
+      "party_short_name": "Republican",
+      "icpsr": 14226,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Kamala",
+      "last_name": "Harris",
+      "party_short_name": "Democrat",
+      "icpsr": 41701,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Maggie",
+      "last_name": "Hassan",
+      "party_short_name": "Democrat",
+      "icpsr": 41702,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Orrin",
+      "last_name": "Hatch",
+      "party_short_name": "Republican",
+      "icpsr": 14503,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Martin",
+      "last_name": "Heinrich",
+      "party_short_name": "Democrat",
+      "icpsr": 20930,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Heidi",
+      "last_name": "Heitkamp",
+      "party_short_name": "Democrat",
+      "icpsr": 41303,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Dean",
+      "last_name": "Heller",
+      "party_short_name": "Republican",
+      "icpsr": 20730,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Mazie",
+      "last_name": "Hirono",
+      "party_short_name": "Democrat",
+      "icpsr": 20713,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Hoeven",
+      "party_short_name": "Republican",
+      "icpsr": 41107,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Cindy",
+      "last_name": "Hyde-Smith",
+      "party_short_name": "Republican",
+      "icpsr": 41707,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Jim",
+      "last_name": "Inhofe",
+      "party_short_name": "Republican",
+      "icpsr": 15424,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Isakson",
+      "party_short_name": "Republican",
+      "icpsr": 29909,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Ron",
+      "last_name": "Johnson",
+      "party_short_name": "Republican",
+      "icpsr": 41111,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Doug",
+      "last_name": "Jones",
+      "party_short_name": "Democrat",
+      "icpsr": 41705,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Timothy",
+      "last_name": "Kaine",
+      "party_short_name": "Democrat",
+      "icpsr": 41305,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Kennedy",
+      "party_short_name": "Republican",
+      "icpsr": 41703,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Angus",
+      "last_name": "King",
+      "party_short_name": "Independent",
+      "icpsr": 41300,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Amy",
+      "last_name": "Klobuchar",
+      "party_short_name": "Democrat",
+      "icpsr": 40700,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Jon",
+      "last_name": "Kyl",
+      "party_short_name": "Republican",
+      "icpsr": 15429,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "James",
+      "last_name": "Lankford",
+      "party_short_name": "Republican",
+      "icpsr": 21166,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Patrick",
+      "last_name": "Leahy",
+      "party_short_name": "Democrat",
+      "icpsr": 14307,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Mike",
+      "last_name": "Lee",
+      "party_short_name": "Republican",
+      "icpsr": 41110,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Joe",
+      "last_name": "Manchin",
+      "party_short_name": "Democrat",
+      "icpsr": 40915,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Edward",
+      "last_name": "Markey",
+      "party_short_name": "Democrat",
+      "icpsr": 14435,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Claire",
+      "last_name": "McCaskill",
+      "party_short_name": "Democrat",
+      "icpsr": 40701,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Mitch",
+      "last_name": "McConnell",
+      "party_short_name": "Republican",
+      "icpsr": 14921,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Robert",
+      "last_name": "Menendez",
+      "party_short_name": "Democrat",
+      "icpsr": 29373,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Jeff",
+      "last_name": "Merkley",
+      "party_short_name": "Democrat",
+      "icpsr": 40908,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Jerry",
+      "last_name": "Moran",
+      "party_short_name": "Republican",
+      "icpsr": 29722,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Lisa",
+      "last_name": "Murkowski",
+      "party_short_name": "Republican",
+      "icpsr": 40300,
+      "vote": "Present"
+    },
+    {
+      "first_name": "Christopher",
+      "last_name": "Murphy",
+      "party_short_name": "Democrat",
+      "icpsr": 20707,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Patty",
+      "last_name": "Murray",
+      "party_short_name": "Democrat",
+      "icpsr": 49308,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Bill",
+      "last_name": "Nelson",
+      "party_short_name": "Democrat",
+      "icpsr": 14651,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Rand",
+      "last_name": "Paul",
+      "party_short_name": "Republican",
+      "icpsr": 41104,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "David",
+      "last_name": "Perdue",
+      "party_short_name": "Republican",
+      "icpsr": 41501,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Gary",
+      "last_name": "Peters",
+      "party_short_name": "Democrat",
+      "icpsr": 20923,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Rob",
+      "last_name": "Portman",
+      "party_short_name": "Republican",
+      "icpsr": 29386,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Reed",
+      "party_short_name": "Democrat",
+      "icpsr": 29142,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "James",
+      "last_name": "Risch",
+      "party_short_name": "Republican",
+      "icpsr": 40902,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Pat",
+      "last_name": "Roberts",
+      "party_short_name": "Republican",
+      "icpsr": 14852,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Mike",
+      "last_name": "Rounds",
+      "party_short_name": "Republican",
+      "icpsr": 41505,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Marco",
+      "last_name": "Rubio",
+      "party_short_name": "Republican",
+      "icpsr": 41102,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Bernie",
+      "last_name": "Sanders",
+      "party_short_name": "Independent",
+      "icpsr": 29147,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Ben",
+      "last_name": "Sasse",
+      "party_short_name": "Republican",
+      "icpsr": 41503,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Brian",
+      "last_name": "Schatz",
+      "party_short_name": "Democrat",
+      "icpsr": 41112,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Charles",
+      "last_name": "Schumer",
+      "party_short_name": "Democrat",
+      "icpsr": 14858,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Tim",
+      "last_name": "Scott",
+      "party_short_name": "Republican",
+      "icpsr": 21173,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Jeanne",
+      "last_name": "Shaheen",
+      "party_short_name": "Democrat",
+      "icpsr": 40906,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Richard",
+      "last_name": "Shelby",
+      "party_short_name": "Republican",
+      "icpsr": 94659,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Tina",
+      "last_name": "Smith",
+      "party_short_name": "Democrat",
+      "icpsr": 41706,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Debbie",
+      "last_name": "Stabenow",
+      "party_short_name": "Democrat",
+      "icpsr": 29732,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Dan",
+      "last_name": "Sullivan",
+      "party_short_name": "Republican",
+      "icpsr": 41500,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Jon",
+      "last_name": "Tester",
+      "party_short_name": "Democrat",
+      "icpsr": 40702,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "John",
+      "last_name": "Thune",
+      "party_short_name": "Republican",
+      "icpsr": 29754,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Thomas",
+      "last_name": "Tillis",
+      "party_short_name": "Republican",
+      "icpsr": 41504,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Patrick",
+      "last_name": "Toomey",
+      "party_short_name": "Republican",
+      "icpsr": 29935,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Tom",
+      "last_name": "Udall",
+      "party_short_name": "Democrat",
+      "icpsr": 29924,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Chris",
+      "last_name": "Van Hollen",
+      "party_short_name": "Democrat",
+      "icpsr": 20330,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Mark",
+      "last_name": "Warner",
+      "party_short_name": "Democrat",
+      "icpsr": 40909,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Elizabeth",
+      "last_name": "Warren",
+      "party_short_name": "Democrat",
+      "icpsr": 41301,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Sheldon",
+      "last_name": "Whitehouse",
+      "party_short_name": "Democrat",
+      "icpsr": 40704,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Roger",
+      "last_name": "Wicker",
+      "party_short_name": "Republican",
+      "icpsr": 29534,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "Ron",
+      "last_name": "Wyden",
+      "party_short_name": "Democrat",
+      "icpsr": 14871,
+      "vote": "Nay"
+    },
+    {
+      "first_name": "Todd",
+      "last_name": "Young",
+      "party_short_name": "Republican",
+      "icpsr": 21133,
+      "vote": "Yea"
+    },
+    {
+      "first_name": "",
+      "last_name": "",
+      "party_short_name": "Republican",
+      "icpsr": 99912.0,
+      "vote": "Yea"
+    }
+  ]
+}

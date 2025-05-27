@@ -2,9 +2,270 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
-import senateData from '@/assets/foafagain.json';
+import senators117Data from '@/assets/senatedata/s117.json';
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
 import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
+
+// senate visualization using real 117th congress voting data
+// visualizes how senators voted on bills instead of sponsor/cosponsor relationships
+
+// data structure types for senate data
+interface Senator {
+  icpsr: number;
+  id: string;
+  name: string;
+  state: string;
+  party: string;
+  party_code: number;
+  faction: string;
+  ideoscore: number;
+}
+
+// type for senators from s117.json
+interface S117Senator {
+  congress: number;
+  icpsr: number;
+  state_icpsr: number;
+  state_abbrev: string;
+  senclass: number;
+  party_code: number;
+  bioname: string;
+  ideoscore: number;
+}
+
+interface Vote {
+  first_name: string;
+  last_name: string;
+  party_short_name: string;
+  icpsr: number;
+  vote: string; // "Yea", "Nay", "Abs", etc.
+}
+
+interface VotingData {
+  party_vote_counts: Record<string, Record<string, number>>;
+  vote_title: string;
+  summary: string;
+  bill_number: string;
+  id: string;
+  votes: Vote[];
+}
+
+interface ProcessedNode {
+  id: string;
+  name: string;
+  type: 'senator' | 'bill';
+  party?: string;
+  state?: string;
+  faction?: string;
+  ideoscore?: number;
+  summary?: string;
+  bill_number?: string;
+}
+
+interface ProcessedLink {
+  source: string;
+  target: string;
+  type: string; // "yea", "nay", "abs"
+  vote?: string;
+}
+
+interface ProcessedData {
+  nodes: ProcessedNode[];
+  links: ProcessedLink[];
+}
+
+// function to dynamically import voting data
+async function loadVotingData(billId: string): Promise<VotingData | null> {
+  try {
+    // dynamically import the voting data file
+    const votingModule = await import(
+      `@/assets/senatedata/s117_votes/${billId}.json`
+    );
+    return votingModule.default as VotingData;
+  } catch (error) {
+    console.error(`failed to load voting data for ${billId}:`, error);
+    return null;
+  }
+}
+
+// function to determine faction based on ideology score
+function getFactionFromIdeology(ideoscore: number, partyCode: number): string {
+  // independents caucus with democrats, so treat them as democrats
+  const isDemocratic = partyCode === 100 || partyCode === 328;
+
+  if (isDemocratic) {
+    if (ideoscore >= 0.0 && ideoscore <= 0.15) return 'progressive';
+    if (ideoscore >= 0.16 && ideoscore <= 0.35) return 'liberal';
+    if (ideoscore >= 0.36 && ideoscore <= 0.55) return 'moderate-dem';
+  } else if (partyCode === 200) {
+    if (ideoscore >= 0.56 && ideoscore <= 0.7) return 'moderate-rep';
+    if (ideoscore >= 0.71 && ideoscore <= 0.85)
+      return 'mainstream-conservative';
+    if (ideoscore >= 0.86 && ideoscore <= 1.0) return 'national-conservative';
+  }
+
+  // fallback for edge cases
+  return partyCode === 200 ? 'mainstream-conservative' : 'liberal';
+}
+
+// function to get faction color
+function getFactionColor(faction: string): string {
+  switch (faction) {
+    // democratic factions (shades of blue)
+    case 'progressive':
+      return '#1e40af'; // dark blue
+    case 'liberal':
+      return '#3b82f6'; // medium blue
+    case 'moderate-dem':
+      return '#93c5fd'; // light blue
+
+    // republican factions (shades of red)
+    case 'moderate-rep':
+      return '#fca5a5'; // light red
+    case 'mainstream-conservative':
+      return '#ef4444'; // medium red
+    case 'national-conservative':
+      return '#b91c1c'; // dark red
+
+    default:
+      return '#6b7280'; // gray fallback
+  }
+}
+
+// function to convert s117 senator data to internal format
+function convertS117Senator(s117Senator: S117Senator): Senator {
+  // extract first and last name from bioname (format: "Last, First")
+  const nameParts = s117Senator.bioname.split(', ');
+  const lastName = nameParts[0] || '';
+  const firstName = nameParts[1] || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  // generate id from name (lowercase, spaces to underscores)
+  const id = fullName.toLowerCase().replace(/\s+/g, '_');
+
+  // convert party code to party name
+  let party = 'independent';
+  if (s117Senator.party_code === 100) {
+    party = 'democrat';
+  } else if (s117Senator.party_code === 200) {
+    party = 'republican';
+  } else if (s117Senator.party_code === 328) {
+    party = 'independent';
+  }
+
+  // determine faction based on ideology score
+  const faction = getFactionFromIdeology(
+    s117Senator.ideoscore,
+    s117Senator.party_code
+  );
+
+  return {
+    icpsr: s117Senator.icpsr,
+    id,
+    name: fullName,
+    state: s117Senator.state_abbrev,
+    party,
+    party_code: s117Senator.party_code,
+    faction, // add faction to senator data
+    ideoscore: s117Senator.ideoscore, // include ideology score
+  };
+}
+
+// function to get available bills from the s117_votes directory
+function getAvailableBills(): string[] {
+  // hardcoded list of available bills - in a real app this could be dynamic
+  return [
+    'hr1319',
+    'hr3684',
+    'hr5376',
+    'hr4346',
+    'hr8404',
+    's2747',
+    's2938',
+    's3373',
+    'hres24',
+    'pn1783',
+  ];
+}
+
+// function to process data for visualization
+async function processSenateData(
+  selectedBills: string[] = getAvailableBills() // default to all available bills
+): Promise<ProcessedData> {
+  const nodes: ProcessedNode[] = [];
+  const links: ProcessedLink[] = [];
+
+  // convert s117 senator data to internal format
+  const senators = senators117Data.map(convertS117Senator);
+
+  // create a map of icpsr to senator for quick lookup
+  const senatorMap = new Map<number, Senator>();
+  senators.forEach((senator) => {
+    senatorMap.set(senator.icpsr, senator);
+  });
+
+  // add all senators as nodes
+  senators.forEach((senator) => {
+    nodes.push({
+      id: senator.id,
+      name: senator.name,
+      type: 'senator',
+      party: senator.party,
+      state: senator.state,
+      faction: senator.faction,
+      ideoscore: senator.ideoscore,
+    });
+  });
+
+  // process selected bills
+  for (const billId of selectedBills) {
+    // load voting data to get bill information
+    const votingData = await loadVotingData(billId);
+    if (!votingData) {
+      console.warn(`voting data not found for ${billId}`);
+      continue;
+    }
+
+    // add bill as node using data from voting file
+    nodes.push({
+      id: billId,
+      name: votingData.vote_title,
+      type: 'bill',
+      summary: votingData.summary,
+      bill_number: votingData.bill_number,
+    });
+
+    // create links based on votes
+    votingData.votes.forEach((vote) => {
+      const senator = senatorMap.get(vote.icpsr);
+      if (!senator) {
+        console.warn(`senator not found for icpsr ${vote.icpsr}`);
+        return;
+      }
+
+      // create link from senator to bill based on vote
+      let linkType = 'vote';
+      if (vote.vote === 'Yea') {
+        linkType = 'yea';
+      } else if (vote.vote === 'Nay') {
+        linkType = 'nay';
+      } else if (vote.vote === 'Abs') {
+        linkType = 'abstain';
+      } else {
+        linkType = 'other';
+      }
+
+      links.push({
+        source: senator.id,
+        target: billId,
+        type: linkType,
+        vote: vote.vote,
+      });
+    });
+  }
+
+  return { nodes, links };
+}
 
 // define shared value types for y.map
 type NodeMapValue = string | number | boolean | undefined;
@@ -254,56 +515,88 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
     };
   }, [doc, syncStatus]);
 
-  // initialize graph data from json if ynodes is empty after sync
+  // initialize graph data from real senate data if ynodes is empty after sync
   useEffect(() => {
     // wait for sync and check if nodes are empty
     if (!syncStatus || yNodes.length > 0) {
       return;
     }
 
-    console.log('initializing senate graph data from json');
+    console.log(
+      'initializing senate graph data from 117th congress - loading all available bills from s117_votes directory'
+    );
 
-    const initialNodes: Y.Map<NodeMapValue>[] = [];
-    const initialLinks: Y.Map<LinkMapValue>[] = [];
+    const initializeData = async () => {
+      try {
+        // process real senate data - include all available bills from 117th congress
+        const processedData = await processSenateData();
 
-    // we'll set positions later with d3 layout
-    const defaultX = fixedWidth / 2;
-    const defaultY = fixedHeight / 2;
+        const initialNodes: Y.Map<NodeMapValue>[] = [];
+        const initialLinks: Y.Map<LinkMapValue>[] = [];
 
-    // process nodes from json
-    senateData.nodes.forEach((node) => {
-      const yNode = new Y.Map<NodeMapValue>();
-      yNode.set('id', node.id);
-      yNode.set('name', node.name);
-      yNode.set('type', node.type);
-      // just set initial positions - d3 will update these
-      yNode.set('x', defaultX);
-      yNode.set('y', defaultY);
-      yNode.set('uuid', crypto.randomUUID()); // stable react key
+        // we'll set positions later with d3 layout
+        const defaultX = fixedWidth / 2;
+        const defaultY = fixedHeight / 2;
 
-      if (node.type === 'senator') {
-        yNode.set('party', node.party?.toLowerCase() || 'i'); // ensure lowercase, default independent
-        yNode.set('state', node.state);
-      } else if (node.type === 'bill') {
-        yNode.set('status', node.status);
+        // process nodes from processed data
+        processedData.nodes.forEach((node) => {
+          const yNode = new Y.Map<NodeMapValue>();
+          yNode.set('id', node.id);
+          yNode.set('name', node.name);
+          yNode.set('type', node.type);
+          // just set initial positions - d3 will update these
+          yNode.set('x', defaultX);
+          yNode.set('y', defaultY);
+          yNode.set('uuid', crypto.randomUUID()); // stable react key
+
+          if (node.type === 'senator') {
+            // normalize party names to lowercase
+            let party = 'i'; // default independent
+            if (node.party === 'democrat') {
+              party = 'd';
+            } else if (node.party === 'republican') {
+              party = 'r';
+            } else if (node.party === 'independent') {
+              party = 'i';
+            }
+            yNode.set('party', party);
+            yNode.set('state', node.state);
+            yNode.set('faction', node.faction);
+            yNode.set('ideoscore', node.ideoscore);
+          } else if (node.type === 'bill') {
+            yNode.set('summary', node.summary);
+            yNode.set('bill_number', node.bill_number);
+          }
+          initialNodes.push(yNode);
+        });
+
+        // process links from processed data
+        processedData.links.forEach((link) => {
+          const yLink = new Y.Map<LinkMapValue>();
+          yLink.set('source', link.source);
+          yLink.set('target', link.target);
+          yLink.set('type', link.type);
+          if (link.vote) {
+            yLink.set('vote', link.vote);
+          }
+          initialLinks.push(yLink);
+        });
+
+        // use transaction to batch updates
+        doc!.transact(() => {
+          yNodes.push(initialNodes);
+          yLinks.push(initialLinks);
+        });
+
+        console.log(
+          `loaded ${initialNodes.length} nodes and ${initialLinks.length} links from real senate data`
+        );
+      } catch (error) {
+        console.error('failed to initialize senate data:', error);
       }
-      initialNodes.push(yNode);
-    });
+    };
 
-    // process links from json
-    senateData.links.forEach((link) => {
-      const yLink = new Y.Map<LinkMapValue>();
-      yLink.set('source', link.source);
-      yLink.set('target', link.target);
-      yLink.set('type', link.type);
-      initialLinks.push(yLink);
-    });
-
-    // use transaction to batch updates
-    doc!.transact(() => {
-      yNodes.push(initialNodes);
-      yLinks.push(initialLinks);
-    });
+    initializeData();
   }, [syncStatus, doc, yNodes, yLinks]);
 
   // effect to sync transform state from yjs
@@ -648,21 +941,6 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       ) => handleInteraction(e.detail)) as EventListener);
     }
 
-    // create arrow marker for sponsor links
-    svg
-      .append('defs')
-      .append('marker')
-      .attr('id', 'arrowhead')
-      .attr('viewBox', '0 -5 10 10')
-      .attr('refX', 20)
-      .attr('refY', 0)
-      .attr('orient', 'auto')
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
-      .append('path')
-      .attr('d', 'M0,-5L10,0L0,5')
-      .attr('fill', '#555');
-
     // create tooltip group with modern styling
     const tooltip = svg
       .append('g')
@@ -696,72 +974,27 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       .attr('width', tooltipWidth)
       .attr('height', fixedHeight)
       .attr('fill', 'url(#tooltip-gradient)')
-      .attr('rx', 12)
-      .attr('ry', 12);
+      .attr('rx', 0)
+      .attr('ry', 0);
 
-    // tooltip content containers with text wrapping
+    // add right-side rounded corners using a clip path
+    const clipPath = svg
+      .append('defs')
+      .append('clipPath')
+      .attr('id', 'tooltip-clip');
+    clipPath
+      .append('path')
+      .attr(
+        'd',
+        `M 0,0 L ${tooltipWidth - 12},0 Q ${tooltipWidth},0 ${tooltipWidth},12 L ${tooltipWidth},${fixedHeight - 12} Q ${tooltipWidth},${fixedHeight} ${tooltipWidth - 12},${fixedHeight} L 0,${fixedHeight} Z`
+      );
+
+    tooltip.attr('clip-path', 'url(#tooltip-clip)');
+
+    // tooltip content container - simplified approach
     const tooltipContent = tooltip
       .append('g')
-      .attr('transform', `translate(20, 40)`);
-
-    // add title text element with proper styling
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-title')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('font-size', '28px')
-      .attr('fill', '#ffffff')
-      .attr('font-weight', '500');
-
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-id')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('font-size', '24px')
-      .attr('fill', '#cbd5e0')
-      .attr('font-weight', '300');
-
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-name')
-      .attr('x', 0)
-      .attr('y', 35) // increased spacing for larger text
-      .attr('font-size', '24px')
-      .attr('fill', '#cbd5e0')
-      .attr('font-weight', '300');
-
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-type')
-      .attr('x', 0)
-      .attr('y', 70) // increased spacing
-      .attr('font-size', '24px')
-      .attr('fill', '#cbd5e0')
-      .attr('font-weight', '300');
-
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-detail1')
-      .attr('x', 0)
-      .attr('y', 105) // increased spacing
-      .attr('font-size', '24px')
-      .attr('fill', '#cbd5e0')
-      .attr('font-weight', '300');
-
-    tooltipContent
-      .append('text')
-      .attr('class', 'tt-detail2')
-      .attr('x', 0)
-      .attr('y', 140) // increased spacing
-      .attr('font-size', '24px')
-      .attr('fill', '#cbd5e0')
-      .attr('font-weight', '300');
-
-    // adjust the main visualization area
-    linkGroup.attr('transform', `translate(${tooltipWidth}, 0)`);
-    nodeGroup.attr('transform', `translate(${tooltipWidth}, 0)`);
+      .attr('transform', `translate(20, 20)`);
 
     // helper function to convert node maps to d3 nodes
     const mapNodesToD3 = (): D3Node[] => {
@@ -813,112 +1046,253 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       return links;
     };
 
-    // function to update the tooltip content
-    const updateSelectedNodesInfo = (nodes: D3Node[] | D3Node | null) => {
+    // function to update the tooltip content with clean styling
+    const updateSelectedNodesInfo = async (
+      nodes: D3Node[] | D3Node | null,
+      nodeMap?: Map<string, D3Node>,
+      links?: D3Link[]
+    ) => {
       // Convert single node to array or use empty array if null
       const nodesArray = Array.isArray(nodes) ? nodes : nodes ? [nodes] : [];
 
-      // Clear all text elements first
-      tooltip.select('.tt-title').text('');
-      tooltip.select('.tt-id').text('');
-      tooltip.select('.tt-name').text('');
-      tooltip.select('.tt-type').text('');
-      tooltip.select('.tt-detail1').text('');
-      tooltip.select('.tt-detail2').text('');
+      // Clear all existing content
+      tooltipContent.selectAll('*').remove();
 
-      // Always remove all list items no matter what state we're in
-      tooltipContent.selectAll('.node-list-item').remove();
+      // function to wrap text with proper line breaks
+      const wrapText = (text: string, charLimit: number): string[] => {
+        const words = text.split(/\s+/);
+        const lines: string[] = [];
+        let line = '';
+
+        for (const word of words) {
+          const testLine = line + (line ? ' ' : '') + word;
+          if (testLine.length > charLimit) {
+            if (line) {
+              lines.push(line);
+              line = word;
+            } else {
+              // if single word is longer than limit, just add it
+              lines.push(word);
+            }
+          } else {
+            line = testLine;
+          }
+        }
+
+        if (line) {
+          lines.push(line);
+        }
+
+        return lines;
+      };
+
+      // helper function to render title
+      const renderTitle = (text: string, startY: number): number => {
+        const wrappedLines = wrapText(text, 22);
+        const lineHeight = 30;
+
+        wrappedLines.forEach((line, index) => {
+          tooltipContent
+            .append('text')
+            .attr('x', 0)
+            .attr('y', startY + index * lineHeight)
+            .attr('font-size', '26px')
+            .attr('fill', '#ffffff')
+            .attr('font-weight', 'bold')
+            .text(line);
+        });
+
+        return startY + wrappedLines.length * lineHeight + 15; // extra spacing after title
+      };
+
+      // helper function to render subtitle
+      const renderSubtext = (text: string, startY: number): number => {
+        const wrappedLines = wrapText(text, 28);
+        const lineHeight = 25;
+
+        wrappedLines.forEach((line, index) => {
+          tooltipContent
+            .append('text')
+            .attr('x', 0)
+            .attr('y', startY + index * lineHeight)
+            .attr('font-size', '20px')
+            .attr('fill', '#cbd5e0')
+            .attr('font-weight', 'normal')
+            .text(line);
+        });
+
+        return startY + wrappedLines.length * lineHeight + 10; // spacing after subtext
+      };
+
+      let currentY = 20; // start position
 
       if (nodesArray.length === 0) {
-        // show default tooltip message when no nodes are selected
-        tooltip.select('.tt-title').text('118th US Congress');
-        tooltip.select('.tt-name').text('1st Session, Senate');
-        tooltip.select('.tt-type').text('hover over nodes for details');
-      } else {
-        // multiple nodes - show count as title
-        tooltip
-          .select('.tt-title')
-          .text(
-            `${nodesArray.length} ${
-              nodesArray.length === 1 ? 'node' : 'nodes'
-            } selected`
+        // default state
+        currentY = renderTitle('117th US Congress', currentY);
+        currentY = renderSubtext('senate voting patterns by faction', currentY);
+        currentY = renderSubtext('organized by ideology scores', currentY);
+        currentY = renderSubtext(
+          'hover over senators & bills to see votes',
+          currentY
+        );
+        currentY = renderSubtext(
+          'green = yea, red = nay, orange = abstain',
+          currentY
+        );
+        renderSubtext('links show only on single hover', currentY);
+      } else if (nodesArray.length === 1) {
+        // single node selected
+        const node = nodesArray[0];
+        currentY = renderTitle(node.name, currentY);
+
+        if (node.type === 'senator') {
+          // get party and ideology info from yjs data
+          let ideoscore = 0;
+          let party = 'd';
+          let state = '';
+
+          for (let i = 0; i < yNodes.length; i++) {
+            const nodeMap = yNodes.get(i);
+            if (nodeMap.get('id') === node.id) {
+              ideoscore = (nodeMap.get('ideoscore') as number) || 0;
+              party = (nodeMap.get('party') as string) || 'd';
+              state = (nodeMap.get('state') as string) || '';
+              break;
+            }
+          }
+
+          // format party name properly
+          let partyName = 'Independent';
+          if (party === 'd') {
+            partyName = 'Democratic';
+          } else if (party === 'r') {
+            partyName = 'Republican';
+          }
+
+          currentY = renderSubtext(
+            `${partyName} Senator from ${state}`,
+            currentY
+          );
+          currentY = renderSubtext(
+            `Ideology Score: ${ideoscore.toFixed(2)}`,
+            currentY
           );
 
-        // Show up to 5 node names as a bullet list
+          // get voting records for this senator from existing links
+          const votedFor: string[] = [];
+          const votedAgainst: string[] = [];
+
+          // get current links data (only if nodeMap and links are provided)
+          if (nodeMap && links) {
+            // find all links where this senator is the source
+            const senatorLinks = links.filter((link) => {
+              const source = link.source as D3Node;
+              return source.id === node.id;
+            });
+
+            // organize votes by type and get bill names
+            senatorLinks.forEach((link) => {
+              const target = link.target as D3Node;
+              if (target.type === 'bill') {
+                if (link.type === 'yea') {
+                  votedFor.push(target.name);
+                } else if (link.type === 'nay') {
+                  votedAgainst.push(target.name);
+                }
+                // abstentions are ignored as requested
+              }
+            });
+          }
+
+          // render voting lists
+          if (votedFor.length > 0) {
+            currentY = renderSubtext('Voted For:', currentY);
+            votedFor.forEach((title) => {
+              currentY = renderSubtext(`• ${title}`, currentY);
+            });
+          }
+
+          if (votedAgainst.length > 0) {
+            currentY = renderSubtext('Voted Against:', currentY);
+            votedAgainst.forEach((title) => {
+              currentY = renderSubtext(`• ${title}`, currentY);
+            });
+          }
+        } else if (node.type === 'bill') {
+          // get additional bill info from yjs data and voting data
+          let billNumber = '';
+          let summary = '';
+          let voteTitle = '';
+          let totalVotes = 0;
+
+          // get basic bill info from yjs
+          for (let i = 0; i < yNodes.length; i++) {
+            const nodeMap = yNodes.get(i);
+            if (nodeMap.get('id') === node.id) {
+              billNumber = (nodeMap.get('bill_number') as string) || '';
+              summary = (nodeMap.get('summary') as string) || '';
+              break;
+            }
+          }
+
+          // get voting data to extract vote_title and vote counts
+          let yeaCount = 0;
+          let nayCount = 0;
+          let absCount = 0;
+
+          try {
+            const votingData = await loadVotingData(node.id);
+            if (votingData) {
+              voteTitle = votingData.vote_title || '';
+
+              // calculate vote counts by type from party_vote_counts
+              if (votingData.party_vote_counts) {
+                Object.values(votingData.party_vote_counts).forEach(
+                  (partyCounts) => {
+                    if (partyCounts.Yea) yeaCount += partyCounts.Yea;
+                    if (partyCounts.Nay) nayCount += partyCounts.Nay;
+                    if (partyCounts.Abs) absCount += partyCounts.Abs;
+                  }
+                );
+                totalVotes = yeaCount + nayCount + absCount;
+              }
+            }
+          } catch (error) {
+            console.error(
+              `failed to load voting data for vote count: ${error}`
+            );
+          }
+
+          // use vote_title if available, otherwise fall back to node name
+          const displayTitle = voteTitle || node.name;
+
+          // update the title with the vote_title
+          tooltipContent.selectAll('*').remove();
+          currentY = 20;
+          currentY = renderTitle(displayTitle, currentY);
+
+          currentY = renderSubtext(`Bill Number: ${billNumber}`, currentY);
+          currentY = renderSubtext(`Total Votes: ${totalVotes}`, currentY);
+          currentY = renderSubtext(`Yea: ${yeaCount}`, currentY);
+          currentY = renderSubtext(`Nay: ${nayCount}`, currentY);
+          currentY = renderSubtext(`Abstention: ${absCount}`, currentY);
+          currentY = renderSubtext(`Bill Summary: ${summary}`, currentY);
+        }
+      } else {
+        // multiple nodes selected
+        currentY = renderTitle(`${nodesArray.length} nodes selected`, currentY);
+
+        // show up to 5 node names
         const maxToShow = 5;
         const namesToShow = nodesArray.slice(0, maxToShow);
         const additionalCount = nodesArray.length - maxToShow;
 
-        // Define text wrapping width
-        const maxWidth = tooltipWidth - 40; // Padding on both sides
-
-        // Function to wrap text with proper line breaks
-        const wrapText = (text: string, width: number): string[] => {
-          const words = text.split(/\s+/);
-          const lines: string[] = [];
-          let line = '';
-
-          for (const word of words) {
-            const testLine = line + (line ? ' ' : '') + word;
-            // Simple estimation of width since we can't measure SVG text easily
-            if (testLine.length * 10 > width) {
-              // Rough approximation
-              lines.push(line);
-              line = word;
-            } else {
-              line = testLine;
-            }
-          }
-
-          if (line) {
-            lines.push(line);
-          }
-
-          return lines;
-        };
-
-        // Track vertical position for next item
-        let currentY = 35;
-        const lineHeight = 30;
-
-        // Add each name as a separate text element with proper spacing
         namesToShow.forEach((node) => {
-          const nameWithBullet = `• ${node.name}`;
-          const wrappedLines = wrapText(nameWithBullet, maxWidth);
-
-          // Create a group for this list item
-          const itemGroup = tooltipContent
-            .append('g')
-            .attr('class', 'node-list-item');
-
-          // Add each line of wrapped text
-          wrappedLines.forEach((line, lineIndex) => {
-            itemGroup
-              .append('text')
-              .attr('x', 0)
-              .attr('y', currentY + lineIndex * lineHeight)
-              .attr('font-size', '25px')
-              .attr('fill', '#cbd5e0')
-              .attr('font-weight', '300')
-              .text(line);
-          });
-
-          // Update vertical position for next item
-          currentY += wrappedLines.length * lineHeight + 10; // Add spacing between items
+          currentY = renderSubtext(`• ${node.name}`, currentY);
         });
 
-        // Show "and X more..." at the bottom of the list if needed
         if (additionalCount > 0) {
-          tooltipContent
-            .append('text')
-            .attr('class', 'node-list-item')
-            .attr('x', 0)
-            .attr('y', currentY)
-            .attr('font-size', '22px')
-            .attr('fill', '#cbd5e0')
-            .attr('font-weight', '300')
-            .attr('font-style', 'italic')
-            .text(`and ${additionalCount} more...`);
+          renderSubtext(`and ${additionalCount} more...`, currentY);
         }
       }
     };
@@ -954,14 +1328,23 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       const linkEnter = link
         .enter()
         .append('line')
-        .attr('stroke', (d) => (d.type === 'sponsor' ? '#555' : '#bbb'))
-        .attr('stroke-width', (d) => (d.type === 'sponsor' ? 3 : 1.5))
-        .attr('stroke-dasharray', (d) =>
-          d.type === 'cosponsor' ? '5,5' : 'none'
+        .attr('stroke', (d) => {
+          // color links based on vote type
+          if (d.type === 'yea') return '#2ecc71'; // green for yea votes
+          if (d.type === 'nay') return '#e74c3c'; // red for nay votes
+          if (d.type === 'abstain') return '#f39c12'; // orange for abstentions
+          return '#95a5a6'; // gray for other/unknown
+        })
+        .attr('stroke-width', (d) => {
+          // make yea/nay votes more prominent with bigger width
+          if (d.type === 'yea' || d.type === 'nay') return 4; // increased from 2 to 4
+          return 2; // increased from 1 to 2
+        })
+        .attr(
+          'stroke-dasharray',
+          (d) => (d.type === 'abstain' ? '8,8' : 'none') // bigger dash pattern for abstentions
         )
-        .attr('marker-end', (d) =>
-          d.type === 'sponsor' ? 'url(#arrowhead)' : ''
-        );
+        .attr('opacity', 0); // hidden by default
 
       // merge links
       const linkMerge = linkEnter.merge(link);
@@ -1005,33 +1388,44 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       nodeEnter
         .filter((d) => d.type === 'senator')
         .append('circle')
-        .attr('r', 15)
-        .attr('fill', (d) =>
-          d.party === 'd' ? '#3498db' : d.party === 'r' ? '#e74c3c' : '#95a5a6'
-        )
+        .attr('r', 20) // increased from 15 to 20
+        .attr('fill', (d) => {
+          // get faction from yjs data
+          let faction = 'liberal'; // default
+          for (let i = 0; i < yNodes.length; i++) {
+            const nodeMap = yNodes.get(i);
+            if (nodeMap.get('id') === d.id) {
+              faction = (nodeMap.get('faction') as string) || 'liberal';
+              break;
+            }
+          }
+          return getFactionColor(faction);
+        })
         .attr('stroke', '#333')
-        .attr('stroke-width', 2)
+        .attr('stroke-width', 3) // increased from 2 to 3
         .attr('class', 'node-shape');
 
-      // create bill nodes with larger size
+      // create bill nodes with larger size and different shape
       nodeEnter
         .filter((d) => d.type === 'bill')
         .append('rect')
-        .attr('x', -12)
-        .attr('y', -12)
-        .attr('width', 24)
-        .attr('height', 24)
-        .attr('fill', '#95a5a6')
-        .attr('stroke', '#333')
-        .attr('stroke-width', 2)
+        .attr('x', -20) // increased from -15 to -20
+        .attr('y', -20) // increased from -15 to -20
+        .attr('width', 40) // increased from 30 to 40
+        .attr('height', 40) // increased from 30 to 40
+        .attr('fill', '#000000') // black fill for bills
+        .attr('stroke', '#333333')
+        .attr('stroke-width', 3) // increased from 2 to 3
+        .attr('rx', 0) // sharp corners to make it a square
+        .attr('ry', 0)
         .attr('class', 'node-shape');
 
       // add text labels with larger font
       nodeEnter
         .append('text')
-        .attr('dx', 20)
+        .attr('dx', 25) // moved further from bigger nodes
         .attr('dy', '.35em')
-        .attr('font-size', '12px')
+        .attr('font-size', '14px') // increased from 12px to 14px
         .attr('text-anchor', 'start')
         .text((d) => d.name)
         .attr('opacity', 0) // initially hidden
@@ -1064,7 +1458,22 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       nodeMerge
         .select('.node-shape')
         .attr('stroke', '#333')
-        .attr('stroke-width', 2);
+        .attr('stroke-width', 3); // updated to match bigger nodes
+
+      // hide all links by default
+      linkMerge.attr('opacity', 0);
+
+      // show links only if exactly one node is hovered (not clicked)
+      if (hoveredIds.length === 1) {
+        const hoveredNodeId = hoveredIds[0];
+        linkMerge
+          .filter((d: D3Link) => {
+            const source = d.source as D3Node;
+            const target = d.target as D3Node;
+            return source.id === hoveredNodeId || target.id === hoveredNodeId;
+          })
+          .attr('opacity', 0.7);
+      }
 
       // apply highlight colors
       if (allHighlightedIds.length > 0) {
@@ -1074,7 +1483,7 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             .filter((d: D3Node) => hoveredIds.includes(d.id))
             .select('.node-shape')
             .attr('stroke', '#f39c12')
-            .attr('stroke-width', 3);
+            .attr('stroke-width', 5); // increased from 3 to 5 for better visibility
         }
 
         // Apply different color to clicked/selected nodes
@@ -1083,17 +1492,19 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             .filter((d: D3Node) => allClickSelectedIds.includes(d.id))
             .select('.node-shape')
             .attr('stroke', '#87ceeb') // sky blue
-            .attr('stroke-width', 3);
+            .attr('stroke-width', 5); // increased from 3 to 5 for better visibility
         }
 
         // update tooltip content with all highlighted nodes
         const highlightedNodes = nodes.filter((n) =>
           allHighlightedIds.includes(n.id)
         );
-        updateSelectedNodesInfo(highlightedNodes);
+        updateSelectedNodesInfo(highlightedNodes, nodeMap, links).catch(
+          console.error
+        );
       } else {
         // show default tooltip message when no node is highlighted
-        updateSelectedNodesInfo([]);
+        updateSelectedNodesInfo([], nodeMap, links).catch(console.error);
       }
 
       // check if initialization is needed
@@ -1108,71 +1519,239 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
 
     // function to initialize layout
     const initializeLayout = (nodes: D3Node[]) => {
-      console.log('initializing layout');
+      console.log('initializing layout for voting visualization with factions');
 
-      const demNodes = nodes.filter(
-        (n) => n.type === 'senator' && n.party === 'd'
-      );
-      const repNodes = nodes.filter(
-        (n) => n.type === 'senator' && n.party === 'r'
-      );
+      // organize senators by faction using yjs data
+      const getFactionForNode = (nodeId: string): string => {
+        for (let i = 0; i < yNodes.length; i++) {
+          const nodeMap = yNodes.get(i);
+          if (nodeMap.get('id') === nodeId) {
+            return (nodeMap.get('faction') as string) || 'liberal';
+          }
+        }
+        return 'liberal';
+      };
+
+      // helper function to get ideology score for a node
+      const getIdeoscoreForNode = (nodeId: string): number => {
+        for (let i = 0; i < yNodes.length; i++) {
+          const nodeMap = yNodes.get(i);
+          if (nodeMap.get('id') === nodeId) {
+            return (nodeMap.get('ideoscore') as number) || 0;
+          }
+        }
+        return 0;
+      };
+
+      // democratic factions (left side) - sorted by ideology score
+      const progressiveNodes = nodes
+        .filter(
+          (n) =>
+            n.type === 'senator' && getFactionForNode(n.id) === 'progressive'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most progressive (lowest score) first
+
+      const liberalNodes = nodes
+        .filter(
+          (n) => n.type === 'senator' && getFactionForNode(n.id) === 'liberal'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most liberal (lowest score) first
+
+      const moderateDemNodes = nodes
+        .filter(
+          (n) =>
+            n.type === 'senator' && getFactionForNode(n.id) === 'moderate-dem'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most liberal (lowest score) first
+
+      // republican factions (right side) - sorted by ideology score
+      const moderateRepNodes = nodes
+        .filter(
+          (n) =>
+            n.type === 'senator' && getFactionForNode(n.id) === 'moderate-rep'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most moderate (lowest score) first
+
+      const mainstreamConsNodes = nodes
+        .filter(
+          (n) =>
+            n.type === 'senator' &&
+            getFactionForNode(n.id) === 'mainstream-conservative'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most moderate (lowest score) first
+
+      const nationalConsNodes = nodes
+        .filter(
+          (n) =>
+            n.type === 'senator' &&
+            getFactionForNode(n.id) === 'national-conservative'
+        )
+        .sort((a, b) => getIdeoscoreForNode(a.id) - getIdeoscoreForNode(b.id)); // most moderate (lowest score) first
+
       const billNodes = nodes.filter((n) => n.type === 'bill');
 
-      // define columns - adjusted for tooltip width and better centering
+      console.log(
+        `layout: progressives: ${progressiveNodes.length}, liberals: ${liberalNodes.length}, moderate-dems: ${moderateDemNodes.length}, moderate-reps: ${moderateRepNodes.length}, mainstream-cons: ${mainstreamConsNodes.length}, national-cons: ${nationalConsNodes.length}, bills: ${billNodes.length}`
+      );
+
+      // define layout areas - adjusted for tooltip width
       const availableWidth = fixedWidth - tooltipWidth;
-      const graphCenter = tooltipWidth + availableWidth * 0.18; // moved center point left
-      const spread = availableWidth * 0.45; // significantly increased spread
+      const graphLeft = tooltipWidth + 50; // leave some margin
+      const graphWidth = availableWidth - 100; // leave margin on right too
 
-      const leftColumnX = graphCenter - spread;
-      const rightColumnX = graphCenter + spread;
-      const centerColumnX = graphCenter;
+      // create layout: left third for dems, center third for bills, right third for reps
+      const colWidth = graphWidth / 3;
+      const leftColCenter = graphLeft + colWidth * 0.5;
+      const billColX = graphLeft + colWidth * 1.5;
+      const rightColCenter = graphLeft + colWidth * 2.5;
 
-      // adjust bill grid width to match new spread
-      const billGridWidth = availableWidth * 0.4; // increased bill grid width
-      const billGridHeight = fixedHeight * 0.85; // increased height for more vertical spread
+      const verticalPadding = 40; // reduced from 80 to move visualization up
+      const usableHeight = fixedHeight - 2 * verticalPadding;
 
-      // set vertical spacing for each party with better vertical centering
-      const verticalPadding = fixedHeight * 0.1; // reduced padding to use more vertical space
-      const demSpacing =
-        (fixedHeight - 2 * verticalPadding) / (demNodes.length + 1);
-      const repSpacing =
-        (fixedHeight - 2 * verticalPadding) / (repNodes.length + 1);
+      // helper function to calculate grid dimensions without positioning
+      const calculateGridDimensions = (nodes: D3Node[]) => {
+        if (nodes.length === 0)
+          return { width: 0, height: 0, cols: 0, rows: 0 };
 
-      // set vertical spacing for bills
-      const billRows = Math.ceil(Math.sqrt(billNodes.length));
-      const billCols = Math.ceil(billNodes.length / billRows);
+        const nodeSpacing = 50; // consistent spacing
+        const cols = Math.ceil(Math.sqrt(nodes.length));
+        const rows = Math.ceil(nodes.length / cols);
+        const gridWidth = (cols - 1) * nodeSpacing;
+        const gridHeight = (rows - 1) * nodeSpacing;
 
-      const billColSpacing = billGridWidth / (billCols || 1);
-      const billRowSpacing = billGridHeight / (billRows || 1);
+        return { width: gridWidth, height: gridHeight, cols, rows };
+      };
 
-      // center grid
-      const billGridLeft = centerColumnX - billGridWidth / 2;
-      const billGridTop = fixedHeight * 0.15;
+      // calculate dimensions for all democratic factions
+      const progressiveDims = calculateGridDimensions(progressiveNodes);
+      const liberalDims = calculateGridDimensions(liberalNodes);
+      const moderateDemDims = calculateGridDimensions(moderateDemNodes);
 
-      // position democratic senators in left column
-      demNodes.forEach((node, i) => {
-        const verticalPos = verticalPadding + (i + 1) * demSpacing;
-        node.x = leftColumnX;
-        node.y = verticalPos;
-      });
+      // calculate dimensions for all republican factions
+      const nationalConsDims = calculateGridDimensions(nationalConsNodes);
+      const mainstreamConsDims = calculateGridDimensions(mainstreamConsNodes);
+      const moderateRepDims = calculateGridDimensions(moderateRepNodes);
 
-      // position republican senators in right column
-      repNodes.forEach((node, i) => {
-        const verticalPos = verticalPadding + (i + 1) * repSpacing;
-        node.x = rightColumnX;
-        node.y = verticalPos;
-      });
+      // calculate actual positions based on grid sizes with padding between factions
+      const factionPadding = 60; // space between faction boxes
 
-      // position bills in a grid in the center
-      billNodes.forEach((node, i) => {
-        const row = Math.floor(i / billCols);
-        const col = i % billCols;
+      // democratic side positioning (top to bottom)
+      const demStartY = verticalPadding;
+      const progressiveY = demStartY + progressiveDims.height / 2;
+      const liberalY =
+        progressiveY +
+        progressiveDims.height / 2 +
+        factionPadding +
+        liberalDims.height / 2;
+      const moderateDemY =
+        liberalY +
+        liberalDims.height / 2 +
+        factionPadding +
+        moderateDemDims.height / 2;
 
-        node.x = billGridLeft + (col + 0.5) * billColSpacing;
-        node.y = billGridTop + (row + 0.5) * billRowSpacing;
-      });
+      // republican side positioning (top to bottom)
+      const repStartY = verticalPadding;
+      const nationalConsY = repStartY + nationalConsDims.height / 2;
+      const mainstreamConsY =
+        nationalConsY +
+        nationalConsDims.height / 2 +
+        factionPadding +
+        mainstreamConsDims.height / 2;
+      const moderateRepY =
+        mainstreamConsY +
+        mainstreamConsDims.height / 2 +
+        factionPadding +
+        moderateRepDims.height / 2;
 
-      // sync with yjs
+      // helper function to arrange nodes in a grid with consistent spacing
+      const arrangeInGrid = (
+        nodes: D3Node[],
+        centerX: number,
+        centerY: number
+      ) => {
+        if (nodes.length === 0) return;
+
+        // consistent spacing for all factions
+        const nodeSpacing = 50; // fixed space between nodes
+
+        // calculate optimal grid dimensions
+        const cols = Math.ceil(Math.sqrt(nodes.length));
+        const rows = Math.ceil(nodes.length / cols);
+
+        // calculate actual grid dimensions (faction box size adjusts to content)
+        const gridWidth = (cols - 1) * nodeSpacing;
+        const gridHeight = (rows - 1) * nodeSpacing;
+
+        // calculate starting position (top-left of grid)
+        const startX = centerX - gridWidth / 2;
+        const startY = centerY - gridHeight / 2;
+
+        // position nodes in grid with consistent spacing
+        nodes.forEach((node, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          node.x = startX + col * nodeSpacing;
+          node.y = startY + row * nodeSpacing;
+        });
+      };
+
+      // position progressive senators (top left) in grid
+      if (progressiveNodes.length > 0) {
+        arrangeInGrid(progressiveNodes, leftColCenter, progressiveY);
+      }
+
+      // position liberal senators (middle left) in grid
+      if (liberalNodes.length > 0) {
+        arrangeInGrid(liberalNodes, leftColCenter, liberalY);
+      }
+
+      // position moderate democratic senators (bottom left) in grid
+      if (moderateDemNodes.length > 0) {
+        arrangeInGrid(moderateDemNodes, leftColCenter, moderateDemY);
+      }
+
+      // position national conservative senators (top right) in grid
+      if (nationalConsNodes.length > 0) {
+        arrangeInGrid(nationalConsNodes, rightColCenter, nationalConsY);
+      }
+
+      // position mainstream conservative senators (middle right) in grid
+      if (mainstreamConsNodes.length > 0) {
+        arrangeInGrid(mainstreamConsNodes, rightColCenter, mainstreamConsY);
+      }
+
+      // position moderate republican senators (bottom right) in grid
+      if (moderateRepNodes.length > 0) {
+        arrangeInGrid(moderateRepNodes, rightColCenter, moderateRepY);
+      }
+
+      // position bills in center column
+      if (billNodes.length > 0) {
+        if (billNodes.length <= 5) {
+          // for 5 or fewer bills, space them evenly in center column
+          const billSpacing = usableHeight / (billNodes.length + 1);
+          billNodes.forEach((node, i) => {
+            node.x = billColX;
+            node.y = verticalPadding + (i + 1) * billSpacing;
+          });
+        } else {
+          // for more than 5 bills, create two columns of bills
+          const leftBillColX = billColX - 40;
+          const rightBillColX = billColX + 40;
+          const billsPerColumn = Math.ceil(billNodes.length / 2);
+          const billSpacing = usableHeight / (billsPerColumn + 1);
+
+          billNodes.forEach((node, i) => {
+            const columnIndex = Math.floor(i / billsPerColumn);
+            const rowIndex = i % billsPerColumn;
+
+            node.x = columnIndex === 0 ? leftBillColX : rightBillColX;
+            node.y = verticalPadding + (rowIndex + 1) * billSpacing;
+          });
+        }
+      }
+
+      // sync final grid positions with yjs (no force simulation needed)
       doc!.transact(() => {
         nodes.forEach((node) => {
           for (let i = 0; i < yNodes.length; i++) {
@@ -1186,67 +1765,9 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
         });
       });
 
-      // then refine with force simulation
-      const nodeMap = new Map<string, D3Node>();
-      nodes.forEach((n) => nodeMap.set(n.id, n));
-
-      const links = mapLinksToD3(nodeMap);
-
-      const simulation = d3
-        .forceSimulation<D3Node>(nodes)
-        .force(
-          'link',
-          d3
-            .forceLink<D3Node, D3Link>(links)
-            .id((d) => d.id)
-            .distance(150) // increased link distance
-        )
-        .force('charge', d3.forceManyBody().strength(-300)) // increased repulsion
-        .force(
-          'x',
-          d3
-            .forceX<D3Node>()
-            .x((d) => {
-              // keep nodes in their assigned columns
-              return d.x || 0;
-            })
-            .strength(0.5)
-        )
-        .force(
-          'y',
-          d3
-            .forceY<D3Node>()
-            .y((d) => {
-              // keep nodes near their assigned rows
-              return d.y || 0;
-            })
-            .strength(0.3)
-        )
-        .force(
-          'collision',
-          d3
-            .forceCollide<D3Node>()
-            .radius((d) => (d.type === 'senator' ? 35 : 30)) // increased collision radius
-        )
-        .stop();
-
-      // run for a fixed number of ticks
-      console.log('running simulation for 100 ticks');
-      simulation.tick(100);
-
-      // update yjs after simulation
-      doc!.transact(() => {
-        nodes.forEach((node) => {
-          for (let i = 0; i < yNodes.length; i++) {
-            const nodeMap = yNodes.get(i);
-            if (nodeMap.get('id') === node.id) {
-              nodeMap.set('x', node.x);
-              nodeMap.set('y', node.y);
-              break;
-            }
-          }
-        });
-      });
+      console.log(
+        'grid layout complete - senators organized in rectangular faction boxes'
+      );
 
       // update visualization
       updateVisualization();
@@ -1256,7 +1777,7 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
     updateVisualization();
 
     // initialize tooltip with default message
-    updateSelectedNodesInfo([]);
+    updateSelectedNodesInfo([]).catch(console.error);
 
     // set up observeDeep to update visualization when yjs data changes
     const observer = () => {
