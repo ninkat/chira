@@ -113,22 +113,22 @@ function getFactionColor(faction: string): string {
   switch (faction) {
     // democratic factions (shades of blue)
     case 'progressive':
-      return '#1e40af'; // dark blue
+      return 'rgba(30, 64, 175, 0.9)'; // dark blue
     case 'liberal':
-      return '#3b82f6'; // medium blue
+      return 'rgba(59, 130, 246, 0.9)'; // medium blue
     case 'moderate-dem':
-      return '#93c5fd'; // light blue
+      return 'rgba(147, 197, 253, 0.9)'; // light blue
 
     // republican factions (shades of red)
     case 'moderate-rep':
-      return '#fca5a5'; // light red
+      return 'rgba(252, 165, 165, 0.9)'; // light red
     case 'mainstream-conservative':
-      return '#ef4444'; // medium red
+      return 'rgba(239, 68, 68, 0.9)'; // medium red
     case 'national-conservative':
-      return '#b91c1c'; // dark red
+      return 'rgba(185, 28, 28, 0.9)'; // dark red
 
     default:
-      return '#6b7280'; // gray fallback
+      return 'rgba(107, 114, 128, 0.9)'; // gray fallback
   }
 }
 
@@ -415,6 +415,12 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
   // add shared state with yjs
   const ySharedState = doc!.getMap<string | boolean | null | string[] | number>(
     'senateSharedState'
+  );
+
+  // add separate hover tracking for left and right hands
+  const yHoveredNodeIdsLeft = doc!.getArray<string>('senateHoveredNodeIdsLeft');
+  const yHoveredNodeIdsRight = doc!.getArray<string>(
+    'senateHoveredNodeIdsRight'
   );
 
   // add client click selections map - maps userId to array of selected node ids
@@ -806,15 +812,18 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             // find the parent node group element that contains the data-id
             const parentNode = element.closest('g.node');
             const nodeId = parentNode?.getAttribute('data-id');
-            if (nodeId) {
-              // get current hovered node ids and add this one if not already in the list
-              const currentHoveredNodeIds =
-                (ySharedState.get('hoveredNodeIds') as string[]) || [];
-              if (!currentHoveredNodeIds.includes(nodeId)) {
-                ySharedState.set('hoveredNodeIds', [
-                  ...currentHoveredNodeIds,
-                  nodeId,
-                ]);
+            const handedness = event.handedness;
+
+            if (nodeId && handedness) {
+              // get the appropriate hover array based on handedness
+              const targetHoverArray =
+                handedness === 'left'
+                  ? yHoveredNodeIdsLeft
+                  : yHoveredNodeIdsRight;
+
+              // add this node if not already in the list for this hand
+              if (!targetHoverArray.toArray().includes(nodeId)) {
+                targetHoverArray.push([nodeId]);
                 updateVisualization();
               }
             }
@@ -827,7 +836,7 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
           const element = event.element;
           if (!element || !(element instanceof SVGElement)) return;
 
-          // If this is a node, remove only this specific node ID from the hovered list
+          // If this is a node, remove only this specific node ID from the appropriate hovered list
           if (
             (element.tagName === 'circle' || element.tagName === 'rect') &&
             element.classList.contains('node-shape')
@@ -835,15 +844,22 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             // find the parent node group element that contains the data-id
             const parentNode = element.closest('g.node');
             const nodeId = parentNode?.getAttribute('data-id');
+            const handedness = event.handedness;
 
-            if (nodeId) {
-              const currentHoveredNodeIds =
-                (ySharedState.get('hoveredNodeIds') as string[]) || [];
-              const updatedHoveredNodeIds = currentHoveredNodeIds.filter(
-                (id) => id !== nodeId
-              );
-              ySharedState.set('hoveredNodeIds', updatedHoveredNodeIds);
-              updateVisualization();
+            if (nodeId && handedness) {
+              // get the appropriate hover array based on handedness
+              const targetHoverArray =
+                handedness === 'left'
+                  ? yHoveredNodeIdsLeft
+                  : yHoveredNodeIdsRight;
+
+              // find and remove this node from the appropriate hand's hover list
+              const currentArray = targetHoverArray.toArray();
+              const index = currentArray.indexOf(nodeId);
+              if (index > -1) {
+                targetHoverArray.delete(index, 1);
+                updateVisualization();
+              }
             }
           }
           break;
@@ -858,6 +874,8 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             // find the parent node group element that contains the data-id
             const parentNode = element.closest('g.node');
             const nodeId = parentNode?.getAttribute('data-id');
+            const handedness = event.handedness;
+
             if (nodeId) {
               // toggle selection
               const currentSelections =
@@ -869,11 +887,25 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
                   currentSelections.filter((id) => id !== nodeId)
                 );
               } else {
-                // add node to selections
+                // add node to selections and remove from hover state
                 yClientClickSelections.set(userId, [
                   ...currentSelections,
                   nodeId,
                 ]);
+
+                // remove from hover state when selected
+                if (handedness) {
+                  const targetHoverArray =
+                    handedness === 'left'
+                      ? yHoveredNodeIdsLeft
+                      : yHoveredNodeIdsRight;
+
+                  const currentArray = targetHoverArray.toArray();
+                  const index = currentArray.indexOf(nodeId);
+                  if (index > -1) {
+                    targetHoverArray.delete(index, 1);
+                  }
+                }
               }
               updateVisualization();
             }
@@ -1046,6 +1078,219 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       return links;
     };
 
+    // function to update tooltip content for two-hand hover scenarios
+    const updateTwoHandHoverInfo = async (
+      leftNode: D3Node | undefined,
+      rightNode: D3Node | undefined,
+      nodeMap?: Map<string, D3Node>,
+      links?: D3Link[]
+    ) => {
+      if (!leftNode || !rightNode) return;
+
+      // clear all existing content
+      tooltipContent.selectAll('*').remove();
+
+      // function to wrap text with proper line breaks
+      const wrapText = (text: string, charLimit: number): string[] => {
+        const words = text.split(/\s+/);
+        const lines: string[] = [];
+        let line = '';
+
+        for (const word of words) {
+          const testLine = line + (line ? ' ' : '') + word;
+          if (testLine.length > charLimit) {
+            if (line) {
+              lines.push(line);
+              line = word;
+            } else {
+              // if single word is longer than limit, just add it
+              lines.push(word);
+            }
+          } else {
+            line = testLine;
+          }
+        }
+
+        if (line) {
+          lines.push(line);
+        }
+
+        return lines;
+      };
+
+      // helper function to render title
+      const renderTitle = (text: string, startY: number): number => {
+        const wrappedLines = wrapText(text, 22);
+        const lineHeight = 30;
+
+        wrappedLines.forEach((line, index) => {
+          tooltipContent
+            .append('text')
+            .attr('x', 0)
+            .attr('y', startY + index * lineHeight)
+            .attr('font-size', '26px')
+            .attr('fill', '#ffffff')
+            .attr('font-weight', 'bold')
+            .text(line);
+        });
+
+        return startY + wrappedLines.length * lineHeight + 15; // extra spacing after title
+      };
+
+      // helper function to render subtitle
+      const renderSubtext = (text: string, startY: number): number => {
+        const wrappedLines = wrapText(text, 28);
+        const lineHeight = 25;
+
+        wrappedLines.forEach((line, index) => {
+          tooltipContent
+            .append('text')
+            .attr('x', 0)
+            .attr('y', startY + index * lineHeight)
+            .attr('font-size', '20px')
+            .attr('fill', '#cbd5e0')
+            .attr('font-weight', 'normal')
+            .text(line);
+        });
+
+        return startY + wrappedLines.length * lineHeight + 10; // spacing after subtext
+      };
+
+      let currentY = 20; // start position
+
+      if (leftNode.type === 'senator' && rightNode.type === 'senator') {
+        // senator-senator comparison
+        currentY = renderTitle(
+          `${leftNode.name} vs ${rightNode.name}`,
+          currentY
+        );
+
+        if (nodeMap && links) {
+          // find bills both senators voted on
+          const leftVotes = new Map<string, string>(); // billId -> vote type
+          const rightVotes = new Map<string, string>(); // billId -> vote type
+
+          // collect left senator's votes
+          links.forEach((link) => {
+            const source = link.source as D3Node;
+            const target = link.target as D3Node;
+            if (source.id === leftNode.id && target.type === 'bill') {
+              leftVotes.set(target.id, link.type);
+            }
+          });
+
+          // collect right senator's votes
+          links.forEach((link) => {
+            const source = link.source as D3Node;
+            const target = link.target as D3Node;
+            if (source.id === rightNode.id && target.type === 'bill') {
+              rightVotes.set(target.id, link.type);
+            }
+          });
+
+          // find bills they both voted on
+          const commonBills = new Set<string>();
+          leftVotes.forEach((_, billId) => {
+            if (rightVotes.has(billId)) {
+              commonBills.add(billId);
+            }
+          });
+
+          // categorize agreements and disagreements
+          const agreements: string[] = [];
+          const disagreements: string[] = [];
+
+          commonBills.forEach((billId) => {
+            const leftVote = leftVotes.get(billId);
+            const rightVote = rightVotes.get(billId);
+            const billNode = nodeMap.get(billId);
+
+            if (billNode && leftVote && rightVote) {
+              if (leftVote === rightVote) {
+                agreements.push(billNode.name);
+              } else {
+                // only count as disagreement if both actually voted (not abstained)
+                if (leftVote !== 'abstain' && rightVote !== 'abstain') {
+                  disagreements.push(billNode.name);
+                }
+              }
+            }
+          });
+
+          currentY = renderSubtext(
+            `Bills in common: ${commonBills.size}`,
+            currentY
+          );
+
+          if (agreements.length > 0) {
+            currentY = renderSubtext('Voted the same:', currentY);
+            agreements.slice(0, 5).forEach((billName) => {
+              currentY = renderSubtext(`• ${billName}`, currentY);
+            });
+            if (agreements.length > 5) {
+              currentY = renderSubtext(
+                `and ${agreements.length - 5} more...`,
+                currentY
+              );
+            }
+          }
+
+          if (disagreements.length > 0) {
+            currentY = renderSubtext('Voted differently:', currentY);
+            disagreements.slice(0, 5).forEach((billName) => {
+              currentY = renderSubtext(`• ${billName}`, currentY);
+            });
+            if (disagreements.length > 5) {
+              currentY = renderSubtext(
+                `and ${disagreements.length - 5} more...`,
+                currentY
+              );
+            }
+          }
+        }
+      } else if (
+        (leftNode.type === 'senator' && rightNode.type === 'bill') ||
+        (leftNode.type === 'bill' && rightNode.type === 'senator')
+      ) {
+        // senator-bill interaction
+        const senator = leftNode.type === 'senator' ? leftNode : rightNode;
+        const bill = leftNode.type === 'bill' ? leftNode : rightNode;
+
+        if (links) {
+          // find the vote relationship
+          const voteLink = links.find((link) => {
+            const source = link.source as D3Node;
+            const target = link.target as D3Node;
+            return (
+              (source.id === senator.id && target.id === bill.id) ||
+              (source.id === bill.id && target.id === senator.id)
+            );
+          });
+
+          if (voteLink) {
+            let voteChoice = '';
+            if (voteLink.type === 'yea') {
+              voteChoice = 'yea';
+            } else if (voteLink.type === 'nay') {
+              voteChoice = 'nay';
+            } else if (voteLink.type === 'abstain') {
+              voteChoice = 'abstained';
+            } else {
+              voteChoice = 'did not vote';
+            }
+            const voteText = `${senator.name} voted ${voteChoice} on ${bill.name}`;
+            currentY = renderTitle(voteText, currentY);
+          } else {
+            const voteText = `${senator.name} - no vote recorded on ${bill.name}`;
+            currentY = renderTitle(voteText, currentY);
+          }
+        } else {
+          const voteText = `${senator.name} on ${bill.name}`;
+          currentY = renderTitle(voteText, currentY);
+        }
+      }
+    };
+
     // function to update the tooltip content with clean styling
     const updateSelectedNodesInfo = async (
       nodes: D3Node[] | D3Node | null,
@@ -1129,17 +1374,10 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       if (nodesArray.length === 0) {
         // default state
         currentY = renderTitle('117th US Congress', currentY);
-        currentY = renderSubtext('senate voting patterns by faction', currentY);
-        currentY = renderSubtext('organized by ideology scores', currentY);
         currentY = renderSubtext(
-          'hover over senators & bills to see votes',
+          'Hover over senators & bills to see votes',
           currentY
         );
-        currentY = renderSubtext(
-          'green = yea, red = nay, orange = abstain',
-          currentY
-        );
-        renderSubtext('links show only on single hover', currentY);
       } else if (nodesArray.length === 1) {
         // single node selected
         const node = nodesArray[0];
@@ -1329,11 +1567,11 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
         .enter()
         .append('line')
         .attr('stroke', (d) => {
-          // color links based on vote type
-          if (d.type === 'yea') return '#2ecc71'; // green for yea votes
-          if (d.type === 'nay') return '#e74c3c'; // red for nay votes
-          if (d.type === 'abstain') return '#f39c12'; // orange for abstentions
-          return '#95a5a6'; // gray for other/unknown
+          // color links based on vote type with 0.9 transparency
+          if (d.type === 'yea') return 'rgba(46, 204, 113, 0.9)'; // green for yea votes
+          if (d.type === 'nay') return 'rgba(231, 76, 60, 0.9)'; // red for nay votes
+          if (d.type === 'abstain') return 'rgba(243, 156, 18, 0.9)'; // orange for abstentions
+          return 'rgba(149, 165, 166, 0.9)'; // gray for other/unknown
         })
         .attr('stroke-width', (d) => {
           // make yea/nay votes more prominent with bigger width
@@ -1401,7 +1639,7 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
           }
           return getFactionColor(faction);
         })
-        .attr('stroke', '#333')
+        .attr('stroke', 'rgba(51, 51, 51, 0.9)') // stroke with 0.9 transparency
         .attr('stroke-width', 3) // increased from 2 to 3
         .attr('class', 'node-shape');
 
@@ -1413,8 +1651,8 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
         .attr('y', -20) // increased from -15 to -20
         .attr('width', 40) // increased from 30 to 40
         .attr('height', 40) // increased from 30 to 40
-        .attr('fill', '#000000') // black fill for bills
-        .attr('stroke', '#333333')
+        .attr('fill', 'rgba(0, 0, 0, 0.9)') // black fill for bills with 0.9 transparency
+        .attr('stroke', 'rgba(51, 51, 51, 0.9)') // stroke with 0.9 transparency
         .attr('stroke-width', 3) // increased from 2 to 3
         .attr('rx', 0) // sharp corners to make it a square
         .attr('ry', 0)
@@ -1440,8 +1678,9 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
         (d: D3Node) => `translate(${d.x || 0},${d.y || 0})`
       );
 
-      // get hover state from yjs
-      const hoveredIds = (ySharedState.get('hoveredNodeIds') as string[]) || [];
+      // get hover state from yjs - now separate for left and right hands
+      const hoveredIdsLeft = yHoveredNodeIdsLeft.toArray();
+      const hoveredIdsRight = yHoveredNodeIdsRight.toArray();
 
       // collect all click selections from the shared map
       const allClickSelectedIds: string[] = [];
@@ -1449,23 +1688,39 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
         allClickSelectedIds.push(...nodeIds);
       });
 
-      // combine hover and click selections
+      // selected nodes are separate from hovered nodes - they don't combine
+      const effectiveHoveredIdsLeft = hoveredIdsLeft;
+      const effectiveHoveredIdsRight = hoveredIdsRight;
+      const allHoveredIds = [
+        ...new Set([...effectiveHoveredIdsLeft, ...effectiveHoveredIdsRight]),
+      ];
+
+      // combine hover and click selections for highlighting (but they remain separate states)
       const allHighlightedIds = [
-        ...new Set([...hoveredIds, ...allClickSelectedIds]),
+        ...new Set([...allHoveredIds, ...allClickSelectedIds]),
       ];
 
       // reset all visual states
       nodeMerge
         .select('.node-shape')
-        .attr('stroke', '#333')
+        .attr('stroke', 'rgba(51, 51, 51, 0.9)') // default stroke with 0.9 transparency
         .attr('stroke-width', 3); // updated to match bigger nodes
 
       // hide all links by default
       linkMerge.attr('opacity', 0);
 
-      // show links only if exactly one node is hovered (not clicked)
-      if (hoveredIds.length === 1) {
-        const hoveredNodeId = hoveredIds[0];
+      // new hover behavior logic - also show links for selected nodes
+      const allActiveIds = [
+        ...new Set([...allHoveredIds, ...allClickSelectedIds]),
+      ];
+
+      if (
+        effectiveHoveredIdsLeft.length === 1 &&
+        effectiveHoveredIdsRight.length === 0 &&
+        allClickSelectedIds.length === 0
+      ) {
+        // single node hovered by left hand only (no selections) - show all its links
+        const hoveredNodeId = effectiveHoveredIdsLeft[0];
         linkMerge
           .filter((d: D3Link) => {
             const source = d.source as D3Node;
@@ -1473,35 +1728,134 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
             return source.id === hoveredNodeId || target.id === hoveredNodeId;
           })
           .attr('opacity', 0.7);
+      } else if (
+        effectiveHoveredIdsLeft.length === 0 &&
+        effectiveHoveredIdsRight.length === 1 &&
+        allClickSelectedIds.length === 0
+      ) {
+        // single node hovered by right hand only (no selections) - show all its links
+        const hoveredNodeId = effectiveHoveredIdsRight[0];
+        linkMerge
+          .filter((d: D3Link) => {
+            const source = d.source as D3Node;
+            const target = d.target as D3Node;
+            return source.id === hoveredNodeId || target.id === hoveredNodeId;
+          })
+          .attr('opacity', 0.7);
+      } else if (
+        effectiveHoveredIdsLeft.length === 1 &&
+        effectiveHoveredIdsRight.length === 1 &&
+        allClickSelectedIds.length === 0
+      ) {
+        // one node hovered by each hand (no selections) - special behavior based on node types
+        const leftNodeId = effectiveHoveredIdsLeft[0];
+        const rightNodeId = effectiveHoveredIdsRight[0];
+        const leftNode = nodes.find((n) => n.id === leftNodeId);
+        const rightNode = nodes.find((n) => n.id === rightNodeId);
+
+        if (leftNode && rightNode) {
+          if (leftNode.type === 'senator' && rightNode.type === 'bill') {
+            // senator-bill: highlight only the link between them if it exists
+            linkMerge
+              .filter((d: D3Link) => {
+                const source = d.source as D3Node;
+                const target = d.target as D3Node;
+                return (
+                  (source.id === leftNodeId && target.id === rightNodeId) ||
+                  (source.id === rightNodeId && target.id === leftNodeId)
+                );
+              })
+              .attr('opacity', 0.7);
+          } else if (leftNode.type === 'bill' && rightNode.type === 'senator') {
+            // bill-senator: highlight only the link between them if it exists
+            linkMerge
+              .filter((d: D3Link) => {
+                const source = d.source as D3Node;
+                const target = d.target as D3Node;
+                return (
+                  (source.id === leftNodeId && target.id === rightNodeId) ||
+                  (source.id === rightNodeId && target.id === leftNodeId)
+                );
+              })
+              .attr('opacity', 0.7);
+          } else if (
+            leftNode.type === 'senator' &&
+            rightNode.type === 'senator'
+          ) {
+            // senator-senator: show all links for comparison (will be handled in tooltip)
+            linkMerge
+              .filter((d: D3Link) => {
+                const source = d.source as D3Node;
+                const target = d.target as D3Node;
+                return (
+                  source.id === leftNodeId ||
+                  target.id === leftNodeId ||
+                  source.id === rightNodeId ||
+                  target.id === rightNodeId
+                );
+              })
+              .attr('opacity', 0.7);
+          }
+          // bill-bill behavior is left open for future implementation
+        }
+      } else if (allActiveIds.length > 0) {
+        // show links for any hovered or selected nodes
+        linkMerge
+          .filter((d: D3Link) => {
+            const source = d.source as D3Node;
+            const target = d.target as D3Node;
+            return (
+              allActiveIds.includes(source.id) ||
+              allActiveIds.includes(target.id)
+            );
+          })
+          .attr('opacity', 0.7);
       }
 
       // apply highlight colors
       if (allHighlightedIds.length > 0) {
-        // Highlight hovered nodes with orange color
-        if (hoveredIds.length > 0) {
+        // highlight hovered nodes with orange color
+        if (allHoveredIds.length > 0) {
           nodeMerge
-            .filter((d: D3Node) => hoveredIds.includes(d.id))
+            .filter((d: D3Node) => allHoveredIds.includes(d.id))
             .select('.node-shape')
-            .attr('stroke', '#f39c12')
+            .attr('stroke', 'rgba(243, 156, 18, 0.9)') // orange with 0.9 transparency
             .attr('stroke-width', 5); // increased from 3 to 5 for better visibility
         }
 
-        // Apply different color to clicked/selected nodes
+        // apply different color to clicked/selected nodes
         if (allClickSelectedIds.length > 0) {
           nodeMerge
             .filter((d: D3Node) => allClickSelectedIds.includes(d.id))
             .select('.node-shape')
-            .attr('stroke', '#87ceeb') // sky blue
+            .attr('stroke', 'rgba(135, 206, 235, 0.9)') // sky blue with 0.9 transparency
             .attr('stroke-width', 5); // increased from 3 to 5 for better visibility
         }
 
-        // update tooltip content with all highlighted nodes
-        const highlightedNodes = nodes.filter((n) =>
-          allHighlightedIds.includes(n.id)
-        );
-        updateSelectedNodesInfo(highlightedNodes, nodeMap, links).catch(
-          console.error
-        );
+        // update tooltip content based on hover state
+        if (
+          effectiveHoveredIdsLeft.length === 1 &&
+          effectiveHoveredIdsRight.length === 1
+        ) {
+          // special tooltip for two-hand hover
+          const leftNode = nodes.find(
+            (n) => n.id === effectiveHoveredIdsLeft[0]
+          );
+          const rightNode = nodes.find(
+            (n) => n.id === effectiveHoveredIdsRight[0]
+          );
+          updateTwoHandHoverInfo(leftNode, rightNode, nodeMap, links).catch(
+            console.error
+          );
+        } else {
+          // standard tooltip for single or multiple nodes
+          const highlightedNodes = nodes.filter((n) =>
+            allHighlightedIds.includes(n.id)
+          );
+          updateSelectedNodesInfo(highlightedNodes, nodeMap, links).catch(
+            console.error
+          );
+        }
       } else {
         // show default tooltip message when no node is highlighted
         updateSelectedNodesInfo([], nodeMap, links).catch(console.error);
@@ -1789,6 +2143,8 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
     yLinks.observeDeep(observer);
     ySharedState.observe(observer);
     yClientClickSelections.observe(observer);
+    yHoveredNodeIdsLeft.observe(observer);
+    yHoveredNodeIdsRight.observe(observer);
 
     // initialize transform values in yjs if not already set
     if (ySharedState.get('zoomScale') === undefined) {
@@ -1805,6 +2161,8 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
       yLinks.unobserveDeep(observer);
       ySharedState.unobserve(observer);
       yClientClickSelections.unobserve(observer);
+      yHoveredNodeIdsLeft.unobserve(observer);
+      yHoveredNodeIdsRight.unobserve(observer);
 
       // Remove custom interaction event listener
       if (parent) {
@@ -1821,6 +2179,8 @@ const Senate: React.FC<SenateProps> = ({ getCurrentTransformRef }) => {
     ySharedState,
     userId,
     yClientClickSelections,
+    yHoveredNodeIdsLeft,
+    yHoveredNodeIdsRight,
   ]);
 
   // if placeholder rendering is needed due to no sync, make that transparent too
