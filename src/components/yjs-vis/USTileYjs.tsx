@@ -266,9 +266,15 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     const loadMigrationData = async () => {
       try {
         const [data1960s, data1990s, data2020s] = await Promise.all([
-          d3.json<MigrationData>('./src/assets/migration_1960s.json'),
-          d3.json<MigrationData>('./src/assets/migration_1990s.json'),
-          d3.json<MigrationData>('./src/assets/migration_2020s.json'),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_1960s.json'
+          ),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_1990s.json'
+          ),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_2020s.json'
+          ),
         ]);
 
         if (data1960s && data1990s && data2020s) {
@@ -966,86 +972,90 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         `translate(${mainPadding}, ${migrationFlowsY + 20 + titleSpacing})` // migration links list with systematic spacing
       );
 
-    d3.json('/src/assets/tiles2.topo.json').then((topology) => {
-      if (!topology) return;
-      const geoFeature = topojson.feature(
-        topology as TileTopology,
-        (topology as TileTopology).objects.tiles
-      ) as unknown as FeatureCollection<Geometry, GeoJsonProperties>;
-      const topoBbox = (topology as TileTopology).bbox;
-      if (!topoBbox) return;
+    d3.json('/src/assets/domesticmigration/tiles2.topo.json').then(
+      (topology) => {
+        if (!topology) return;
+        const geoFeature = topojson.feature(
+          topology as TileTopology,
+          (topology as TileTopology).objects.tiles
+        ) as unknown as FeatureCollection<Geometry, GeoJsonProperties>;
+        const topoBbox = (topology as TileTopology).bbox;
+        if (!topoBbox) return;
 
-      const bboxWidth = topoBbox[2] - topoBbox[0];
-      const bboxHeight = topoBbox[3] - topoBbox[1];
-      const scale = Math.min(mapWidth / bboxWidth, height / bboxHeight) * 1.06;
-      const centerX = mapWidth * 0.5;
-      const centerY = height * 0.5;
-      const xOffset = (topoBbox[0] + topoBbox[2]) / 2;
-      const yOffset = (topoBbox[1] + topoBbox[3]) / 2;
-      const projection = d3
-        .geoIdentity()
-        .scale(scale)
-        .reflectY(true)
-        .translate([centerX - xOffset * scale, centerY + yOffset * scale]);
-      const pathGenerator = d3.geoPath().projection(projection);
+        const bboxWidth = topoBbox[2] - topoBbox[0];
+        const bboxHeight = topoBbox[3] - topoBbox[1];
+        const scale =
+          Math.min(mapWidth / bboxWidth, height / bboxHeight) * 1.06;
+        const centerX = mapWidth * 0.5;
+        const centerY = height * 0.5;
+        const xOffset = (topoBbox[0] + topoBbox[2]) / 2;
+        const yOffset = (topoBbox[1] + topoBbox[3]) / 2;
+        const projection = d3
+          .geoIdentity()
+          .scale(scale)
+          .reflectY(true)
+          .translate([centerX - xOffset * scale, centerY + yOffset * scale]);
+        const pathGenerator = d3.geoPath().projection(projection);
 
-      stateCentroidsRef.current = {};
-      geoFeature.features.forEach((feature) => {
-        const stateName = feature.properties?.name;
-        if (stateName) {
-          const centroid = pathGenerator.centroid(feature);
-          if (!isNaN(centroid[0]) && !isNaN(centroid[1]))
-            stateCentroidsRef.current[stateName] = centroid;
-        }
-      });
+        stateCentroidsRef.current = {};
+        geoFeature.features.forEach((feature) => {
+          const stateName = feature.properties?.name;
+          if (stateName) {
+            const centroid = pathGenerator.centroid(feature);
+            if (!isNaN(centroid[0]) && !isNaN(centroid[1]))
+              stateCentroidsRef.current[stateName] = centroid;
+          }
+        });
 
-      mapGroup
-        .selectAll('path.tile')
-        .data(geoFeature.features)
-        .join('path')
-        .attr('class', 'tile')
-        .attr(
-          'data-statename',
-          (d) => (d.properties as TileGeometry['properties'])?.name || 'unknown'
-        )
-        .attr('d', pathGenerator)
-        .attr('fill', defaultFill)
-        .attr('stroke', '#fff')
-        .attr('stroke-width', defaultStrokeWidth)
-        .style('pointer-events', 'all')
-        .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
+        mapGroup
+          .selectAll('path.tile')
+          .data(geoFeature.features)
+          .join('path')
+          .attr('class', 'tile')
+          .attr(
+            'data-statename',
+            (d) =>
+              (d.properties as TileGeometry['properties'])?.name || 'unknown'
+          )
+          .attr('d', pathGenerator)
+          .attr('fill', defaultFill)
+          .attr('stroke', '#fff')
+          .attr('stroke-width', defaultStrokeWidth)
+          .style('pointer-events', 'all')
+          .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
 
-      mapGroup
-        .selectAll('text.state-label')
-        .data(geoFeature.features)
-        .join('text')
-        .attr('class', 'state-label')
-        .attr('pointer-events', 'none')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .attr('fill', '#333')
-        .attr('font-size', '20px')
-        .attr('font-weight', '600')
-        .attr('text-shadow', '0 1px 1px rgba(255, 255, 255, 0.5)')
-        .attr('x', (d) => {
-          const c = pathGenerator.centroid(d);
-          return isNaN(c[0]) ? 0 : c[0];
-        })
-        .attr('y', (d) => {
-          const c = pathGenerator.centroid(d);
-          return isNaN(c[1]) ? 0 : c[1];
-        })
-        .text((d) =>
-          (d.properties as TileGeometry['properties'])?.name
-            ? stateAbbreviations[
-                (d.properties as TileGeometry['properties']).name
-              ] || ''
-            : ''
-        );
+        mapGroup
+          .selectAll('text.state-label')
+          .data(geoFeature.features)
+          .join('text')
+          .attr('class', 'state-label')
+          .attr('pointer-events', 'none')
+          .attr('text-anchor', 'middle')
+          .attr('dy', '0.35em')
+          .attr('fill', '#333')
+          .attr('font-size', '20px')
+          .attr('font-weight', '600')
+          .attr('text-shadow', '0 1px 1px rgba(255, 255, 255, 0.5)')
+          .attr('x', (d) => {
+            const c = pathGenerator.centroid(d);
+            return isNaN(c[0]) ? 0 : c[0];
+          })
+          .attr('y', (d) => {
+            const c = pathGenerator.centroid(d);
+            return isNaN(c[1]) ? 0 : c[1];
+          })
+          .text((d) =>
+            (d.properties as TileGeometry['properties'])?.name
+              ? stateAbbreviations[
+                  (d.properties as TileGeometry['properties']).name
+                ] || ''
+              : ''
+          );
 
-      isInitializedRef.current = true;
-      renderVisuals();
-    });
+        isInitializedRef.current = true;
+        renderVisuals();
+      }
+    );
 
     const visualObserver = () => renderVisuals();
     yHoveredLeftStates?.observeDeep(visualObserver);

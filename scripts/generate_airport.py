@@ -35,6 +35,7 @@ airports = [
     {"IATA": "CAI", "Airport Name": "Cairo International Airport", "City": "Cairo", "Latitude": 30.1219, "Longitude": 31.4056},
     {"IATA": "JNB", "Airport Name": "O.R. Tambo International Airport", "City": "Johannesburg", "Latitude": -26.1392, "Longitude": 28.2460},
     {"IATA": "CMN", "Airport Name": "Mohammed V International Airport", "City": "Casablanca", "Latitude": 33.3675, "Longitude": -7.5897},
+    {"IATA": "NBO", "Airport Name": "Jomo Kenyatta International Airport", "City": "Nairobi", "Latitude": -1.3192, "Longitude": 36.9278},
     
     # asia
     {"IATA": "NRT", "Airport Name": "Narita International Airport", "City": "Tokyo", "Latitude": 35.7647, "Longitude": 140.3864},
@@ -44,11 +45,72 @@ airports = [
     {"IATA": "SIN", "Airport Name": "Singapore Changi Airport", "City": "Singapore", "Latitude": 1.3644, "Longitude": 103.9915},
     {"IATA": "BKK", "Airport Name": "Suvarnabhumi Airport", "City": "Bangkok", "Latitude": 13.6900, "Longitude": 100.7501},
     {"IATA": "DEL", "Airport Name": "Indira Gandhi International Airport", "City": "New Delhi", "Latitude": 28.5562, "Longitude": 77.1000},
+    {"IATA": "MNL", "Airport Name": "Ninoy Aquino International Airport", "City": "Manila", "Latitude": 14.5086, "Longitude": 121.0194},
     
     # australia
     {"IATA": "SYD", "Airport Name": "Sydney Kingsford Smith Airport", "City": "Sydney", "Latitude": -33.9399, "Longitude": 151.1753},
     {"IATA": "PER", "Airport Name": "Perth Airport", "City": "Perth", "Latitude": -31.9403, "Longitude": 115.9669}
 ]
+
+# define airlines with continental dominance
+airlines = [
+    {"code": "AA", "name": "American Airlines", "continent": "north america"},
+    {"code": "LH", "name": "Lufthansa", "continent": "europe"},
+    {"code": "LA", "name": "LATAM Airlines", "continent": "south america"},
+    {"code": "ET", "name": "Ethiopian Airlines", "continent": "africa"},
+    {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"},
+    {"code": "QF", "name": "Qantas", "continent": "australia"}
+]
+
+# map airports to continents for airline assignment
+airport_continent_map = {
+    # north america
+    "YYZ": "north america", "YVR": "north america", "JFK": "north america", "LAX": "north america",
+    # europe
+    "LHR": "europe", "CDG": "europe", "AMS": "europe", "FRA": "europe", "MAD": "europe", 
+    "ZRH": "europe", "LIS": "europe", "VIE": "europe", "PRG": "europe", "WAW": "europe", 
+    "BUD": "europe", "SVO": "europe",
+    # south america
+    "GRU": "south america", "EZE": "south america", "BOG": "south america",
+    # africa
+    "CAI": "africa", "JNB": "africa", "CMN": "africa", "NBO": "africa",
+    # asia
+    "NRT": "asia", "ICN": "asia", "PEK": "asia", "PVG": "asia", "SIN": "asia", 
+    "BKK": "asia", "DEL": "asia", "MNL": "asia",
+    # australia
+    "SYD": "australia", "PER": "australia"
+}
+
+def get_dominant_airline(origin_iata: str, destination_iata: str) -> dict:
+    """
+    determine the dominant airline for a route based on continental dominance rules.
+    the airline from the origin's continent gets higher probability.
+    """
+    origin_continent = airport_continent_map.get(origin_iata, "unknown")
+    dest_continent = airport_continent_map.get(destination_iata, "unknown")
+    
+    # find airlines for each continent
+    origin_airline = next((a for a in airlines if a["continent"] == origin_continent), None)
+    dest_airline = next((a for a in airlines if a["continent"] == dest_continent), None)
+    
+    # determine which airline to use based on dominance rules
+    if origin_continent == dest_continent and origin_airline:
+        # same continent - use that continent's airline with high probability
+        if random.random() < 0.8:
+            return origin_airline
+    elif origin_airline and dest_airline:
+        # different continents - origin airline gets 60% probability
+        if random.random() < 0.6:
+            return origin_airline
+        else:
+            return dest_airline
+    elif origin_airline:
+        return origin_airline
+    elif dest_airline:
+        return dest_airline
+    
+    # fallback to random airline if no continent match
+    return random.choice(airlines)
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """
@@ -151,6 +213,9 @@ while len(flights) < 5000:
     flight_time = calculate_flight_time(distance)
     price = calculate_flight_price(distance, flight_time)
     
+    # get dominant airline for the route
+    airline = get_dominant_airline(origin, destination)
+    
     flights.append({
         "id": flight_id,  # add unique flight id
         "origin": origin,
@@ -158,7 +223,8 @@ while len(flights) < 5000:
         "price": price,
         "duration": flight_time,
         "date": date,
-        "distance_km": round(distance, 1)  # Add distance for reference
+        "distance_km": round(distance, 1),  # add distance for reference
+        "airline": airline
     })
     flight_id += 1  # increment flight id counter
 
@@ -170,10 +236,13 @@ try:
     with open("assets/airports.json", "w") as f:
         json.dump(airports, f, indent=2)
 
+    with open("assets/airlines.json", "w") as f:
+        json.dump(airlines, f, indent=2)
+
     with open("assets/flights.json", "w") as f:
         json.dump(flights, f, indent=2)
 
-    print("✅ airports.json and flights.json have been created.")
+    print("✅ airports.json, airlines.json, and flights.json have been created.")
 except Exception as e:
     print(f"❌ Error writing files: {e}")
     print(f"Current working directory: {os.getcwd()}")

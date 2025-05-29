@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
-import auspolData from '@/assets/auspol.json';
+import auspolData from '@/assets/aushouse/auspol.json';
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
 import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 

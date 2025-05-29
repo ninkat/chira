@@ -94,14 +94,14 @@ function getFactionFromIdeology(ideoscore: number, partyCode: number): string {
   const isDemocratic = partyCode === 100 || partyCode === 328;
 
   if (isDemocratic) {
-    if (ideoscore >= 0.0 && ideoscore <= 0.15) return 'progressive';
-    if (ideoscore >= 0.16 && ideoscore <= 0.35) return 'liberal';
-    if (ideoscore >= 0.36 && ideoscore <= 0.55) return 'moderate-dem';
+    if (ideoscore >= 0.0 && ideoscore <= 0.11) return 'progressive';
+    if (ideoscore >= 0.12 && ideoscore <= 0.29) return 'liberal';
+    if (ideoscore >= 0.3 && ideoscore <= 0.55) return 'moderate-dem';
   } else if (partyCode === 200) {
-    if (ideoscore >= 0.56 && ideoscore <= 0.7) return 'moderate-rep';
-    if (ideoscore >= 0.71 && ideoscore <= 0.85)
+    if (ideoscore >= 0.45 && ideoscore <= 0.6) return 'moderate-rep';
+    if (ideoscore >= 0.61 && ideoscore <= 0.75)
       return 'mainstream-conservative';
-    if (ideoscore >= 0.86 && ideoscore <= 1.0) return 'national-conservative';
+    if (ideoscore >= 0.76 && ideoscore <= 1.0) return 'national-conservative';
   }
 
   // fallback for edge cases

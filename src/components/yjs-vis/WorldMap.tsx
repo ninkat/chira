@@ -44,6 +44,11 @@ interface Flight {
   price: number;
   duration: number; // assuming duration is in hours
   date: string; // date string format 'yyyy-mm-dd'
+  airline: {
+    code: string;
+    name: string;
+    continent: string;
+  };
 }
 
 // yjs shared value types
@@ -336,7 +341,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       .attr('stroke-width', lineWidth / transformRef.current.k) // use current transform
       .attr('fill', 'none')
       .style('stroke-dasharray', `${dotSize} ${dotSpacing}`)
-      .style('stroke-linecap', 'round');
+      .style('stroke-linecap', 'round')
+      .style('pointer-events', 'none'); // make flight lines uninteractable
 
     activeLinesByPair.current.set(pairKey, line.node()!);
   };
@@ -704,7 +710,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     const flightsListContainer =
       infoPanel.select<HTMLDivElement>('.flights-list');
     flightsListContainer.selectAll('*').remove();
-    const flightsToShow = currentFilteredFlights;
+    // sort flights by price (cheapest first)
+    const flightsToShow = currentFilteredFlights.sort(
+      (a, b) => a.price - b.price
+    );
 
     if (!displayOriginsSelected || !displayDestinationsSelected) {
       flightsListContainer
@@ -752,6 +761,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .style('font-weight', '500')
           .style('font-size', '12px')
           .text(`$${flight.price.toFixed(2)}`);
+
+        // airline information row
+        const airlineRow = item
+          .append('div')
+          .style('display', 'flex')
+          .style('justify-content', 'space-between')
+          .style('align-items', 'center')
+          .style('font-size', '10px')
+          .style('color', 'rgba(255, 255, 255, 0.8)');
+        airlineRow
+          .append('span')
+          .style('font-weight', '600')
+          .text(`${flight.airline.code} • ${flight.airline.name}`);
+
         const details = item
           .append('div')
           .style('display', 'flex')
@@ -832,9 +855,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     let parentElementForListener: HTMLElement | null = null;
 
     Promise.all([
-      d3.json<WorldTopology>('/src/assets/world110.topo.json'),
-      d3.json<Airport[]>('/src/assets/airports2.json'),
-      d3.json<Flight[]>('/src/assets/flights2.json'),
+      d3.json<WorldTopology>('/src/assets/traveldata/world110.topo.json'),
+      d3.json<Airport[]>('/src/assets/traveldata/airports.json'),
+      d3.json<Flight[]>('/src/assets/traveldata/flights.json'),
     ])
       .then(([topology, airportsData, flightsData]) => {
         if (

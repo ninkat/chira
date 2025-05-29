@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { YjsContext } from '@/context/YjsContext';
 import * as d3 from 'd3';
-import moviesData from '@/assets/movies2.json'; // updated data import
+import moviesData from '@/assets/movies/movies2.json'; // updated data import
 import { InteractionEvent, InteractionPoint } from '@/types/interactionTypes';
 import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
 
