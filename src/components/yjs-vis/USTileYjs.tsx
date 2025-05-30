@@ -83,18 +83,17 @@ const stateAbbreviations: Record<string, string> = {
 };
 
 // types for topojson data
-interface TileGeometry {
+interface StateGeometry {
   type: string;
   id: string;
   properties: {
     name: string;
-    tilegramValue: number;
   };
 }
 
-interface TileTopology extends TopoTopology {
+interface StateTopology extends TopoTopology {
   objects: {
-    tiles: TopoGeometryCollection;
+    states: TopoGeometryCollection;
   };
 }
 
@@ -133,7 +132,10 @@ const totalHeight = 720;
 const thirdWidth = totalWidth / 3;
 const mapWidth = thirdWidth * 2;
 const panelWidth = thirdWidth;
-const mapLeftOffset = panelWidth - 50; // move map 50px more to the left
+const mapLeftOffset = panelWidth - 40; // move map 20px more to the left (reduced from 50px)
+
+// toggle for including alaska and hawaii
+const includeAlaskaHawaii = false; // set to true to include ak+hi+dc, false for continental us only
 
 // constants for info panel styling (will be adapted for d3)
 const panelBgColor = 'rgba(33, 33, 33, 0.65)';
@@ -165,6 +167,97 @@ interface MigrationLinkInfo {
 interface USTileYjsProps {
   getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
 }
+
+// helper function to convert uppercase state names to proper case
+const formatStateName = (stateName: string): string => {
+  return stateName
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+// manual adjustments for optimal state label positioning
+// values are [x_offset, y_offset] from the geometric centroid
+const stateLabelAdjustments: Record<string, [number, number]> = {
+  // states that need significant repositioning due to shape or size
+  CALIFORNIA: [0, 20], // move south to avoid northern mountains
+  FLORIDA: [10, -5], // move slightly east and north
+  TEXAS: [-10, 10], // move slightly west and south
+  ALASKA: [0, 0], // keep centered (if included)
+  HAWAII: [0, 0], // keep centered (if included)
+  NEVADA: [5, 0], // move slightly east
+  UTAH: [0, 0], // keep centered
+  COLORADO: [0, 0], // keep centered - rectangular shape works well
+  WYOMING: [0, 0], // keep centered - rectangular shape works well
+  MONTANA: [0, 0], // keep centered
+  'NORTH DAKOTA': [0, 0], // keep centered
+  'SOUTH DAKOTA': [0, 0], // keep centered
+  NEBRASKA: [0, 0], // keep centered
+  KANSAS: [0, 0], // keep centered
+  OKLAHOMA: [0, 0], // keep centered
+  'NEW MEXICO': [0, 0], // keep centered
+  ARIZONA: [0, 5], // move slightly south
+  IDAHO: [0, 10], // move south to avoid narrow northern part
+  WASHINGTON: [0, 5], // move slightly south
+  OREGON: [0, 0], // keep centered
+  MICHIGAN: [10, -15], // move to lower peninsula
+  MINNESOTA: [0, 5], // move slightly south
+  WISCONSIN: [0, 0], // keep centered
+  IOWA: [0, 0], // keep centered
+  MISSOURI: [0, 0], // keep centered
+  ARKANSAS: [0, 0], // keep centered
+  LOUISIANA: [0, -5], // move slightly north to main body
+  MISSISSIPPI: [0, 0], // keep centered
+  ALABAMA: [0, 0], // keep centered
+  TENNESSEE: [0, 0], // keep centered
+  KENTUCKY: [0, 0], // keep centered
+  INDIANA: [0, 0], // keep centered
+  OHIO: [0, 0], // keep centered
+  'WEST VIRGINIA': [0, 0], // keep centered
+  VIRGINIA: [10, 0], // move slightly east to main body
+  'NORTH CAROLINA': [0, 0], // keep centered
+  'SOUTH CAROLINA': [0, 0], // keep centered
+  GEORGIA: [0, 0], // keep centered
+  PENNSYLVANIA: [0, 0], // keep centered
+  'NEW YORK': [0, 10], // move south to avoid northern regions
+  VERMONT: [0, 0], // keep centered
+  'NEW HAMPSHIRE': [0, 0], // keep centered
+  MAINE: [0, -10], // move north to main body
+  MASSACHUSETTS: [0, 0], // keep centered
+  'RHODE ISLAND': [0, 0], // keep centered
+  CONNECTICUT: [0, 0], // keep centered
+  'NEW JERSEY': [0, 0], // keep centered
+  DELAWARE: [0, 0], // keep centered
+  MARYLAND: [5, 0], // move slightly east
+  'DISTRICT OF COLUMBIA': [0, 0], // keep centered (if included)
+  ILLINOIS: [0, 0], // keep centered
+};
+
+// function to get optimal label position for a state
+const getStateLabelPosition = (
+  feature: Feature<Geometry, GeoJsonProperties>,
+  pathGenerator: d3.GeoPath<unknown, d3.GeoPermissibleObjects>
+): [number, number] => {
+  const stateName = (
+    feature.properties as StateGeometry['properties']
+  )?.name?.toUpperCase();
+  const centroid = pathGenerator.centroid(feature);
+
+  // return fallback position if centroid calculation fails
+  if (isNaN(centroid[0]) || isNaN(centroid[1])) {
+    return [0, 0];
+  }
+
+  // apply manual adjustment if available
+  if (stateName && stateLabelAdjustments[stateName]) {
+    const [xOffset, yOffset] = stateLabelAdjustments[stateName];
+    return [centroid[0] + xOffset, centroid[1] + yOffset];
+  }
+
+  // default to centroid for states without specific adjustments
+  return [centroid[0], centroid[1]];
+};
 
 const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -297,7 +390,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const getStateName = (element: SVGPathElement): string | null => {
     const datum = d3.select(element).datum() as Feature<
       Geometry,
-      TileGeometry['properties']
+      StateGeometry['properties']
     >;
     return datum?.properties?.name || null;
   };
@@ -421,25 +514,40 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
           const newMigrationLinksInfo: MigrationLinkInfo[] = [];
           const migrationsByPair = new Map<string, number>();
 
-          // calculate migration from selected origins to all other states (excluding origins)
-          migrationDataByEra.current[currentEraRef.current].forEach(
-            (migration) => {
-              if (
-                originStates.has(migration.origin) &&
-                !originStates.has(migration.destination)
-              ) {
-                const pairKey = getPairKey(
-                  migration.origin,
-                  migration.destination
-                );
-                migrationsByPair.set(
-                  pairKey,
-                  (migrationsByPair.get(pairKey) || 0) + migration.value
-                );
-                totalValue += migration.value;
-              }
-            }
+          // convert state names to uppercase for migration data comparison
+          const originStatesUpper = new Set(
+            [...originStates].map((s) => s.toUpperCase())
           );
+
+          // calculate migration from selected origins to all other states (excluding origins)
+          const migrationData = includeAlaskaHawaii
+            ? migrationDataByEra.current[currentEraRef.current]
+            : migrationDataByEra.current[currentEraRef.current].filter(
+                (migration) =>
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.origin
+                  ) &&
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.destination
+                  )
+              );
+
+          migrationData.forEach((migration) => {
+            if (
+              originStatesUpper.has(migration.origin) &&
+              !originStatesUpper.has(migration.destination)
+            ) {
+              const pairKey = getPairKey(
+                migration.origin,
+                migration.destination
+              );
+              migrationsByPair.set(
+                pairKey,
+                (migrationsByPair.get(pairKey) || 0) + migration.value
+              );
+              totalValue += migration.value;
+            }
+          });
 
           migrationsByPair.forEach((value, pairKey) => {
             const [origin, destination] = pairKey.split('->');
@@ -472,25 +580,40 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
           const newMigrationLinksInfo: MigrationLinkInfo[] = [];
           const migrationsByPair = new Map<string, number>();
 
-          // calculate migration from all other states (excluding destinations) to selected destinations
-          migrationDataByEra.current[currentEraRef.current].forEach(
-            (migration) => {
-              if (
-                !destStates.has(migration.origin) &&
-                destStates.has(migration.destination)
-              ) {
-                const pairKey = getPairKey(
-                  migration.origin,
-                  migration.destination
-                );
-                migrationsByPair.set(
-                  pairKey,
-                  (migrationsByPair.get(pairKey) || 0) + migration.value
-                );
-                totalValue += migration.value;
-              }
-            }
+          // convert state names to uppercase for migration data comparison
+          const destStatesUpper = new Set(
+            [...destStates].map((s) => s.toUpperCase())
           );
+
+          // calculate migration from all other states (excluding destinations) to selected destinations
+          const migrationData = includeAlaskaHawaii
+            ? migrationDataByEra.current[currentEraRef.current]
+            : migrationDataByEra.current[currentEraRef.current].filter(
+                (migration) =>
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.origin
+                  ) &&
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.destination
+                  )
+              );
+
+          migrationData.forEach((migration) => {
+            if (
+              !destStatesUpper.has(migration.origin) &&
+              destStatesUpper.has(migration.destination)
+            ) {
+              const pairKey = getPairKey(
+                migration.origin,
+                migration.destination
+              );
+              migrationsByPair.set(
+                pairKey,
+                (migrationsByPair.get(pairKey) || 0) + migration.value
+              );
+              totalValue += migration.value;
+            }
+          });
 
           migrationsByPair.forEach((value, pairKey) => {
             const [origin, destination] = pairKey.split('->');
@@ -523,25 +646,43 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
           const newMigrationLinksInfo: MigrationLinkInfo[] = [];
           const migrationsByPair = new Map<string, number>();
 
-          // use current era data
-          migrationDataByEra.current[currentEraRef.current].forEach(
-            (migration) => {
-              if (
-                originStates.has(migration.origin) &&
-                destStates.has(migration.destination)
-              ) {
-                const pairKey = getPairKey(
-                  migration.origin,
-                  migration.destination
-                );
-                migrationsByPair.set(
-                  pairKey,
-                  (migrationsByPair.get(pairKey) || 0) + migration.value
-                );
-                totalValue += migration.value;
-              }
-            }
+          // convert state names to uppercase for migration data comparison
+          const originStatesUpper = new Set(
+            [...originStates].map((s) => s.toUpperCase())
           );
+          const destStatesUpper = new Set(
+            [...destStates].map((s) => s.toUpperCase())
+          );
+
+          // use current era data
+          const migrationData = includeAlaskaHawaii
+            ? migrationDataByEra.current[currentEraRef.current]
+            : migrationDataByEra.current[currentEraRef.current].filter(
+                (migration) =>
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.origin
+                  ) &&
+                  !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                    migration.destination
+                  )
+              );
+
+          migrationData.forEach((migration) => {
+            if (
+              originStatesUpper.has(migration.origin) &&
+              destStatesUpper.has(migration.destination)
+            ) {
+              const pairKey = getPairKey(
+                migration.origin,
+                migration.destination
+              );
+              migrationsByPair.set(
+                pairKey,
+                (migrationsByPair.get(pairKey) || 0) + migration.value
+              );
+              totalValue += migration.value;
+            }
+          });
 
           migrationsByPair.forEach((value, pairKey) => {
             const [origin, destination] = pairKey.split('->');
@@ -743,11 +884,11 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .append('text')
         .attr('x', 0)
         .attr('y', 26) // increased from 24 for slightly bigger entries
-        .style('font-size', '22px') // increased from 20px for slightly bigger entries
+        .style('font-size', '15px') // reduced from 22px to make text smaller
         .style('font-weight', '600')
         .style('fill', 'rgba(255, 255, 255, 0.9)')
         .text(
-          `${stateAbbreviations[link.origin] || link.origin} → ${stateAbbreviations[link.destination] || link.destination}`
+          `${formatStateName(link.origin)} → ${formatStateName(link.destination)}`
         );
 
       linkGroup
@@ -755,7 +896,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .attr('x', tooltipPanelWidth - 2 * mainPadding)
         .attr('y', 26) // increased from 24 for slightly bigger entries
         .attr('text-anchor', 'end')
-        .style('font-size', '22px') // increased from 20px for slightly bigger entries
+        .style('font-size', '18px') // reduced from 22px to make text smaller
         .style('font-weight', '500')
         .style('fill', 'rgba(255, 255, 255, 0.8)')
         .text(formatMigrationValue(link.value));
@@ -972,90 +1113,89 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         `translate(${mainPadding}, ${migrationFlowsY + 20 + titleSpacing})` // migration links list with systematic spacing
       );
 
-    d3.json('/src/assets/domesticmigration/tiles2.topo.json').then(
-      (topology) => {
-        if (!topology) return;
-        const geoFeature = topojson.feature(
-          topology as TileTopology,
-          (topology as TileTopology).objects.tiles
-        ) as unknown as FeatureCollection<Geometry, GeoJsonProperties>;
-        const topoBbox = (topology as TileTopology).bbox;
-        if (!topoBbox) return;
+    d3.json('/src/assets/domesticmigration/usmap.json').then((topology) => {
+      if (!topology) return;
+      const geoFeature = topojson.feature(
+        topology as StateTopology,
+        (topology as StateTopology).objects.states
+      ) as unknown as FeatureCollection<Geometry, GeoJsonProperties>;
 
-        const bboxWidth = topoBbox[2] - topoBbox[0];
-        const bboxHeight = topoBbox[3] - topoBbox[1];
-        const scale =
-          Math.min(mapWidth / bboxWidth, height / bboxHeight) * 1.06;
-        const centerX = mapWidth * 0.5;
-        const centerY = height * 0.5;
-        const xOffset = (topoBbox[0] + topoBbox[2]) / 2;
-        const yOffset = (topoBbox[1] + topoBbox[3]) / 2;
-        const projection = d3
-          .geoIdentity()
-          .scale(scale)
-          .reflectY(true)
-          .translate([centerX - xOffset * scale, centerY + yOffset * scale]);
-        const pathGenerator = d3.geoPath().projection(projection);
+      // set up the map projection using albers usa for geographic accuracy
+      const projection = d3
+        .geoAlbersUsa()
+        .scale(includeAlaskaHawaii ? 1100 : 1275)
+        .translate([mapWidth / 2, height / 2]);
+      const pathGenerator = d3.geoPath().projection(projection);
 
-        stateCentroidsRef.current = {};
-        geoFeature.features.forEach((feature) => {
-          const stateName = feature.properties?.name;
-          if (stateName) {
-            const centroid = pathGenerator.centroid(feature);
-            if (!isNaN(centroid[0]) && !isNaN(centroid[1]))
-              stateCentroidsRef.current[stateName] = centroid;
-          }
-        });
+      // filter out Alaska and Hawaii from features if not including them
+      const filteredFeatures = includeAlaskaHawaii
+        ? geoFeature.features
+        : geoFeature.features.filter((feature) => {
+            const stateName = feature.properties?.name;
+            return (
+              stateName &&
+              !['Alaska', 'Hawaii', 'District of Columbia'].includes(stateName)
+            );
+          });
 
-        mapGroup
-          .selectAll('path.tile')
-          .data(geoFeature.features)
-          .join('path')
-          .attr('class', 'tile')
-          .attr(
-            'data-statename',
-            (d) =>
-              (d.properties as TileGeometry['properties'])?.name || 'unknown'
-          )
-          .attr('d', pathGenerator)
-          .attr('fill', defaultFill)
-          .attr('stroke', '#fff')
-          .attr('stroke-width', defaultStrokeWidth)
-          .style('pointer-events', 'all')
-          .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
+      stateCentroidsRef.current = {};
+      filteredFeatures.forEach((feature) => {
+        const stateName = feature.properties?.name;
+        if (stateName) {
+          const centroid = pathGenerator.centroid(feature);
+          if (!isNaN(centroid[0]) && !isNaN(centroid[1]))
+            stateCentroidsRef.current[stateName.toUpperCase()] = centroid;
+        }
+      });
 
-        mapGroup
-          .selectAll('text.state-label')
-          .data(geoFeature.features)
-          .join('text')
-          .attr('class', 'state-label')
-          .attr('pointer-events', 'none')
-          .attr('text-anchor', 'middle')
-          .attr('dy', '0.35em')
-          .attr('fill', '#333')
-          .attr('font-size', '20px')
-          .attr('font-weight', '600')
-          .attr('text-shadow', '0 1px 1px rgba(255, 255, 255, 0.5)')
-          .attr('x', (d) => {
-            const c = pathGenerator.centroid(d);
-            return isNaN(c[0]) ? 0 : c[0];
-          })
-          .attr('y', (d) => {
-            const c = pathGenerator.centroid(d);
-            return isNaN(c[1]) ? 0 : c[1];
-          })
-          .text((d) =>
-            (d.properties as TileGeometry['properties'])?.name
-              ? stateAbbreviations[
-                  (d.properties as TileGeometry['properties']).name
-                ] || ''
-              : ''
-          );
+      mapGroup
+        .selectAll('path.tile')
+        .data(filteredFeatures)
+        .join('path')
+        .attr('class', 'tile')
+        .attr(
+          'data-statename',
+          (d) =>
+            (d.properties as StateGeometry['properties'])?.name || 'unknown'
+        )
+        .attr('d', pathGenerator)
+        .attr('fill', defaultFill)
+        .attr('stroke', '#fff')
+        .attr('stroke-width', defaultStrokeWidth)
+        .style('pointer-events', 'all')
+        .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
 
-        isInitializedRef.current = true;
-        renderVisuals();
-      }
-    );
+      mapGroup
+        .selectAll('text.state-label')
+        .data(filteredFeatures)
+        .join('text')
+        .attr('class', 'state-label')
+        .attr('pointer-events', 'none')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('fill', '#333')
+        .attr('font-size', '16px')
+        .attr('font-weight', '600')
+        .attr('text-shadow', '0 1px 1px rgba(255, 255, 255, 0.5)')
+        .attr('x', (d) => {
+          const position = getStateLabelPosition(d, pathGenerator);
+          return position[0];
+        })
+        .attr('y', (d) => {
+          const position = getStateLabelPosition(d, pathGenerator);
+          return position[1];
+        })
+        .text((d) =>
+          (d.properties as StateGeometry['properties'])?.name
+            ? stateAbbreviations[
+                (d.properties as StateGeometry['properties']).name.toUpperCase()
+              ] || ''
+            : ''
+        );
+
+      isInitializedRef.current = true;
+      renderVisuals();
+    });
 
     const visualObserver = () => renderVisuals();
     yHoveredLeftStates?.observeDeep(visualObserver);

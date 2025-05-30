@@ -201,6 +201,17 @@ function isInteractableElement(element: Element | null): boolean {
     return true;
   }
 
+  // check for elements with specific interactable classes (for grouped svg elements)
+  if (isSvgElement) {
+    const interactableSvgClasses = [
+      'flight-item', // worldmap flight items for hover/selection
+    ];
+
+    return interactableSvgClasses.some((className) =>
+      element.classList.contains(className)
+    );
+  }
+
   // check for html elements with specific classes that should be interactable
   const isHtmlElement = element instanceof HTMLElement;
 

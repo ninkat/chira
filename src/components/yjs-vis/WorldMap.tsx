@@ -81,26 +81,23 @@ const airportSelectedRightStroke = '#ADD8E6';
 // constants for line styling
 const lineColor = 'rgba(116, 100, 139, 0.9)';
 const lineWidth = 4;
-const dotSize = 4;
-const dotSpacing = 10;
+const pinnedFlightColor = '#32CD32'; // bright green for pinned flights
 
 // constants for panel styling
 const panelWidth = totalWidth / 4;
-const panelBackground = 'rgba(33, 33, 33, 0.65)';
+const panelBackground = 'rgba(33, 33, 33, 0.2)';
 const panelTextColor = 'white';
 
 const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement | null>(null); // main group for d3 transformations
+  const panelSvgRef = useRef<SVGSVGElement>(null); // ref for the info panel svg
   const animationFrameRef = useRef<number | null>(null);
   const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
 
   // get doc from yjs context
   const yjsContext = useContext(YjsContext);
   const doc = yjsContext?.doc;
-
-  // unique user id for yjs interactions (if needed for specific logic)
-  const [userId] = useState<string>(() => crypto.randomUUID());
 
   // yjs shared state maps and arrays
   const yWorldMapState = doc?.getMap<WorldMapStateValue>('worldMapGlobalState');
@@ -116,6 +113,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const ySelectedAirportIATAsRight = doc?.getArray<string>(
     'worldMapSelectedIATAsRight'
   );
+  const yPanelState = doc?.getMap<WorldMapStateValue>('worldMapPanelState'); // panel svg state
+  const yHoveredFlights = doc?.getArray<number>('worldMapHoveredFlights'); // track hovered flight ids globally
+  const ySelectedFlights = doc?.getArray<number>('worldMapSelectedFlights'); // track pinned/selected flight ids (global)
 
   // ref to track current transform from yjs or local updates before sync
   const transformRef = useRef<{ k: number; x: number; y: number }>({
@@ -124,7 +124,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     y: 0,
   });
 
-  // ref to track scroll drag state for flights list
+  // ref for scroll drag state for flights list
   const scrollDragStateRef = useRef<{
     left: {
       active: boolean;
@@ -148,9 +148,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       startScrollTop: 0,
     },
   });
-
-  // ref for the flights list element
-  const flightsListRef = useRef<HTMLDivElement>(null);
 
   // state for sync status
   const [syncStatus, setSyncStatus] = useState<boolean>(false);
@@ -294,8 +291,41 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       })
       .attr('fill', airportFill); // ensure fill is reset/set
 
-    activeLinesByPair.current.forEach((line) => {
+    activeLinesByPair.current.forEach((line, pairKey) => {
       d3.select(line).attr('stroke-width', lineWidth / scale);
+
+      // extract origin and destination from pair key (format: "ORIGIN->DESTINATION")
+      const [originIATA, destinationIATA] = pairKey.split('->');
+
+      // check if this line corresponds to any selected (pinned) flight
+      const selectedFlights = ySelectedFlights?.toArray() || [];
+      const selectedFlightData = selectedFlights
+        .map((id) => allFlights.current.find((f) => f.id === id))
+        .filter(Boolean) as Flight[];
+
+      const isPinned = selectedFlightData.some(
+        (flight) =>
+          flight.origin === originIATA && flight.destination === destinationIATA
+      );
+
+      // check if this line corresponds to any hovered flight
+      const hoveredFlights = yHoveredFlights?.toArray() || [];
+      const hoveredFlightData = hoveredFlights
+        .map((id) => allFlights.current.find((f) => f.id === id))
+        .filter(Boolean) as Flight[];
+
+      const isHighlighted = hoveredFlightData.some(
+        (flight) =>
+          flight.origin === originIATA && flight.destination === destinationIATA
+      );
+
+      // use pinned color if pinned, highlight color if highlighted, otherwise default
+      const strokeColor = isPinned
+        ? pinnedFlightColor
+        : isHighlighted
+          ? airportHighlightStroke
+          : lineColor;
+      d3.select(line).attr('stroke', strokeColor);
     });
   };
 
@@ -303,7 +333,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const drawAirportLineByIATAs = (
     originIATA: string,
     destinationIATA: string,
-    projection: d3.GeoProjection
+    projection: d3.GeoProjection,
+    highlight = false,
+    pinned = false
   ) => {
     if (!gRef.current || !projection) return;
 
@@ -326,21 +358,40 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     if (!originCoords || !destCoords) return;
 
-    const lineGenerator = d3.line();
-    const pathData = lineGenerator([
-      [originCoords[0], originCoords[1]],
-      [destCoords[0], destCoords[1]],
-    ]);
-    if (!pathData) return;
+    // calculate arc control point for curved flight path
+    const midX = (originCoords[0] + destCoords[0]) / 2;
+    const midY = (originCoords[1] + destCoords[1]) / 2;
+
+    // calculate distance between points to determine arc height
+    const distance = Math.sqrt(
+      Math.pow(destCoords[0] - originCoords[0], 2) +
+        Math.pow(destCoords[1] - originCoords[1], 2)
+    );
+
+    // arc height is proportional to distance (but capped for very long distances)
+    const arcHeight = Math.min(distance * 0.2, 100);
+
+    // control point is above the midpoint
+    const controlX = midX;
+    const controlY = midY - arcHeight;
+
+    // create quadratic curve path
+    const pathData = `M ${originCoords[0]} ${originCoords[1]} Q ${controlX} ${controlY} ${destCoords[0]} ${destCoords[1]}`;
+
+    // use pinned color if pinned, highlight color if highlighted, otherwise use default line color
+    const strokeColor = pinned
+      ? pinnedFlightColor
+      : highlight
+        ? airportHighlightStroke
+        : lineColor;
 
     const line = d3
       .select(gRef.current)
       .append('path')
       .attr('d', pathData)
-      .attr('stroke', lineColor)
+      .attr('stroke', strokeColor)
       .attr('stroke-width', lineWidth / transformRef.current.k) // use current transform
       .attr('fill', 'none')
-      .style('stroke-dasharray', `${dotSize} ${dotSpacing}`)
       .style('stroke-linecap', 'round')
       .style('pointer-events', 'none'); // make flight lines uninteractable
 
@@ -367,6 +418,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       return;
     clearAllLines();
 
+    // first draw pinned flight lines (always visible in green)
+    drawPinnedFlightLines(projection);
+
     const hoveredLeftIATAs = yHoveredAirportIATAsLeft.toArray();
     const hoveredRightIATAs = yHoveredAirportIATAsRight.toArray();
     const selectedLeftIATAs = ySelectedAirportIATAsLeft.toArray();
@@ -380,11 +434,29 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       new Set([...selectedRightIATAs, ...hoveredRightIATAs])
     );
 
+    // get hovered flights to determine which routes should be highlighted
+    const hoveredFlights = yHoveredFlights?.toArray() || [];
+    const hoveredFlightData = hoveredFlights
+      .map((id) => allFlights.current.find((f) => f.id === id))
+      .filter(Boolean) as Flight[];
+
     effectiveLeftIATAs.forEach((originIATA) => {
       effectiveRightIATAs.forEach((destIATA) => {
         if (originIATA !== destIATA) {
           // prevent self-loops if an airport is somehow in both effective lists
-          drawAirportLineByIATAs(originIATA, destIATA, projection);
+
+          // check if this route corresponds to any hovered flight
+          const isHighlighted = hoveredFlightData.some(
+            (flight) =>
+              flight.origin === originIATA && flight.destination === destIATA
+          );
+
+          drawAirportLineByIATAs(
+            originIATA,
+            destIATA,
+            projection,
+            isHighlighted
+          );
         }
       });
     });
@@ -397,12 +469,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       !yHoveredAirportIATAsLeft ||
       !yHoveredAirportIATAsRight ||
       !ySelectedAirportIATAsLeft ||
-      !ySelectedAirportIATAsRight
+      !ySelectedAirportIATAsRight ||
+      !panelSvgRef.current ||
+      !yPanelState
     )
       return;
 
-    const infoPanel = d3.select('.info-panel');
-    if (infoPanel.empty()) return;
+    const panelSvg = d3.select(panelSvgRef.current);
+
+    // clear existing content (keep defs)
+    panelSvg.selectAll('g.panel-content').remove();
+
+    const contentGroup = panelSvg.append('g').attr('class', 'panel-content');
 
     const hoveredLeftIATAs = yHoveredAirportIATAsLeft.toArray();
     const hoveredRightIATAs = yHoveredAirportIATAsRight.toArray();
@@ -410,11 +488,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     const selectedRightIATAs = ySelectedAirportIATAsRight.toArray();
 
     // display logic: selected items are primary. hovered items are secondary if not selected.
-    // for flight filtering, selected items take precedence.
-    const leftFilterIATAs =
-      selectedLeftIATAs.length > 0 ? selectedLeftIATAs : hoveredLeftIATAs;
-    const rightFilterIATAs =
-      selectedRightIATAs.length > 0 ? selectedRightIATAs : hoveredRightIATAs;
+    // for flight filtering, combine selected and hovered items (pins are sticky hovers)
+    const leftFilterIATAs = Array.from(
+      new Set([...selectedLeftIATAs, ...hoveredLeftIATAs])
+    );
+    const rightFilterIATAs = Array.from(
+      new Set([...selectedRightIATAs, ...hoveredRightIATAs])
+    );
 
     let currentFilteredFlights: Flight[] = [];
     if (leftFilterIATAs.length > 0 && rightFilterIATAs.length > 0) {
@@ -433,9 +513,54 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       );
     }
 
-    const originsBox = infoPanel.select('.origins-box .content');
-    originsBox.selectAll('div').remove();
+    // svg panel layout constants
+    const padding = 6;
+    const sectionGap = 12; // consistent spacing between all sections
+    // const sectionHeight = (totalHeight - 2 * padding - 2 * sectionGap) / 3; // properly account for gaps between sections // removing the 1/3 rule
 
+    // calculate fixed height for origins/destinations boxes to fit exactly 4 entries
+    const titleHeight = 20; // height for "origins"/"destinations" title
+    const itemHeight = 35; // height per airport item
+    const maxItems = 4; // exactly 4 entries
+    const topPadding = 10; // padding above the boxes
+    const bottomPadding = 10; // padding below the boxes to match top
+    const boxHeight = titleHeight + 25 + maxItems * itemHeight - bottomPadding; // 25px padding after title, reduced by bottom padding for balance
+
+    // section 1: current selections
+    const selectionsY = padding;
+    const selectionsGroup = contentGroup
+      .append('g')
+      .attr('class', 'selections-section');
+
+    // origins and destinations boxes
+    const boxY = selectionsY + topPadding; // use the defined topPadding constant
+    // const boxHeight = sectionHeight - 10; // adjusted for removed title // removing this line since we have fixed height now
+    const boxWidth = (panelWidth - 2 * padding - 8) / 2; // wider boxes with smaller gap
+
+    // origins box background
+    selectionsGroup
+      .append('rect')
+      .attr('x', padding)
+      .attr('y', boxY)
+      .attr('width', boxWidth)
+      .attr('height', boxHeight)
+      .attr('fill', 'rgba(255, 255, 255, 0.12)')
+      .attr('rx', 6)
+      .attr('ry', 6);
+
+    // origins title
+    selectionsGroup
+      .append('text')
+      .attr('x', padding + 8)
+      .attr('y', boxY + 20)
+      .attr('fill', 'rgba(255, 255, 255, 0.95)')
+      .attr('font-size', '16px')
+      .attr('font-weight', '500')
+      .style('font-family', 'system-ui, sans-serif')
+      .style('letter-spacing', '0.05em')
+      .text('Origins');
+
+    // origins content
     const uniqueLeftDisplayIATAs = Array.from(
       new Set([...selectedLeftIATAs, ...hoveredLeftIATAs])
     );
@@ -443,40 +568,91 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       .map(getAirportByIATA)
       .filter(Boolean) as Airport[];
 
-    const leftToShow = leftAirportsToShow.slice(0, 3);
-    const leftRemaining = leftAirportsToShow.length - 3;
+    // show maximum 3 airports, reserve 4th slot for "more" if needed
+    const maxAirportsToShow = 3;
+    const leftToShow = leftAirportsToShow.slice(0, maxAirportsToShow);
+    const leftRemaining = leftAirportsToShow.length - leftToShow.length;
 
-    leftToShow.forEach((airport) => {
+    leftToShow.forEach((airport, index) => {
       const isSelected = selectedLeftIATAs.includes(airport.IATA);
-      // const isHovered = hoveredLeftIATAs.includes(airport.IATA) && !isSelected; // if needed for distinct hover style
-      originsBox
-        .append('div')
-        .style('background', 'rgba(232, 27, 35, 0.3)')
-        .style('padding', isSelected ? '2px 6px' : '4px 8px')
-        .style(
-          'border',
-          isSelected ? `2px solid ${airportSelectedLeftStroke}` : 'none'
-        )
-        .style('borderRadius', '4px')
-        .style('font-size', '14px')
-        .style('font-weight', isSelected ? '700' : '500')
+      const itemY = boxY + 45 + index * 35;
+
+      // background for airport item
+      selectionsGroup
+        .append('rect')
+        .attr('x', padding + 4 + (isSelected ? 1 : 0)) // reduced padding from 8 to 4
+        .attr('y', itemY - 17 + (isSelected ? 1 : 0)) // adjust for stroke width
+        .attr('width', boxWidth - 8 - (isSelected ? 2 : 0)) // increased width from -16 to -8
+        .attr('height', 30 - (isSelected ? 2 : 0)) // reduce height for stroke
+        .attr('fill', 'rgba(232, 27, 35, 0.3)')
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('stroke', isSelected ? airportSelectedLeftStroke : 'none')
+        .attr('stroke-width', isSelected ? 2 : 0);
+
+      selectionsGroup
+        .append('text')
+        .attr('x', padding + 10) // adjusted text position for new padding
+        .attr('y', itemY) // center vertically within container
+        .attr('fill', panelTextColor)
+        .attr('font-size', '15px') // reduced from 16px to 15px
+        .attr('font-weight', '500') // consistent weight, no bold for selected
+        .style('font-family', 'system-ui, sans-serif')
+        .attr('dominant-baseline', 'middle') // center text vertically
         .text(`${airport.IATA} (${airport.City})`);
     });
+
     if (leftRemaining > 0) {
-      originsBox
-        .append('div')
-        .style('background', 'rgba(232, 27, 35, 0.3)')
-        .style('padding', '4px 8px')
-        .style('borderRadius', '4px')
-        .style('font-size', '14px')
-        .style('font-weight', '500')
-        .style('opacity', '0.7')
+      const remainingY = boxY + 45 + leftToShow.length * 35;
+      selectionsGroup
+        .append('rect')
+        .attr('x', padding + 4) // reduced padding from 8 to 4
+        .attr('y', remainingY - 17)
+        .attr('width', boxWidth - 8) // increased width from -16 to -8
+        .attr('height', 30)
+        .attr('fill', 'rgba(232, 27, 35, 0.3)')
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('opacity', 0.7);
+
+      selectionsGroup
+        .append('text')
+        .attr('x', padding + 10) // adjusted text position for new padding
+        .attr('y', remainingY) // center vertically within container
+        .attr('fill', panelTextColor)
+        .attr('font-size', '15px') // reduced from 16px to 15px
+        .attr('font-weight', '500') // consistent weight, no bold for selected
+        .style('font-family', 'system-ui, sans-serif')
+        .attr('dominant-baseline', 'middle') // center text vertically
+        .attr('opacity', 0.7)
         .text(`and ${leftRemaining} more...`);
     }
 
-    const destinationsBox = infoPanel.select('.destinations-box .content');
-    destinationsBox.selectAll('div').remove();
+    // destinations box background (side by side with origins)
+    const destBoxX = padding + boxWidth + 8; // 8px gap between boxes
+    selectionsGroup
+      .append('rect')
+      .attr('x', destBoxX)
+      .attr('y', boxY)
+      .attr('width', boxWidth)
+      .attr('height', boxHeight)
+      .attr('fill', 'rgba(255, 255, 255, 0.15)')
+      .attr('rx', 6)
+      .attr('ry', 6);
 
+    // destinations title
+    selectionsGroup
+      .append('text')
+      .attr('x', destBoxX + 8)
+      .attr('y', boxY + 20)
+      .attr('fill', 'rgba(255, 255, 255, 0.95)')
+      .attr('font-size', '16px')
+      .attr('font-weight', '500')
+      .style('font-family', 'system-ui, sans-serif')
+      .style('letter-spacing', '0.05em')
+      .text('Destinations');
+
+    // destinations content
     const uniqueRightDisplayIATAs = Array.from(
       new Set([...selectedRightIATAs, ...hoveredRightIATAs])
     );
@@ -484,317 +660,718 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       .map(getAirportByIATA)
       .filter(Boolean) as Airport[];
 
-    const rightToShow = rightAirportsToShow.slice(0, 3);
-    const rightRemaining = rightAirportsToShow.length - 3;
+    // show maximum 3 airports, reserve 4th slot for "more" if needed
+    const rightToShow = rightAirportsToShow.slice(0, maxAirportsToShow);
+    const rightRemaining = rightAirportsToShow.length - rightToShow.length;
 
-    rightToShow.forEach((airport) => {
+    rightToShow.forEach((airport, index) => {
       const isSelected = selectedRightIATAs.includes(airport.IATA);
-      // const isHovered = hoveredRightIATAs.includes(airport.IATA) && !isSelected;
-      destinationsBox
-        .append('div')
-        .style('background', 'rgba(0, 174, 243, 0.3)')
-        .style('padding', isSelected ? '2px 6px' : '4px 8px')
-        .style(
-          'border',
-          isSelected ? `2px solid ${airportSelectedRightStroke}` : 'none'
-        )
-        .style('borderRadius', '4px')
-        .style('font-size', '14px')
-        .style('font-weight', isSelected ? '700' : '500')
+      const itemY = boxY + 45 + index * 35;
+
+      // background for airport item
+      selectionsGroup
+        .append('rect')
+        .attr('x', destBoxX + 4 + (isSelected ? 1 : 0)) // reduced padding from 8 to 4
+        .attr('y', itemY - 17 + (isSelected ? 1 : 0)) // adjust for stroke width
+        .attr('width', boxWidth - 8 - (isSelected ? 2 : 0)) // increased width from -16 to -8
+        .attr('height', 30 - (isSelected ? 2 : 0)) // reduce height for stroke
+        .attr('fill', 'rgba(0, 174, 243, 0.3)')
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('stroke', isSelected ? airportSelectedRightStroke : 'none')
+        .attr('stroke-width', isSelected ? 2 : 0);
+
+      selectionsGroup
+        .append('text')
+        .attr('x', destBoxX + 10) // adjusted text position for new padding
+        .attr('y', itemY) // center vertically within container
+        .attr('fill', panelTextColor)
+        .attr('font-size', '15px') // reduced from 16px to 15px
+        .attr('font-weight', '500') // consistent weight, no bold for selected
+        .style('font-family', 'system-ui, sans-serif')
+        .attr('dominant-baseline', 'middle') // center text vertically
         .text(`${airport.IATA} (${airport.City})`);
     });
+
     if (rightRemaining > 0) {
-      destinationsBox
-        .append('div')
-        .style('background', 'rgba(0, 174, 243, 0.3)')
-        .style('padding', '4px 8px')
-        .style('borderRadius', '4px')
-        .style('font-size', '14px')
-        .style('font-weight', '500')
-        .style('opacity', '0.7')
+      const remainingY = boxY + 45 + rightToShow.length * 35;
+      selectionsGroup
+        .append('rect')
+        .attr('x', destBoxX + 4)
+        .attr('y', remainingY - 17)
+        .attr('width', boxWidth - 8)
+        .attr('height', 30)
+        .attr('fill', 'rgba(0, 174, 243, 0.3)')
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('opacity', 0.7);
+
+      selectionsGroup
+        .append('text')
+        .attr('x', destBoxX + 10)
+        .attr('y', remainingY) // center vertically within container
+        .attr('fill', panelTextColor)
+        .attr('font-size', '15px') // reduced from 16px to 15px
+        .attr('font-weight', '500') // consistent weight, no bold for selected
+        .style('font-family', 'system-ui, sans-serif')
+        .attr('dominant-baseline', 'middle') // center text vertically
+        .attr('opacity', 0.7)
         .text(`and ${rightRemaining} more...`);
     }
 
-    // distributions and flights list rendering
-    const distributionsContainer = infoPanel.select<HTMLDivElement>(
-      '.distributions-container'
-    );
-    distributionsContainer.selectAll('*').remove();
+    // section 2: available flights
+    const flightsY = selectionsY + boxHeight + sectionGap;
+    const flightsGroup = contentGroup
+      .append('g')
+      .attr('class', 'flights-section');
 
-    const flightsToAnalyze = currentFilteredFlights;
+    // calculate space for distributions section (fixed size)
+    const distributionsFixedHeight = 10 + 3 * 70; // 10px for content Y offset + space for 3 histograms at 70px each
+
+    // flights content area - use all available space except what's reserved for distributions
+    const flightsContentY = flightsY + 10; // reduced from flightsY + 40 since no title
+    const flightsContentHeight =
+      totalHeight -
+      flightsContentY -
+      distributionsFixedHeight -
+      sectionGap -
+      padding; // use all remaining space
+
+    // get current scroll position from yjs or default to 0
+    const scrollOffset = (yPanelState.get('flightsScrollY') as number) || 0;
+
     const displayOriginsSelected =
       selectedLeftIATAs.length > 0 || hoveredLeftIATAs.length > 0;
     const displayDestinationsSelected =
       selectedRightIATAs.length > 0 || hoveredRightIATAs.length > 0;
 
     if (!displayOriginsSelected || !displayDestinationsSelected) {
-      distributionsContainer
-        .append('div')
-        .style('color', 'rgba(255, 255, 255, 0.5)')
-        .text(
-          'hover over origins (left) and destinations (right) to see flight distributions.'
-        );
-    } else if (flightsToAnalyze.length === 0) {
-      distributionsContainer
-        .append('div')
-        .style('color', 'rgba(255, 255, 255, 0.5)')
-        .text('no flight data available for distribution analysis.');
+      // first line
+      flightsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', flightsContentY + flightsContentHeight / 2 - 10)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('Select origins (left) and destinations (right)');
+
+      // second line
+      flightsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', flightsContentY + flightsContentHeight / 2 + 10)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('to see available flights.');
+    } else if (currentFilteredFlights.length === 0) {
+      flightsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', flightsContentY + flightsContentHeight / 2)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('No direct flights found for the current selection.');
     } else {
-      const prices = flightsToAnalyze.map((f) => f.price);
-      const durations = flightsToAnalyze.map((f) => f.duration);
-      const dates = flightsToAnalyze.map((f) => new Date(f.date));
+      // sort flights by price (cheapest first)
+      const flightsToShow = currentFilteredFlights.sort(
+        (a, b) => a.price - b.price
+      );
 
-      const histHeight = 18;
-      const histMargin = { top: 0, right: 10, bottom: 20, left: 0 }; // increased bottom margin for labels
-      const numBins = 8;
-      const histogramBarFill = 'rgba(255, 255, 255, 0.4)';
+      // create clipping path for flights list
+      const clipId = 'flights-clip';
+      panelSvg
+        .select('defs')
+        .append('clipPath')
+        .attr('id', clipId)
+        .append('rect')
+        .attr('x', padding)
+        .attr('y', flightsContentY)
+        .attr('width', panelWidth - 2 * padding)
+        .attr('height', flightsContentHeight);
 
-      // adjust histwidth to fit within the panel, considering margins and container padding
-      const containerPaddingRight = 5; // as per distributions-container style
-      const calculatedHistWidth =
-        panelWidth - histMargin.left - histMargin.right - containerPaddingRight;
+      const flightsListGroup = flightsGroup
+        .append('g')
+        .attr('class', 'flights-list')
+        .attr('clip-path', `url(#${clipId})`);
 
-      const createLinearHistogram = (
-        data: number[],
-        title: string,
-        unit: string = ''
-      ) => {
-        const histContainer = distributionsContainer
-          .append('div')
-          .style('display', 'flex')
-          .style('flex-direction', 'column')
-          .style('gap', '1px');
-        histContainer
-          .append('label')
-          .style('color', 'rgba(255, 255, 255, 0.75)')
-          .style('font-size', '12px')
-          .style('font-weight', '500')
-          .style('text-transform', 'lowercase')
-          .style('letter-spacing', '0.05em')
-          .text(title);
-        const svg = histContainer
-          .append('svg')
-          .attr(
-            'width',
-            calculatedHistWidth + histMargin.left + histMargin.right
-          ) // use calculated width for svg
-          .attr('height', histHeight + histMargin.top + histMargin.bottom)
+      const itemHeight = 80;
+      const visibleItems = Math.ceil(flightsContentHeight / itemHeight) + 1;
+      const startIndex = Math.max(0, Math.floor(scrollOffset / itemHeight));
+      const endIndex = Math.min(
+        flightsToShow.length,
+        startIndex + visibleItems
+      );
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const flight = flightsToShow[i];
+        const itemY = flightsContentY + i * itemHeight - scrollOffset;
+
+        // get current hovered flights from yjs state
+        const hoveredFlights = yHoveredFlights?.toArray() || [];
+        const isHovered = hoveredFlights.includes(flight.id);
+
+        // get current selected flights from yjs state
+        const selectedFlights = ySelectedFlights?.toArray() || [];
+        const isSelected = selectedFlights.includes(flight.id);
+
+        // create a group for each flight item to make it interactable
+        const flightGroup = flightsListGroup
           .append('g')
-          .attr('transform', `translate(${histMargin.left},${histMargin.top})`);
-        const [minVal, maxVal] = d3.extent(data);
-        if (minVal === undefined || maxVal === undefined) return;
-        const xScale = d3
-          .scaleLinear()
-          .domain([minVal, maxVal])
-          .range([0, calculatedHistWidth]); // use calculated width for scale range
-        svg
-          .append('g')
-          .attr('transform', `translate(0,${histHeight})`)
-          .call(
-            d3
-              .axisBottom(xScale)
-              .ticks(4)
-              .tickFormat(
-                (d) =>
-                  `${unit === '$' ? unit : ''}${d}${unit !== '$' ? unit : ''}`
-              )
-          )
-          .selectAll('text')
-          .style('fill', panelTextColor)
-          .style('font-size', '10px');
-        svg.selectAll('path, line').style('stroke', panelTextColor);
-        const histogram = d3
-          .histogram<number, number>()
-          .value((d) => d)
-          .domain([minVal, maxVal])
-          .thresholds(xScale.ticks(numBins));
-        const bins: d3.Bin<number, number>[] = histogram(data);
-        if (!bins || bins.length === 0 || bins[0] === undefined) {
-          console.warn('histogram bins calculation failed for linear data.');
-          return;
-        }
-        const yMax = d3.max(bins, (d) => d.length) ?? 0;
-        const yScale = d3
-          .scaleLinear()
-          .range([histHeight, 0])
-          .domain([0, yMax]);
-        svg
-          .selectAll('rect')
-          .data(bins)
-          .join('rect')
-          .attr('x', (d) => xScale(d.x0!) + 1)
-          .attr('width', (d) => Math.max(0, xScale(d.x1!) - xScale(d.x0!) - 1))
-          .attr('y', (d) => yScale(d.length))
-          .attr('height', (d) => histHeight - yScale(d.length))
-          .style('fill', histogramBarFill);
-      };
-
-      const createTimeHistogram = (data: Date[], title: string) => {
-        const histContainer = distributionsContainer
-          .append('div')
-          .style('display', 'flex')
-          .style('flex-direction', 'column')
-          .style('gap', '1px');
-        histContainer
-          .append('label')
-          .style('color', 'rgba(255, 255, 255, 0.75)')
-          .style('font-size', '12px')
-          .style('font-weight', '500')
-          .style('text-transform', 'lowercase')
-          .style('letter-spacing', '0.05em')
-          .text(title);
-        const svg = histContainer
-          .append('svg')
-          .attr(
-            'width',
-            calculatedHistWidth + histMargin.left + histMargin.right
-          ) // use calculated width for svg
-          .attr('height', histHeight + histMargin.top + histMargin.bottom)
-          .append('g')
-          .attr('transform', `translate(${histMargin.left},${histMargin.top})`);
-        const [minVal, maxVal] = d3.extent(data);
-        if (minVal === undefined || maxVal === undefined) return;
-        const xScale = d3
-          .scaleTime()
-          .domain([minVal, maxVal])
-          .range([0, calculatedHistWidth]); // use calculated width for scale range
-        svg
-          .append('g')
-          .attr('transform', `translate(0,${histHeight})`)
-          .call(
-            d3
-              .axisBottom(xScale)
-              .ticks(4)
-              .tickFormat(
-                d3.timeFormat('%b %d') as (
-                  domainValue: Date | d3.NumberValue,
-                  index: number
-                ) => string
-              )
-          )
-          .selectAll('text')
-          .style('fill', panelTextColor)
-          .style('font-size', '10px');
-        svg.selectAll('path, line').style('stroke', panelTextColor);
-        const histogram = d3
-          .histogram<Date, Date>()
-          .value((d) => d)
-          .domain([minVal, maxVal])
-          .thresholds(xScale.ticks(numBins));
-        const bins: d3.Bin<Date, Date>[] = histogram(data);
-        if (!bins || bins.length === 0 || bins[0] === undefined) {
-          console.warn('histogram bins calculation failed for time data.');
-          return;
-        }
-        const yMax = d3.max(bins, (d) => d.length) ?? 0;
-        const yScale = d3
-          .scaleLinear()
-          .range([histHeight, 0])
-          .domain([0, yMax]);
-        svg
-          .selectAll('rect')
-          .data(bins)
-          .join('rect')
-          .attr('x', (d) => xScale(d.x0!) + 1)
-          .attr('width', (d) => Math.max(0, xScale(d.x1!) - xScale(d.x0!) - 1))
-          .attr('y', (d) => yScale(d.length))
-          .attr('height', (d) => histHeight - yScale(d.length))
-          .style('fill', histogramBarFill);
-      };
-
-      createLinearHistogram(prices, 'price distribution', '$');
-      createLinearHistogram(durations, 'flight time distribution', 'h');
-      createTimeHistogram(dates, 'date');
-    }
-
-    const flightsListContainer =
-      infoPanel.select<HTMLDivElement>('.flights-list');
-    flightsListContainer.selectAll('*').remove();
-    // sort flights by price (cheapest first)
-    const flightsToShow = currentFilteredFlights.sort(
-      (a, b) => a.price - b.price
-    );
-
-    if (!displayOriginsSelected || !displayDestinationsSelected) {
-      flightsListContainer
-        .append('div')
-        .style('color', 'rgba(255, 255, 255, 0.5)')
-        .style('text-align', 'center')
-        .style('padding-top', '20px')
-        .style('pointer-events', 'none') // disable pointer events so gestures reach the flights-list container
-        .text(
-          'select origins (left) and destinations (right) to see available flights.'
-        );
-    } else if (flightsToShow.length === 0) {
-      flightsListContainer
-        .append('div')
-        .style('color', 'rgba(255, 255, 255, 0.5)')
-        .style('text-align', 'center')
-        .style('padding-top', '20px')
-        .style('pointer-events', 'none') // disable pointer events so gestures reach the flights-list container
-        .text('no direct flights found for the current selection.');
-    } else {
-      flightsToShow.forEach((flight) => {
-        const item = flightsListContainer
-          .append('div')
           .attr('class', 'flight-item')
-          .style('padding', '4px')
-          .style('border-radius', '3px')
-          .style('background', 'rgba(255, 255, 255, 0.07)')
-          .style('display', 'flex')
-          .style('flex-direction', 'column')
-          .style('gap', '2px')
-          .style('pointer-events', 'none'); // disable pointer events so gestures reach the flights-list container
-        const header = item
-          .append('div')
-          .style('display', 'flex')
-          .style('justify-content', 'space-between')
-          .style('align-items', 'center');
-        header
-          .append('span')
-          .style('font-weight', '600')
-          .style('font-size', '12px')
+          .attr('data-flight-id', flight.id.toString());
+
+        // flight item background
+        flightGroup
+          .append('rect')
+          .attr('x', padding + 4)
+          .attr('y', itemY)
+          .attr('width', panelWidth - 2 * padding - 8)
+          .attr('height', itemHeight - 4)
+          .attr('fill', 'rgba(255, 255, 255, 0.12)')
+          .attr(
+            'stroke',
+            isSelected
+              ? pinnedFlightColor
+              : isHovered
+                ? airportHighlightStroke
+                : 'none'
+          )
+          .attr('stroke-width', isSelected || isHovered ? 2 : 0)
+          .attr('rx', 3)
+          .attr('ry', 3);
+
+        // flight route and price
+        flightGroup
+          .append('text')
+          .attr('x', padding + 8)
+          .attr('y', itemY + 20)
+          .attr('fill', panelTextColor)
+          .attr('font-size', '22px')
+          .attr('font-weight', '600')
+          .style('font-family', 'system-ui, sans-serif')
           .text(`${flight.origin} → ${flight.destination}`);
-        header
-          .append('span')
-          .style('color', 'rgba(255, 255, 255, 0.7)')
-          .style('font-weight', '500')
-          .style('font-size', '12px')
+
+        flightGroup
+          .append('text')
+          .attr('x', panelWidth - padding - 8)
+          .attr('y', itemY + 20) // back to top line with route
+          .attr('fill', panelTextColor)
+          .attr('font-size', '22px') // back to 20px to match route
+          .attr('font-weight', '600')
+          .attr('text-anchor', 'end')
+          .style('font-family', 'system-ui, sans-serif')
           .text(`$${flight.price.toFixed(2)}`);
 
-        // airline information row
-        const airlineRow = item
-          .append('div')
-          .style('display', 'flex')
-          .style('justify-content', 'space-between')
-          .style('align-items', 'center')
-          .style('font-size', '10px')
-          .style('color', 'rgba(255, 255, 255, 0.8)');
-        airlineRow
-          .append('span')
-          .style('font-weight', '600')
-          .text(`${flight.airline.code} • ${flight.airline.name}`);
+        // airline information (full name only, no abbreviation)
+        flightGroup
+          .append('text')
+          .attr('x', padding + 8)
+          .attr('y', itemY + 40)
+          .attr('fill', panelTextColor)
+          .attr('font-size', '18px')
+          .attr('font-weight', '600')
+          .style('font-family', 'system-ui, sans-serif')
+          .text(`${flight.airline.name}`);
 
-        const details = item
-          .append('div')
-          .style('display', 'flex')
-          .style('justify-content', 'space-between')
-          .style('font-size', '10px')
-          .style('color', 'rgba(255, 255, 255, 0.6)');
-        details.append('span').text(`flight #${flight.id}`);
-        details.append('span').text(`${flight.duration.toFixed(1)}h`);
+        // flight duration (same styling as price)
+        flightGroup
+          .append('text')
+          .attr('x', panelWidth - padding - 8)
+          .attr('y', itemY + itemHeight - 12) // anchored to bottom with 12px margin
+          .attr('fill', panelTextColor)
+          .attr('font-size', '18px')
+          .attr('font-weight', '600')
+          .attr('text-anchor', 'end')
+          .style('font-family', 'system-ui, sans-serif')
+          .text(`${flight.duration.toFixed(1)}h`);
+
+        // flight date (same size and styling as airline name)
         const flightDate = new Date(flight.date);
         const formattedDate = flightDate.toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
         });
-        item
-          .append('div')
-          .style('font-size', '10px')
-          .style('color', 'rgba(255, 255, 255, 0.5)')
+        flightGroup
+          .append('text')
+          .attr('x', padding + 8)
+          .attr('y', itemY + itemHeight - 12) // anchored to bottom with 12px margin
+          .attr('fill', panelTextColor)
+          .attr('font-size', '18px')
+          .attr('font-weight', '600')
+          .style('font-family', 'system-ui, sans-serif')
           .text(formattedDate);
-      });
+      }
+
+      // add scrollbar if there are more flights than can be displayed
+      const totalContentHeight = flightsToShow.length * itemHeight;
+      if (totalContentHeight > flightsContentHeight) {
+        const scrollbarWidth = 4;
+        const scrollbarX = panelWidth - padding - scrollbarWidth;
+
+        // scrollbar track
+        flightsGroup
+          .append('rect')
+          .attr('x', scrollbarX)
+          .attr('y', flightsContentY)
+          .attr('width', scrollbarWidth)
+          .attr('height', flightsContentHeight)
+          .attr('fill', 'rgba(255, 255, 255, 0.1)')
+          .attr('rx', 2)
+          .attr('ry', 2);
+
+        // scrollbar thumb
+        const scrollRatio = Math.min(
+          1,
+          flightsContentHeight / totalContentHeight
+        );
+        const thumbHeight = flightsContentHeight * scrollRatio;
+        const maxScrollForThumb = Math.max(
+          0,
+          totalContentHeight - flightsContentHeight
+        );
+        const thumbY =
+          maxScrollForThumb > 0
+            ? flightsContentY +
+              (scrollOffset / maxScrollForThumb) *
+                (flightsContentHeight - thumbHeight)
+            : flightsContentY;
+
+        flightsGroup
+          .append('rect')
+          .attr('x', scrollbarX)
+          .attr('y', thumbY)
+          .attr('width', scrollbarWidth)
+          .attr('height', thumbHeight)
+          .attr('fill', 'rgba(255, 255, 255, 0.4)')
+          .attr('rx', 2)
+          .attr('ry', 2);
+      }
+    }
+
+    // section 3: flight distributions
+    const distributionsY = flightsContentY + flightsContentHeight + sectionGap;
+    const distributionsGroup = contentGroup
+      .append('g')
+      .attr('class', 'distributions-section');
+
+    // distributions content
+    const distributionsContentY = distributionsY + 10; // reduced from distributionsY + 40 since no title
+    const flightsToAnalyze = currentFilteredFlights;
+
+    if (!displayOriginsSelected || !displayDestinationsSelected) {
+      // first line
+      distributionsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', distributionsContentY + 40)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('Select origins (left) and destinations (right)');
+
+      // second line
+      distributionsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', distributionsContentY + 60)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('to see flight distributions.');
+    } else if (flightsToAnalyze.length === 0) {
+      distributionsGroup
+        .append('text')
+        .attr('x', panelWidth / 2)
+        .attr('y', distributionsContentY + 50)
+        .attr('fill', 'rgba(255, 255, 255, 0.5)')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .style('font-family', 'system-ui, sans-serif')
+        .text('no flight data available for distribution analysis.');
+    } else {
+      const prices = flightsToAnalyze.map((f) => f.price);
+      const durations = flightsToAnalyze.map((f) => f.duration);
+      const dates = flightsToAnalyze.map((f) => new Date(f.date));
+
+      const histHeight = 40; // increased from 32 for better visibility
+      const numBins = 8;
+      const histogramBarFill = 'rgba(255, 255, 255, 0.4)';
+      const calculatedHistWidth = panelWidth - 2 * padding - 8; // match other sections' width calculation
+
+      // histograms use <= for the last bin to include maximum values (edge case fix)
+
+      // create histograms
+      let currentHistY = distributionsContentY;
+
+      // price histogram
+      if (prices.length > 0) {
+        const [minVal, maxVal] = d3.extent(prices);
+        if (minVal !== undefined && maxVal !== undefined) {
+          const histGroup = distributionsGroup
+            .append('g')
+            .attr('transform', `translate(${padding + 4}, ${currentHistY})`);
+
+          const xScale = d3
+            .scaleLinear()
+            .domain([minVal, maxVal])
+            .range([0, calculatedHistWidth]);
+
+          const histogram = d3
+            .histogram<number, number>()
+            .value((d) => d)
+            .domain([minVal, maxVal])
+            .thresholds(xScale.ticks(numBins));
+
+          const bins = histogram(prices);
+          const yMax = d3.max(bins, (d) => d.length) ?? 0;
+          const yScale = d3
+            .scaleLinear()
+            .range([histHeight, 0])
+            .domain([0, yMax]);
+
+          // calculate consistent bar width
+          const barWidth = calculatedHistWidth / bins.length;
+
+          // get hovered flights for highlighting
+          const hoveredFlightIds = yHoveredFlights?.toArray() || [];
+          const hoveredFlightsData = hoveredFlightIds
+            .map((id) => flightsToAnalyze.find((f) => f.id === id))
+            .filter(Boolean) as Flight[];
+
+          // bars
+          histGroup
+            .selectAll('rect')
+            .data(bins)
+            .join('rect')
+            .attr('x', (d, i) => i * barWidth)
+            .attr('width', barWidth - 1) // subtract 1 for spacing between bars
+            .attr('y', (d) => yScale(d.length))
+            .attr('height', (d) => histHeight - yScale(d.length))
+            .attr('fill', (d) => {
+              // check if any hovered flight's price falls in this bin
+              const binContainsHoveredFlight = hoveredFlightsData.some(
+                (flight) => {
+                  const binStart = d.x0!;
+                  const binEnd = d.x1!;
+                  // fix for edge values: use <= for the last bin to include max value
+                  const isLastBin = bins.indexOf(d) === bins.length - 1;
+                  return (
+                    flight.price >= binStart &&
+                    (isLastBin ? flight.price <= binEnd : flight.price < binEnd)
+                  );
+                }
+              );
+              return binContainsHoveredFlight
+                ? airportHighlightStroke
+                : histogramBarFill;
+            });
+
+          // x-axis
+          const numTicks = Math.min(bins.length, 4);
+          const tickIndices = [];
+          if (numTicks === 1) {
+            tickIndices.push(0);
+          } else {
+            for (let i = 0; i < numTicks; i++) {
+              tickIndices.push(
+                Math.round((i * (bins.length - 1)) / (numTicks - 1))
+              );
+            }
+          }
+
+          const xAxis = d3
+            .axisBottom(
+              d3
+                .scaleLinear()
+                .range([0, calculatedHistWidth])
+                .domain([0, bins.length - 1])
+            )
+            .tickValues(tickIndices)
+            .tickFormat((d) => {
+              const binIndex = Math.round(d as number);
+              if (binIndex >= 0 && binIndex < bins.length) {
+                const bin = bins[binIndex];
+                return `$${((bin.x0! + bin.x1!) / 2).toFixed(0)}`;
+              }
+              return '';
+            });
+
+          histGroup
+            .append('g')
+            .attr('transform', `translate(0, ${histHeight})`)
+            .call(xAxis)
+            .call((g) =>
+              g
+                .selectAll('.tick')
+                .attr(
+                  'transform',
+                  (d) =>
+                    `translate(${(d as number) * barWidth + barWidth / 2}, 0)`
+                )
+            )
+            .selectAll('text')
+            .attr('fill', panelTextColor)
+            .attr('font-size', '18px')
+            .style('font-family', 'system-ui, sans-serif');
+
+          histGroup.selectAll('path, line').attr('stroke', panelTextColor);
+
+          currentHistY += 70; // increased from 50 to accommodate taller histograms
+        }
+      }
+
+      // duration histogram
+      if (durations.length > 0) {
+        const [minVal, maxVal] = d3.extent(durations);
+        if (minVal !== undefined && maxVal !== undefined) {
+          const histGroup = distributionsGroup
+            .append('g')
+            .attr('transform', `translate(${padding + 4}, ${currentHistY})`);
+
+          const xScale = d3
+            .scaleLinear()
+            .domain([minVal, maxVal])
+            .range([0, calculatedHistWidth]);
+
+          const histogram = d3
+            .histogram<number, number>()
+            .value((d) => d)
+            .domain([minVal, maxVal])
+            .thresholds(xScale.ticks(numBins));
+
+          const bins = histogram(durations);
+          const yMax = d3.max(bins, (d) => d.length) ?? 0;
+          const yScale = d3
+            .scaleLinear()
+            .range([histHeight, 0])
+            .domain([0, yMax]);
+
+          // calculate consistent bar width
+          const barWidth = calculatedHistWidth / bins.length;
+
+          // get hovered flights for highlighting
+          const hoveredFlightIds = yHoveredFlights?.toArray() || [];
+          const hoveredFlightsData = hoveredFlightIds
+            .map((id) => flightsToAnalyze.find((f) => f.id === id))
+            .filter(Boolean) as Flight[];
+
+          // bars
+          histGroup
+            .selectAll('rect')
+            .data(bins)
+            .join('rect')
+            .attr('x', (d, i) => i * barWidth)
+            .attr('width', barWidth - 1) // subtract 1 for spacing between bars
+            .attr('y', (d) => yScale(d.length))
+            .attr('height', (d) => histHeight - yScale(d.length))
+            .attr('fill', (d) => {
+              // check if any hovered flight's duration falls in this bin
+              const binContainsHoveredFlight = hoveredFlightsData.some(
+                (flight) => {
+                  const binStart = d.x0!;
+                  const binEnd = d.x1!;
+                  // fix for edge values: use <= for the last bin to include max value
+                  const isLastBin = bins.indexOf(d) === bins.length - 1;
+                  return (
+                    flight.duration >= binStart &&
+                    (isLastBin
+                      ? flight.duration <= binEnd
+                      : flight.duration < binEnd)
+                  );
+                }
+              );
+              return binContainsHoveredFlight
+                ? airportHighlightStroke
+                : histogramBarFill;
+            });
+
+          // x-axis
+          const numTicks = Math.min(bins.length, 4);
+          const tickIndices = [];
+          if (numTicks === 1) {
+            tickIndices.push(0);
+          } else {
+            for (let i = 0; i < numTicks; i++) {
+              tickIndices.push(
+                Math.round((i * (bins.length - 1)) / (numTicks - 1))
+              );
+            }
+          }
+
+          const xAxis = d3
+            .axisBottom(
+              d3
+                .scaleLinear()
+                .range([0, calculatedHistWidth])
+                .domain([0, bins.length - 1])
+            )
+            .tickValues(tickIndices)
+            .tickFormat((d) => {
+              const binIndex = Math.round(d as number);
+              if (binIndex >= 0 && binIndex < bins.length) {
+                const bin = bins[binIndex];
+                const hours = (bin.x0! + bin.x1!) / 2;
+                // show half-hour precision for better granularity
+                return `${hours.toFixed(1)}h`;
+              }
+              return '';
+            });
+
+          histGroup
+            .append('g')
+            .attr('transform', `translate(0, ${histHeight})`)
+            .call(xAxis)
+            .call((g) =>
+              g
+                .selectAll('.tick')
+                .attr(
+                  'transform',
+                  (d) =>
+                    `translate(${(d as number) * barWidth + barWidth / 2}, 0)`
+                )
+            )
+            .selectAll('text')
+            .attr('fill', panelTextColor)
+            .attr('font-size', '16px')
+            .style('font-family', 'system-ui, sans-serif');
+
+          histGroup.selectAll('path, line').attr('stroke', panelTextColor);
+
+          currentHistY += 70; // increased from 50 to accommodate taller histograms
+        }
+      }
+
+      // date histogram
+      if (dates.length > 0) {
+        const [minVal, maxVal] = d3.extent(dates);
+        if (minVal !== undefined && maxVal !== undefined) {
+          const histGroup = distributionsGroup
+            .append('g')
+            .attr('transform', `translate(${padding + 4}, ${currentHistY})`);
+
+          const xScale = d3
+            .scaleTime()
+            .domain([minVal, maxVal])
+            .range([0, calculatedHistWidth]);
+
+          // calculate number of days between earliest and latest dates for bins
+          const daysBetween =
+            Math.ceil(
+              (maxVal.getTime() - minVal.getTime()) / (1000 * 60 * 60 * 24)
+            ) + 1;
+
+          const histogram = d3
+            .histogram<Date, Date>()
+            .value((d) => d)
+            .domain([minVal, maxVal])
+            .thresholds(xScale.ticks(daysBetween));
+
+          const bins = histogram(dates);
+          const yMax = d3.max(bins, (d) => d.length) ?? 0;
+          const yScale = d3
+            .scaleLinear()
+            .range([histHeight, 0])
+            .domain([0, yMax]);
+
+          // calculate consistent bar width
+          const barWidth = calculatedHistWidth / bins.length;
+
+          // get hovered flights for highlighting
+          const hoveredFlightIds = yHoveredFlights?.toArray() || [];
+          const hoveredFlightsData = hoveredFlightIds
+            .map((id) => flightsToAnalyze.find((f) => f.id === id))
+            .filter(Boolean) as Flight[];
+
+          // bars
+          histGroup
+            .selectAll('rect')
+            .data(bins)
+            .join('rect')
+            .attr('x', (d, i) => i * barWidth)
+            .attr('width', barWidth - 1) // subtract 1 for spacing between bars
+            .attr('y', (d) => yScale(d.length))
+            .attr('height', (d) => histHeight - yScale(d.length))
+            .attr('fill', (d) => {
+              // check if any hovered flight's date falls in this bin
+              const binContainsHoveredFlight = hoveredFlightsData.some(
+                (flight) => {
+                  const flightDate = new Date(flight.date).getTime();
+                  const binStart = d.x0!.getTime();
+                  const binEnd = d.x1!.getTime();
+                  // fix for edge values: use <= for the last bin to include max value
+                  const isLastBin = bins.indexOf(d) === bins.length - 1;
+                  return (
+                    flightDate >= binStart &&
+                    (isLastBin ? flightDate <= binEnd : flightDate < binEnd)
+                  );
+                }
+              );
+              return binContainsHoveredFlight
+                ? airportHighlightStroke
+                : histogramBarFill;
+            });
+
+          // x-axis
+          const numTicks = Math.min(bins.length, 4);
+          const tickIndices = [];
+          if (numTicks === 1) {
+            tickIndices.push(0);
+          } else {
+            for (let i = 0; i < numTicks; i++) {
+              tickIndices.push(
+                Math.round((i * (bins.length - 1)) / (numTicks - 1))
+              );
+            }
+          }
+
+          const xAxis = d3
+            .axisBottom(
+              d3
+                .scaleLinear()
+                .range([0, calculatedHistWidth])
+                .domain([0, bins.length - 1])
+            )
+            .tickValues(tickIndices)
+            .tickFormat((d) => {
+              const binIndex = Math.round(d as number);
+              if (binIndex >= 0 && binIndex < bins.length) {
+                const bin = bins[binIndex];
+                const date = new Date(bin.x0!);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+              }
+              return '';
+            });
+
+          histGroup
+            .append('g')
+            .attr('transform', `translate(0, ${histHeight})`)
+            .call(xAxis)
+            .call((g) =>
+              g
+                .selectAll('.tick')
+                .attr(
+                  'transform',
+                  (d) =>
+                    `translate(${(d as number) * barWidth + barWidth / 2}, 0)`
+                )
+            )
+            .selectAll('text')
+            .attr('fill', panelTextColor)
+            .attr('font-size', '16px')
+            .style('font-family', 'system-ui, sans-serif');
+
+          histGroup.selectAll('path, line').attr('stroke', panelTextColor);
+        }
+      }
     }
   };
 
@@ -812,7 +1389,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       !yHoveredAirportIATAsLeft ||
       !yHoveredAirportIATAsRight ||
       !ySelectedAirportIATAsLeft ||
-      !ySelectedAirportIATAsRight
+      !ySelectedAirportIATAsRight ||
+      !yPanelState
     ) {
       return undefined; // ensure a value is returned for cleanup path
     }
@@ -856,8 +1434,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     Promise.all([
       d3.json<WorldTopology>('/src/assets/traveldata/world110.topo.json'),
-      d3.json<Airport[]>('/src/assets/traveldata/airports.json'),
-      d3.json<Flight[]>('/src/assets/traveldata/flights.json'),
+      d3.json<Airport[]>('/src/assets/situation/airports.json'),
+      d3.json<Flight[]>('/src/assets/situation/flights.json'),
     ])
       .then(([topology, airportsData, flightsData]) => {
         if (
@@ -972,9 +1550,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
             ?.closest('.airport')
             ?.getAttribute('data-iata');
 
+          // check for flight element
+          const flightElement = targetElement?.closest('.flight-item');
+          const flightId = flightElement?.getAttribute('data-flight-id');
+
           doc.transact(() => {
             switch (event.type) {
               case 'pointerover':
+                // handle airport hover
                 if (
                   airportIATA &&
                   handedness &&
@@ -990,9 +1573,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     targetArray.push([airportIATA]);
                   }
                 }
+                // handle flight hover
+                else if (flightId && yHoveredFlights) {
+                  const flightIdNum = parseInt(flightId, 10);
+                  if (!yHoveredFlights.toArray().includes(flightIdNum)) {
+                    // allow multiple flights to be hovered simultaneously
+                    yHoveredFlights.push([flightIdNum]);
+                  }
+                }
                 break;
 
               case 'pointerout':
+                // handle airport hover out
                 if (
                   airportIATA &&
                   handedness &&
@@ -1014,6 +1606,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     if (yWorldMapState.get(selectedKey) !== airportIATA) {
                       targetArray.delete(index, 1);
                     }
+                  }
+                }
+                // handle flight hover out
+                else if (flightId && yHoveredFlights) {
+                  const flightIdNum = parseInt(flightId, 10);
+                  const index = yHoveredFlights.toArray().indexOf(flightIdNum);
+                  if (index > -1) {
+                    yHoveredFlights.delete(index, 1);
                   }
                 }
                 break;
@@ -1045,6 +1645,25 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     targetSelectionArray.push([airportIATA]);
                   }
                 }
+                // handle flight selection (pinning)
+                else if (flightId && ySelectedFlights) {
+                  const flightIdNum = parseInt(flightId, 10);
+                  const currentSelectedFlights = ySelectedFlights.toArray();
+                  const currentSelectedIndex =
+                    currentSelectedFlights.indexOf(flightIdNum);
+
+                  if (currentSelectedIndex > -1) {
+                    // flight is already selected, so deselect it
+                    ySelectedFlights.delete(currentSelectedIndex, 1);
+                  } else {
+                    // flight is not selected, so select it (with maximum of 2)
+                    if (currentSelectedFlights.length >= 2) {
+                      // remove the oldest selected flight to make room for the new one
+                      ySelectedFlights.delete(0, 1);
+                    }
+                    ySelectedFlights.push([flightIdNum]);
+                  }
+                }
                 break;
 
               case 'drag':
@@ -1068,15 +1687,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                 const { point, handedness, element } = event;
                 if (!handedness || !element) return;
 
-                // check if the element is the flights list
+                // check if the element is the panel svg or related to flights list
                 if (
-                  element.classList.contains('flights-list') &&
-                  flightsListRef.current
+                  (element === panelSvgRef.current ||
+                    panelSvgRef.current?.contains(element)) &&
+                  yPanelState
                 ) {
                   const scrollState = scrollDragStateRef.current[handedness];
                   scrollState.active = true;
                   scrollState.startY = point.clientY;
-                  scrollState.startScrollTop = flightsListRef.current.scrollTop;
+                  const currentScroll =
+                    (yPanelState.get('flightsScrollY') as number) || 0;
+                  scrollState.startScrollTop = currentScroll;
                 }
                 break;
               }
@@ -1087,21 +1709,91 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                 if (!handedness) return;
 
                 const scrollState = scrollDragStateRef.current[handedness];
-                if (scrollState.active && flightsListRef.current) {
+                if (scrollState.active && yPanelState) {
                   const deltaY = point.clientY - scrollState.startY;
                   // invert the delta to make dragging down scroll down (natural scrolling)
                   const newScrollTop = scrollState.startScrollTop - deltaY;
 
+                  // calculate filtered flights count for scroll limit
+                  const hoveredLeftIATAsForScroll =
+                    yHoveredAirportIATAsLeft?.toArray() || [];
+                  const hoveredRightIATAsForScroll =
+                    yHoveredAirportIATAsRight?.toArray() || [];
+                  const selectedLeftIATAsForScroll =
+                    ySelectedAirportIATAsLeft?.toArray() || [];
+                  const selectedRightIATAsForScroll =
+                    ySelectedAirportIATAsRight?.toArray() || [];
+
+                  const leftFilterIATAsForScroll = Array.from(
+                    new Set([
+                      ...selectedLeftIATAsForScroll,
+                      ...hoveredLeftIATAsForScroll,
+                    ])
+                  );
+                  const rightFilterIATAsForScroll = Array.from(
+                    new Set([
+                      ...selectedRightIATAsForScroll,
+                      ...hoveredRightIATAsForScroll,
+                    ])
+                  );
+
+                  let filteredFlightsCount = 0;
+                  if (
+                    leftFilterIATAsForScroll.length > 0 &&
+                    rightFilterIATAsForScroll.length > 0
+                  ) {
+                    filteredFlightsCount = allFlights.current.filter(
+                      (flight) =>
+                        leftFilterIATAsForScroll.includes(flight.origin) &&
+                        rightFilterIATAsForScroll.includes(flight.destination)
+                    ).length;
+                  } else if (leftFilterIATAsForScroll.length > 0) {
+                    filteredFlightsCount = allFlights.current.filter((flight) =>
+                      leftFilterIATAsForScroll.includes(flight.origin)
+                    ).length;
+                  } else if (rightFilterIATAsForScroll.length > 0) {
+                    filteredFlightsCount = allFlights.current.filter((flight) =>
+                      rightFilterIATAsForScroll.includes(flight.destination)
+                    ).length;
+                  }
+
                   // clamp scroll position to valid range
-                  const maxScroll =
-                    flightsListRef.current.scrollHeight -
-                    flightsListRef.current.clientHeight;
+                  // calculate flights content height for proper scroll bounds
+                  const paddingForScroll = 6;
+                  const sectionGapForScroll = 12;
+                  const titleHeightForScroll = 20;
+                  const itemHeightForScroll = 35;
+                  const maxItemsForScroll = 4;
+                  const bottomPaddingForScroll = 10;
+                  const distributionsFixedHeightForScroll = 10 + 3 * 70; // same as calculated earlier
+                  const selectionsYForScroll = paddingForScroll;
+                  const boxHeightForScroll =
+                    titleHeightForScroll +
+                    25 +
+                    maxItemsForScroll * itemHeightForScroll -
+                    bottomPaddingForScroll; // replicate box height calculation
+                  const flightsYForScroll =
+                    selectionsYForScroll +
+                    boxHeightForScroll +
+                    sectionGapForScroll;
+                  const flightsContentYForScroll = flightsYForScroll + 10;
+                  const flightsContentHeightForScroll =
+                    totalHeight -
+                    flightsContentYForScroll -
+                    distributionsFixedHeightForScroll -
+                    sectionGapForScroll -
+                    paddingForScroll;
+
+                  const maxScroll = Math.max(
+                    0,
+                    filteredFlightsCount * 80 - flightsContentHeightForScroll
+                  );
                   const clampedScrollTop = Math.max(
                     0,
                     Math.min(maxScroll, newScrollTop)
                   );
 
-                  flightsListRef.current.scrollTop = clampedScrollTop;
+                  yPanelState.set('flightsScrollY', clampedScrollTop);
                 }
                 break;
               }
@@ -1155,6 +1847,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     yHoveredAirportIATAsRight.observeDeep(yjsObserver);
     ySelectedAirportIATAsLeft.observeDeep(yjsObserver);
     ySelectedAirportIATAsRight.observeDeep(yjsObserver);
+    yPanelState.observeDeep(yjsObserver); // observe panel state changes
+    yHoveredFlights?.observeDeep(yjsObserver); // observe hovered flights changes
+    ySelectedFlights?.observeDeep(yjsObserver); // observe selected flights changes
 
     // main effect cleanup
     return () => {
@@ -1165,6 +1860,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       yHoveredAirportIATAsRight?.unobserveDeep(yjsObserver);
       ySelectedAirportIATAsLeft?.unobserveDeep(yjsObserver);
       ySelectedAirportIATAsRight?.unobserveDeep(yjsObserver);
+      yPanelState?.unobserveDeep(yjsObserver); // unobserve panel state changes
+      yHoveredFlights?.unobserveDeep(yjsObserver); // unobserve hovered flights changes
+      ySelectedFlights?.unobserveDeep(yjsObserver); // unobserve selected flights changes
 
       // cleanup scroll drag state
       scrollDragStateRef.current.left.active = false;
@@ -1182,13 +1880,39 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   }, [
     doc,
     syncStatus,
-    userId,
     yWorldMapState,
     yHoveredAirportIATAsLeft,
     yHoveredAirportIATAsRight,
     ySelectedAirportIATAsLeft,
     ySelectedAirportIATAsRight,
+    yPanelState,
+    yHoveredFlights,
+    ySelectedFlights,
   ]);
+
+  // function to draw pinned flight lines (always visible in green)
+  const drawPinnedFlightLines = (projection: d3.GeoProjection | null) => {
+    if (!projection || !ySelectedFlights) return;
+
+    const selectedFlights = ySelectedFlights.toArray();
+    const selectedFlightData = selectedFlights
+      .map((id) => allFlights.current.find((f) => f.id === id))
+      .filter(Boolean) as Flight[];
+
+    selectedFlightData.forEach((flight) => {
+      const pairKey = getPairKey(flight.origin, flight.destination);
+      // only draw if this line doesn't already exist
+      if (!activeLinesByPair.current.has(pairKey)) {
+        drawAirportLineByIATAs(
+          flight.origin,
+          flight.destination,
+          projection,
+          false,
+          true
+        );
+      }
+    });
+  };
 
   if (
     !syncStatus ||
@@ -1293,227 +2017,29 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           overflow: 'hidden',
         }}
       />
-      {/* info panel html structure (content filled by d3) */}
-      <div
-        className='info-panel'
+      {/* info panel svg structure */}
+      <svg
+        ref={panelSvgRef}
+        width={panelWidth}
+        height={totalHeight}
         style={{
           position: 'fixed',
           top: '0',
           left: '0',
-          bottom: '0',
-          width: `${panelWidth}px`,
           background: panelBackground,
-          color: panelTextColor,
-          padding: '24px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           zIndex: 1000,
-          fontSize: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           backdropFilter: 'blur(12px)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          pointerEvents: 'none', // disable pointer events for the entire panel
+          pointerEvents: 'all',
         }}
       >
-        {/* section 1: current selections */}
-        <div
-          className='panel-section selections-section'
-          style={{
-            flex: '1 1 33%', // take 1/3rd of height
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            overflow: 'hidden', // prevent content from overflowing its 1/3rd boundary
-          }}
-        >
-          <h2
-            style={{
-              margin: '0', // remove default h2 margin
-              fontSize: '20px',
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontWeight: 600,
-              textTransform: 'lowercase',
-              letterSpacing: '0.05em',
-              flexShrink: 0, // prevent title from shrinking
-            }}
-          >
-            current selections
-          </h2>
-          <div
-            style={{
-              display: 'flex',
-              gap: '4px',
-              flex: 1, // allow this div to take remaining space in the section
-              overflow: 'hidden', // content within boxes should scroll
-            }}
-          >
-            <div
-              className='origins-box'
-              style={{
-                flex: 1,
-                borderRadius: '6px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                padding: '8px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                overflow: 'hidden', // content (list of airports) should scroll if needed
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.75)',
-                  fontWeight: 500,
-                  textTransform: 'lowercase',
-                  letterSpacing: '0.05em',
-                  flexShrink: 0, // prevent title from shrinking
-                }}
-              >
-                origins
-              </h3>
-              <div
-                className='content'
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  overflowY: 'auto', // enable vertical scrolling for this content
-                  flex: 1, // take remaining space in origins-box
-                  scrollbarWidth: 'thin',
-                  scrollbarColor:
-                    'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)',
-                }}
-              />
-            </div>
-            <div
-              className='destinations-box'
-              style={{
-                flex: 1,
-                borderRadius: '6px',
-                background: 'rgba(255, 255, 255, 0.07)',
-                padding: '8px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                overflow: 'hidden', // content (list of airports) should scroll if needed
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.75)',
-                  fontWeight: 500,
-                  textTransform: 'lowercase',
-                  letterSpacing: '0.05em',
-                  flexShrink: 0, // prevent title from shrinking
-                }}
-              >
-                destinations
-              </h3>
-              <div
-                className='content'
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  overflowY: 'auto', // enable vertical scrolling for this content
-                  flex: 1, // take remaining space in destinations-box
-                  scrollbarWidth: 'thin',
-                  scrollbarColor:
-                    'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* section 2: available flights */}
-        <div
-          className='panel-section flights-section'
-          style={{
-            flex: '1 1 33%', // take 1/3rd of height
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            overflow: 'hidden', // prevent content from overflowing its 1/3rd boundary
-          }}
-        >
-          <h2
-            style={{
-              margin: '0', // remove default h2 margin
-              fontSize: '20px',
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontWeight: 600,
-              textTransform: 'lowercase',
-              letterSpacing: '0.05em',
-              flexShrink: 0, // prevent title from shrinking
-            }}
-          >
-            available flights
-          </h2>
-          <div
-            ref={flightsListRef}
-            className='flights-list'
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              overflowY: 'auto',
-              flex: 1, // take remaining space in this section
-              paddingRight: '5px', // add some padding for scrollbar
-              scrollbarWidth: 'thin',
-              scrollbarColor:
-                'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)',
-              position: 'relative', // for positioning the scroll indicator
-              pointerEvents: 'all', // re-enable pointer events for the flights list
-            }}
-          ></div>
-        </div>
-
-        {/* section 3: flight distributions */}
-        <div
-          className='panel-section distributions-section'
-          style={{
-            flex: '1 1 33%', // take 1/3rd of height
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            overflow: 'hidden', // prevent content from overflowing its 1/3rd boundary
-          }}
-        >
-          <h2
-            style={{
-              margin: '0', // remove default h2 margin
-              fontSize: '20px',
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontWeight: 600,
-              textTransform: 'lowercase',
-              letterSpacing: '0.05em',
-              flexShrink: 0, // prevent title from shrinking
-            }}
-          >
-            flight distributions
-          </h2>
-          <div
-            className='distributions-container'
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px',
-              flex: 1, // take remaining space in this section
-              overflowY: 'auto', // scroll if histograms exceed space
-              paddingRight: '5px', // add some padding for scrollbar
-              scrollbarWidth: 'thin',
-              scrollbarColor:
-                'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)',
-            }}
-          ></div>
-        </div>
-      </div>
+        <defs>
+          <filter id='panel-text-shadow'>
+            <feDropShadow dx='0' dy='1' stdDeviation='1' floodOpacity='0.3' />
+          </filter>
+        </defs>
+      </svg>
     </>
   );
 };

@@ -1,0 +1,32 @@
+[
+  {
+    "code": "AA",
+    "name": "American Airlines",
+    "continent": "north america"
+  },
+  {
+    "code": "LH",
+    "name": "Lufthansa",
+    "continent": "europe"
+  },
+  {
+    "code": "LA",
+    "name": "LATAM Airlines",
+    "continent": "south america"
+  },
+  {
+    "code": "ET",
+    "name": "Ethiopian Airlines",
+    "continent": "africa"
+  },
+  {
+    "code": "SQ",
+    "name": "Singapore Airlines",
+    "continent": "asia"
+  },
+  {
+    "code": "QF",
+    "name": "Qantas",
+    "continent": "australia"
+  }
+]

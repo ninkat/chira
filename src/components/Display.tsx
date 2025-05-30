@@ -82,7 +82,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [currentVisualization, setCurrentVisualization] =
-    useState<VisualizationType>('senate');
+    useState<VisualizationType>('worldmap');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
