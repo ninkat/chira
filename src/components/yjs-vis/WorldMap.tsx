@@ -855,6 +855,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('font-size', '22px')
           .attr('font-weight', '600')
           .style('font-family', 'system-ui, sans-serif')
+          .style('pointer-events', 'none')
           .text(`${flight.origin} → ${flight.destination}`);
 
         flightGroup
@@ -866,6 +867,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('font-weight', '600')
           .attr('text-anchor', 'end')
           .style('font-family', 'system-ui, sans-serif')
+          .style('pointer-events', 'none')
           .text(`$${flight.price.toFixed(2)}`);
 
         // airline information (full name only, no abbreviation)
@@ -877,6 +879,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('font-size', '18px')
           .attr('font-weight', '600')
           .style('font-family', 'system-ui, sans-serif')
+          .style('pointer-events', 'none')
           .text(`${flight.airline.name}`);
 
         // flight duration (same styling as price)
@@ -889,6 +892,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('font-weight', '600')
           .attr('text-anchor', 'end')
           .style('font-family', 'system-ui, sans-serif')
+          .style('pointer-events', 'none')
           .text(`${flight.duration.toFixed(1)}h`);
 
         // flight date (same size and styling as airline name)
@@ -906,6 +910,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('font-size', '18px')
           .attr('font-weight', '600')
           .style('font-family', 'system-ui, sans-serif')
+          .style('pointer-events', 'none')
           .text(formattedDate);
       }
 
