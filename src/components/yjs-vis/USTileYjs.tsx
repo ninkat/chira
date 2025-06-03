@@ -126,11 +126,6 @@ const defaultStrokeWidth = 1.5;
 const hoverStrokeWidth = 2.5;
 const pinnedStrokeWidth = 3;
 
-// constants for line styling
-const highlightLineColor = '#FFD700'; // bright yellow for highlighted lines
-const minLineWidth = 2; // minimum line width for smallest values (increased from 1)
-const maxLineWidth = 10; // maximum line width for highest values (increased from 2)
-
 // constants for edge bundling algorithm
 const EDGE_BUNDLING_COMPATIBILITY_THRESHOLD = 0.1; // much lower for aggressive bundling - more edges bundle together
 const EDGE_BUNDLING_STIFFNESS = 0.4; // much higher stiffness for tighter bundles
@@ -323,8 +318,12 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const stateCentroidsRef = useRef<Record<string, [number, number]>>({});
   const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
   const bundledPathsRef = useRef<
-    Map<string, { points: Point[]; value: number }>
-  >(new Map()); // store bundled paths with migration values
+    Record<Era, Map<string, { points: Point[]; value: number }>>
+  >({
+    '1960s': new Map(),
+    '1990s': new Map(),
+    '2020s': new Map(),
+  }); // store bundled paths with migration values for all eras
   const allBundledLinesRef = useRef<SVGGElement | null>(null); // group for all bundled lines
   const isInitializedRef = useRef(false);
   const buttonContainerRef = useRef<SVGGElement | null>(null);
@@ -378,7 +377,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   useEffect(() => {
     if (!doc) return;
     const timeout = setTimeout(() => {
-      console.log('assuming sync for ustileyjs visualization');
       setSyncStatus(true);
     }, 1500);
     return () => clearTimeout(timeout);
@@ -433,7 +431,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             '2020s': data2020s.migrations,
           };
           setMigrationDataLoaded(true);
-          console.log('all migration era data loaded successfully');
         }
       } catch (error) {
         console.error('error loading migration era data:', error);
@@ -476,28 +473,11 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     return String(numValue);
   };
 
-  // compute bundled paths for all migration flows using force-directed edge bundling
+  // compute bundled paths for all migration flows using force-directed edge bundling for all eras
   const computeBundledPaths = () => {
     if (Object.keys(stateCentroidsRef.current).length === 0) {
       return;
     }
-
-    const allMigrationData = includeAlaskaHawaii
-      ? migrationDataByEra.current[currentEraRef.current]
-      : migrationDataByEra.current[currentEraRef.current].filter(
-          (migration) =>
-            !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
-              migration.origin
-            ) &&
-            !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
-              migration.destination
-            )
-        );
-
-    // sort by migration value and take only the top 300 flows
-    const currentMigrationData = allMigrationData
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 300);
 
     // convert state centroids to the format expected by ForceEdgeBundling
     const nodes: DataNodes = {};
@@ -510,151 +490,181 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       }
     );
 
-    // convert migration data to edges format and create a value mapping
-    const edgesWithValues: { edge: Edge; value: number }[] =
-      currentMigrationData
-        .filter(
-          (migration) => nodes[migration.origin] && nodes[migration.destination]
-        )
-        .map((migration) => ({
-          edge: { source: migration.origin, target: migration.destination },
-          value: migration.value,
-        }));
+    // compute bundled paths for each era
+    const eras: Era[] = ['1960s', '1990s', '2020s'];
 
-    const edges: Edge[] = edgesWithValues.map((item) => item.edge);
+    eras.forEach((era) => {
+      const allMigrationData = includeAlaskaHawaii
+        ? migrationDataByEra.current[era]
+        : migrationDataByEra.current[era].filter(
+            (migration) =>
+              !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                migration.origin
+              ) &&
+              !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                migration.destination
+              )
+          );
 
-    if (edges.length === 0) return;
+      // sort by migration value and take only the top 300 flows
+      const currentMigrationData = allMigrationData
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 300);
 
-    console.log(
-      `processing top ${edges.length} migration flows for edge bundling (era: ${currentEraRef.current})`
-    );
-    console.log(
-      `total migration data available: ${allMigrationData.length} flows, filtered to top 300`
-    );
+      // convert migration data to edges format and create a value mapping
+      const edgesWithValues: { edge: Edge; value: number }[] =
+        currentMigrationData
+          .filter(
+            (migration) =>
+              nodes[migration.origin] && nodes[migration.destination]
+          )
+          .map((migration) => ({
+            edge: { source: migration.origin, target: migration.destination },
+            value: migration.value,
+          }));
 
-    try {
-      // check if ForceEdgeBundling is available
-      if (!ForceEdgeBundling || typeof ForceEdgeBundling !== 'function') {
-        throw new Error('ForceEdgeBundling is not available');
+      const edges: Edge[] = edgesWithValues.map((item) => item.edge);
+
+      if (edges.length === 0) {
+        return;
       }
 
-      // create and configure the bundling algorithm with proper type handling
-      const bundling = ForceEdgeBundling() as {
-        nodes: (nl?: DataNodes) => unknown;
-        edges: (ll?: Edge[]) => unknown;
-        compatibility_threshold: (t?: number) => unknown;
-        bundling_stiffness: (k?: number) => unknown;
-        step_size: (step?: number) => unknown;
-        cycles: (c?: number) => unknown;
-        iterations: (i?: number) => unknown;
-        iterations_rate: (i?: number) => unknown;
-        subdivision_points_seed: (p?: number) => unknown;
-        subdivision_rate: (r?: number) => unknown;
-        (): Point[][];
-      };
+      try {
+        // check if ForceEdgeBundling is available
+        if (!ForceEdgeBundling || typeof ForceEdgeBundling !== 'function') {
+          throw new Error('ForceEdgeBundling is not available');
+        }
 
-      // configure the bundling algorithm
-      (bundling.nodes as (nl: DataNodes) => unknown)(nodes);
-      (bundling.edges as (ll: Edge[]) => unknown)(edges);
-      (bundling.compatibility_threshold as (t: number) => unknown)(
-        EDGE_BUNDLING_COMPATIBILITY_THRESHOLD
-      );
-      (bundling.bundling_stiffness as (k: number) => unknown)(
-        EDGE_BUNDLING_STIFFNESS
-      );
-      (bundling.step_size as (step: number) => unknown)(
-        EDGE_BUNDLING_STEP_SIZE
-      );
-      (bundling.cycles as (c: number) => unknown)(EDGE_BUNDLING_CYCLES);
-      (bundling.iterations as (i: number) => unknown)(EDGE_BUNDLING_ITERATIONS);
-      (bundling.iterations_rate as (i: number) => unknown)(
-        EDGE_BUNDLING_ITERATIONS_RATE
-      );
-      (bundling.subdivision_points_seed as (p: number) => unknown)(
-        EDGE_BUNDLING_SUBDIVISION_SEED
-      );
-      (bundling.subdivision_rate as (r: number) => unknown)(
-        EDGE_BUNDLING_SUBDIVISION_RATE
-      );
+        // create and configure the bundling algorithm with proper type handling
+        const bundling = ForceEdgeBundling() as {
+          nodes: (nl?: DataNodes) => unknown;
+          edges: (ll?: Edge[]) => unknown;
+          compatibility_threshold: (t?: number) => unknown;
+          bundling_stiffness: (k?: number) => unknown;
+          step_size: (step?: number) => unknown;
+          cycles: (c?: number) => unknown;
+          iterations: (i?: number) => unknown;
+          iterations_rate: (i?: number) => unknown;
+          subdivision_points_seed: (p?: number) => unknown;
+          subdivision_rate: (r?: number) => unknown;
+          (): Point[][];
+        };
 
-      // compute bundled paths
-      const bundledPaths = (bundling as () => Point[][])();
+        // configure the bundling algorithm
+        (bundling.nodes as (nl: DataNodes) => unknown)(nodes);
+        (bundling.edges as (ll: Edge[]) => unknown)(edges);
+        (bundling.compatibility_threshold as (t: number) => unknown)(
+          EDGE_BUNDLING_COMPATIBILITY_THRESHOLD
+        );
+        (bundling.bundling_stiffness as (k: number) => unknown)(
+          EDGE_BUNDLING_STIFFNESS
+        );
+        (bundling.step_size as (step: number) => unknown)(
+          EDGE_BUNDLING_STEP_SIZE
+        );
+        (bundling.cycles as (c: number) => unknown)(EDGE_BUNDLING_CYCLES);
+        (bundling.iterations as (i: number) => unknown)(
+          EDGE_BUNDLING_ITERATIONS
+        );
+        (bundling.iterations_rate as (i: number) => unknown)(
+          EDGE_BUNDLING_ITERATIONS_RATE
+        );
+        (bundling.subdivision_points_seed as (p: number) => unknown)(
+          EDGE_BUNDLING_SUBDIVISION_SEED
+        );
+        (bundling.subdivision_rate as (r: number) => unknown)(
+          EDGE_BUNDLING_SUBDIVISION_RATE
+        );
 
-      // store bundled paths in our ref with correct values
-      bundledPathsRef.current.clear();
-      edges.forEach((edge, index) => {
-        const pairKey = getPairKey(edge.source, edge.target);
-        bundledPathsRef.current.set(pairKey, {
-          points: bundledPaths[index],
-          value: edgesWithValues[index].value,
+        // compute bundled paths
+        const bundledPaths = (bundling as () => Point[][])();
+
+        // store bundled paths for this era with correct values
+        bundledPathsRef.current[era].clear();
+        edges.forEach((edge, index) => {
+          const pairKey = getPairKey(edge.source, edge.target);
+          bundledPathsRef.current[era].set(pairKey, {
+            points: bundledPaths[index],
+            value: edgesWithValues[index].value,
+          });
         });
-      });
+      } catch (error) {
+        console.error(
+          `error computing bundled paths for era ${era}, falling back to straight lines:`,
+          error
+        );
 
-      console.log(
-        `computed bundled paths for ${edges.length} migration flows using ForceEdgeBundling algorithm`
-      );
-    } catch (error) {
-      console.error(
-        'error computing bundled paths, falling back to straight lines:',
-        error
-      );
+        // fallback to straight line paths if bundling fails
+        bundledPathsRef.current[era].clear();
+        edgesWithValues.forEach(({ edge, value }) => {
+          const pairKey = getPairKey(edge.source, edge.target);
+          const originNode = nodes[edge.source];
+          const targetNode = nodes[edge.target];
 
-      // fallback to straight line paths if bundling fails
-      bundledPathsRef.current.clear();
-      edgesWithValues.forEach(({ edge, value }) => {
-        const pairKey = getPairKey(edge.source, edge.target);
-        const originNode = nodes[edge.source];
-        const targetNode = nodes[edge.target];
+          // create a simple straight line path as fallback
+          const straightPath: Point[] = [
+            { x: originNode.x, y: originNode.y },
+            { x: targetNode.x, y: targetNode.y },
+          ];
 
-        // create a simple straight line path as fallback
-        const straightPath: Point[] = [
-          { x: originNode.x, y: originNode.y },
-          { x: targetNode.x, y: targetNode.y },
-        ];
-
-        bundledPathsRef.current.set(pairKey, {
-          points: straightPath,
-          value: value,
+          bundledPathsRef.current[era].set(pairKey, {
+            points: straightPath,
+            value: value,
+          });
         });
-      });
-
-      console.log(`created fallback paths for ${edges.length} migration flows`);
-    }
+      }
+    });
   };
 
-  // render all bundled migration lines on the map
+  // render all bundled migration lines on the map for the current era
   const renderAllBundledLines = () => {
-    if (!svgRef.current || bundledPathsRef.current.size === 0) return;
+    if (
+      !svgRef.current ||
+      bundledPathsRef.current[currentEraRef.current].size === 0
+    )
+      return;
 
     const svg = d3.select(svgRef.current);
 
-    // remove existing bundled lines group and gradients
+    // remove existing base bundled lines group and their specific gradients
     svg.select('g.all-bundled-lines').remove();
-    svg.select('g.highlighted-bundled-lines').remove();
-    svg.select('defs').selectAll('.migration-gradient').remove();
+    // svg.select('g.highlighted-bundled-lines').remove(); // do not remove the highlight group
+    svg
+      .select('defs')
+      .selectAll(
+        'linearGradient[id^="migration-gradient-"]:not([id^="highlight-migration-gradient-"]):not([id^="temp-migration-gradient-"])'
+      )
+      .remove(); // only remove base gradients
 
     // ensure defs exists for gradients
-    let defs = svg.select('defs');
-    if (defs.empty()) {
-      defs = svg.append('defs');
-    }
+    const defsSelection = svg.select('defs');
+    const defs = defsSelection.empty() ? svg.append('defs') : defsSelection;
 
     // create new group for bundled lines (background layer)
     const bundledLinesGroup = svg
-      .append('g')
+      .append('g') // append to be on top of previously added elements (like the map)
       .attr('class', 'all-bundled-lines')
       .style('pointer-events', 'none');
 
-    // create group for highlighted lines (foreground layer)
-    const highlightedLinesGroup = svg
-      .append('g')
-      .attr('class', 'highlighted-bundled-lines')
-      .style('pointer-events', 'none');
+    // ensure group for highlighted lines (foreground layer) exists, create if not
+    let highlightedLinesGroup = svg.select<SVGGElement>(
+      'g.highlighted-bundled-lines'
+    );
+    if (highlightedLinesGroup.empty()) {
+      highlightedLinesGroup = svg
+        .append('g')
+        .attr('class', 'highlighted-bundled-lines')
+        .style('pointer-events', 'none');
+    }
 
     allBundledLinesRef.current = bundledLinesGroup.node();
 
+    // get the bundled paths for the current era
+    const currentEraBundledPaths =
+      bundledPathsRef.current[currentEraRef.current];
+
     // calculate min and max values for logarithmic scaling
-    const values = Array.from(bundledPathsRef.current.values()).map(
+    const values = Array.from(currentEraBundledPaths.values()).map(
       (data) => data.value
     );
     const maxValue = Math.max(...values);
@@ -662,15 +672,8 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     const minStrokeWidth = 2;
     const maxStrokeWidth = 12;
 
-    console.log(
-      `edge value range: ${minValue} to ${maxValue} (${values.length} edges)`
-    );
-    console.log(
-      `sample values: ${values.slice(0, 5).join(', ')}${values.length > 5 ? '...' : ''}`
-    );
-
     // render each bundled path with directional gradient
-    bundledPathsRef.current.forEach((data, pairKey) => {
+    currentEraBundledPaths.forEach((data, pairKey) => {
       if (data.points.length < 2) return;
 
       // calculate linear stroke width based on migration value
@@ -706,13 +709,13 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .append('stop')
         .attr('offset', '0%')
         .attr('stop-color', '#e53e3e') // red for origin
-        .attr('stop-opacity', 0.15);
+        .attr('stop-opacity', 0.1);
 
       gradient
         .append('stop')
         .attr('offset', '100%')
         .attr('stop-color', '#3182ce') // blue for destination
-        .attr('stop-opacity', 0.15);
+        .attr('stop-opacity', 0.1);
 
       // create line generator for the bundled path
       const lineGenerator = d3
@@ -739,10 +742,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .style('stroke-linecap', 'round')
         .style('stroke-linejoin', 'round'); // smoother joins
     });
-
-    console.log(
-      `rendered ${bundledPathsRef.current.size} bundled migration lines with directional gradients on the map (era: ${currentEraRef.current})`
-    );
   };
 
   // highlight specific bundled lines based on active migration links
@@ -756,8 +755,12 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     // clear any existing highlighted lines
     highlightedLinesGroup.selectAll('*').remove();
 
+    // get the bundled paths for the current era
+    const currentEraBundledPaths =
+      bundledPathsRef.current[currentEraRef.current];
+
     // calculate global min/max values including both bundled paths AND active links for proper scaling
-    const bundledValues = Array.from(bundledPathsRef.current.values()).map(
+    const bundledValues = Array.from(currentEraBundledPaths.values()).map(
       (data) => data.value
     );
     const activeLinkValues = activeMigrationLinks.map((link) => link.value);
@@ -767,13 +770,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     const globalMinValue = Math.min(...allScalingValues);
     const minStrokeWidth = 2;
     const maxStrokeWidth = 12;
-
-    console.log(
-      `highlighting: global value range ${globalMinValue} to ${globalMaxValue}, active links: ${activeMigrationLinks.length}`
-    );
-    console.log(
-      `scaling range: ${minStrokeWidth} to ${maxStrokeWidth} stroke width`
-    );
 
     // reset all lines to default appearance with original gradients (recalculate stroke width based on their values)
     bundledLinesGroup
@@ -802,19 +798,19 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             normalizedValue * (maxStrokeWidth - minStrokeWidth);
         }
 
-        console.log(
-          `resetting line with value ${value}: normalized=${normalizedValue.toFixed(3)}, width=${strokeWidth.toFixed(2)}`
-        );
-
         element
           .attr('stroke', `url(#${originalGradientId})`)
           .attr('stroke-width', strokeWidth)
           .style('filter', 'none');
       });
 
-    // highlight the active migration links by creating bright yellow lines in the foreground group
+    // highlight the active migration links by creating thick, high-opacity gradient lines in the foreground group
     const top5Links = activeMigrationLinks.slice(0, 5);
     if (top5Links.length > 0) {
+      // ensure defs exists for gradients
+      const defsSelection = svg.select('defs');
+      const defs = defsSelection.empty() ? svg.append('defs') : defsSelection;
+
       // create line generator for temporary straight-line paths
       const lineGenerator = d3
         .line<[number, number]>()
@@ -825,11 +821,11 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       top5Links.forEach((link) => {
         const pairKey = getPairKey(link.origin, link.destination);
 
-        // calculate scaled line width using proper bounds to ensure min/max are respected
-        let scaledWidth: number;
+        // calculate much thicker highlighted line width
+        let highlightedWidth: number;
         let normalizedValue: number;
         if (globalMaxValue === globalMinValue) {
-          scaledWidth = maxLineWidth;
+          highlightedWidth = maxStrokeWidth;
           normalizedValue = 1;
         } else {
           normalizedValue = Math.max(
@@ -839,45 +835,86 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
               (link.value - globalMinValue) / (globalMaxValue - globalMinValue)
             )
           );
-          scaledWidth =
-            minLineWidth + normalizedValue * (maxLineWidth - minLineWidth);
+          highlightedWidth =
+            minStrokeWidth +
+            normalizedValue * (maxStrokeWidth - minStrokeWidth);
         }
 
-        console.log(
-          `highlighting ${pairKey} with value ${link.value}: global normalized=${normalizedValue.toFixed(3)}, scaledWidth=${scaledWidth.toFixed(2)} (min=${minLineWidth}, max=${maxLineWidth})`
-        );
-
-        // check if this link is already in the bundled paths
-        const bundledData = bundledPathsRef.current.get(pairKey);
+        // check if this link is already in the bundled paths for the current era
+        const bundledData = currentEraBundledPaths.get(pairKey);
 
         if (bundledData) {
-          // get the original path data from the background line
+          // get the original path data and gradient from the background line
           const originalLine = bundledLinesGroup.select(
             `path[data-pair-key="${pairKey}"]`
           );
           const pathData = originalLine.attr('data-path-data');
+          const gradientId = originalLine.attr('data-gradient-id');
 
-          if (pathData) {
-            // create bright yellow highlighted line using bundled path
+          if (pathData && gradientId) {
+            // create new highlighted gradient for bundled lines
+            const highlightGradientId = `highlight-migration-gradient-${pairKey.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+            // get start and end points from bundled data for gradient direction
+            const startPoint = bundledData.points[0];
+            const endPoint = bundledData.points[bundledData.points.length - 1];
+
+            const highlightGradient = defs
+              .append('linearGradient')
+              .attr('id', highlightGradientId)
+              .attr('class', 'migration-gradient')
+              .attr('x1', startPoint.x)
+              .attr('y1', startPoint.y)
+              .attr('x2', endPoint.x)
+              .attr('y2', endPoint.y)
+              .attr('gradientUnits', 'userSpaceOnUse');
+
+            // vibrant red at origin (start), bright blue at destination (end)
+            highlightGradient
+              .append('stop')
+              .attr('offset', '0%')
+              .attr('stop-color', '#ff0000') // even brighter red for highlighted origin
+              .attr('stop-opacity', 0.95);
+
+            highlightGradient
+              .append('stop')
+              .attr('offset', '100%')
+              .attr('stop-color', '#0066ff') // even brighter blue for highlighted destination
+              .attr('stop-opacity', 0.95);
+
+            // create highlighted line using new distinctive gradient with same width as background
+            const backgroundStrokeWidth =
+              Number(originalLine.attr('stroke-width')) || highlightedWidth;
+            const outlineStrokeWidth = backgroundStrokeWidth + 2; // 1px outline on each side
+
+            // draw the black outline path first
+            highlightedLinesGroup
+              .append('path')
+              .attr('class', 'highlighted-migration-line-outline')
+              .attr('d', pathData)
+              .attr('stroke', 'black')
+              .attr('stroke-width', outlineStrokeWidth)
+              .attr('stroke-opacity', 0.95)
+              .attr('fill', 'none')
+              .attr('data-pair-key', pairKey) // for consistency
+              .style('stroke-linecap', 'round')
+              .style('stroke-linejoin', 'round');
+
+            // draw the main gradient path on top
             highlightedLinesGroup
               .append('path')
               .attr('class', 'highlighted-migration-line')
               .attr('d', pathData)
-              .attr('stroke', pinnedStroke) // use the same yellow as pinned states (#FFD700)
-              .attr('stroke-width', scaledWidth)
-              .attr('stroke-opacity', 0.6) // set opacity to 0.6
+              .attr('stroke', `url(#${highlightGradientId})`) // use new distinctive gradient
+              .attr('stroke-width', backgroundStrokeWidth) // same width as background line
+              .attr('stroke-opacity', 1) // full opacity
               .attr('fill', 'none')
               .attr('data-pair-key', pairKey)
               .style('stroke-linecap', 'round')
-              .style('stroke-linejoin', 'round')
-              .each(function () {
-                console.log(
-                  `successfully highlighted bundled line ${pairKey} with bright yellow and width ${scaledWidth}`
-                );
-              });
+              .style('stroke-linejoin', 'round');
           }
         } else {
-          // this link is not in the bundled paths, create a temporary straight line
+          // this link is not in the bundled paths, create a temporary straight line with gradient
           const originCentroid =
             stateCentroidsRef.current[link.origin.toUpperCase()];
           const destCentroid =
@@ -894,29 +931,83 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
               destCentroid[1] - totalHeight * 0.1,
             ];
 
+            // create gradient for temporary line
+            const tempGradientId = `temp-migration-gradient-${pairKey.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+            const tempGradient = defs
+              .append('linearGradient')
+              .attr('id', tempGradientId)
+              .attr('class', 'migration-gradient')
+              .attr('x1', adjustedOrigin[0])
+              .attr('y1', adjustedOrigin[1])
+              .attr('x2', adjustedDest[0])
+              .attr('y2', adjustedDest[1])
+              .attr('gradientUnits', 'userSpaceOnUse');
+
+            // red at origin (start), blue at destination (end) with full opacity
+            tempGradient
+              .append('stop')
+              .attr('offset', '0%')
+              .attr('stop-color', '#ff0000') // even brighter red for highlighted origin
+              .attr('stop-opacity', 1); // full opacity for highlighting
+
+            tempGradient
+              .append('stop')
+              .attr('offset', '100%')
+              .attr('stop-color', '#0066ff') // even brighter blue for highlighted destination
+              .attr('stop-opacity', 1); // full opacity for highlighting
+
             const straightLinePath = lineGenerator([
               adjustedOrigin,
               adjustedDest,
             ]);
 
             if (straightLinePath) {
-              // create bright yellow highlighted line using straight line path
+              // calculate what the background line width would be for this value
+              let backgroundEquivalentWidth: number;
+              if (globalMaxValue === globalMinValue) {
+                backgroundEquivalentWidth = maxStrokeWidth;
+              } else {
+                const normalizedValue = Math.max(
+                  0,
+                  Math.min(
+                    1,
+                    (link.value - globalMinValue) /
+                      (globalMaxValue - globalMinValue)
+                  )
+                );
+                backgroundEquivalentWidth =
+                  minStrokeWidth +
+                  normalizedValue * (maxStrokeWidth - minStrokeWidth);
+              }
+
+              const temporaryOutlineStrokeWidth = backgroundEquivalentWidth + 2; // 1px outline on each side
+
+              // draw the black outline path first for temporary lines
+              highlightedLinesGroup
+                .append('path')
+                .attr('class', 'highlighted-migration-line-outline temporary')
+                .attr('d', straightLinePath)
+                .attr('stroke', 'black')
+                .attr('stroke-width', temporaryOutlineStrokeWidth)
+                .attr('stroke-opacity', 1)
+                .attr('fill', 'none')
+                .attr('data-pair-key', pairKey)
+                .style('stroke-linecap', 'round')
+                .style('stroke-linejoin', 'round');
+
+              // create highlighted line using temporary gradient with background-equivalent width
               highlightedLinesGroup
                 .append('path')
                 .attr('class', 'highlighted-migration-line temporary')
                 .attr('d', straightLinePath)
-                .attr('stroke', pinnedStroke) // use the same yellow as pinned states (#FFD700)
-                .attr('stroke-width', scaledWidth)
-                .attr('stroke-opacity', 0.6) // set opacity to 0.6
+                .attr('stroke', `url(#${tempGradientId})`) // use temporary gradient
+                .attr('stroke-width', backgroundEquivalentWidth) // same width as background would be
+                .attr('stroke-opacity', 1) // full opacity
                 .attr('fill', 'none')
                 .attr('data-pair-key', pairKey)
                 .style('stroke-linecap', 'round')
-                .style('stroke-linejoin', 'round')
-                .each(function () {
-                  console.log(
-                    `successfully highlighted temporary straight line ${pairKey} with bright yellow and width ${scaledWidth}`
-                  );
-                });
+                .style('stroke-linejoin', 'round');
             }
           }
         }
@@ -1294,14 +1385,13 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup.on('click', (event) => {
         event.stopPropagation();
-        console.log(`era button clicked: ${era}`);
         currentEraRef.current = era;
         setCurrentEra(era);
         if (calculateAndStoreMigrationsRef.current) {
           calculateAndStoreMigrationsRef.current();
         }
         updateInfoPanel();
-        renderVisuals();
+        // just re-render with pre-computed bundled paths for the new era
       });
     });
 
@@ -1469,7 +1559,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   useEffect(() => {
     if (!syncStatus || !doc || !svgRef.current || isInitializedRef.current)
       return;
-    console.log('ustileyjs: initializing base d3 map and tooltip structure');
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('g#map-group').remove();
@@ -1692,7 +1781,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       isInitializedRef.current = true;
       renderVisuals();
 
-      // compute and render bundled paths for all migration flows
+      // compute and render bundled paths for all eras if migration data is loaded
       if (migrationDataLoaded) {
         computeBundledPaths();
         renderAllBundledLines();
@@ -1733,12 +1822,9 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
   // re-render when currentEra changes
   useEffect(() => {
-    console.log(`currentEra changed to: ${currentEra}`);
     if (isInitializedRef.current) {
-      renderVisuals();
-      // recompute bundled paths for new era
-      computeBundledPaths();
-      renderAllBundledLines();
+      renderAllBundledLines(); // ensure background lines for the new era are drawn first
+      renderVisuals(); // then update highlights and other visual elements
     }
   }, [currentEra]);
 
@@ -1746,14 +1832,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   useEffect(() => {
     currentEraRef.current = currentEra;
   }, [currentEra]);
-
-  // recompute bundled paths when migration data is loaded
-  useEffect(() => {
-    if (migrationDataLoaded && isInitializedRef.current) {
-      computeBundledPaths();
-      renderAllBundledLines();
-    }
-  }, [migrationDataLoaded]);
 
   useEffect(() => {
     if (
@@ -1775,7 +1853,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       switch (detail.type) {
         case 'pointerover': {
           if (!handedness) return;
-          console.log('ustileyjs: pointerover interaction');
           const pointerOverDetail = detail as PointerOverDetail;
 
           const statesToAdd: string[] = [];
@@ -1849,8 +1926,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             const era = parentButton?.getAttribute('data-era') as Era;
 
             if (era && ['1960s', '1990s', '2020s'].includes(era)) {
-              console.log(`era button gesture-selected: ${era}`);
-
               // update ref immediately for instant response
               currentEraRef.current = era;
 
@@ -1862,9 +1937,8 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
                 calculateAndStoreMigrationsRef.current();
               }
 
-              // trigger immediate visual update
+              // trigger immediate visual update (no bundled path recomputation needed)
               updateInfoPanel();
-              renderVisuals();
             }
           }
           // check if this is a tile for pinning
@@ -1874,10 +1948,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
             const stateName = getStateName(element as SVGPathElement);
             if (!stateName) return;
-
-            console.log(
-              `tile ${stateName} gesture-selected with ${handedness} hand`
-            );
 
             doc.transact(() => {
               const targetArray =
@@ -1890,11 +1960,9 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
               if (index > -1) {
                 // unpin if already pinned
                 targetArray.delete(index, 1);
-                console.log(`unpinned ${stateName} from ${handedness} hand`);
               } else {
                 // pin if not already pinned
                 targetArray.push([stateName]);
-                console.log(`pinned ${stateName} to ${handedness} hand`);
               }
             }, `pin-toggle-${handedness}`);
 
