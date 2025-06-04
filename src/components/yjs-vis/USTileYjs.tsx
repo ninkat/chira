@@ -346,8 +346,6 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const doc = yjsContext?.doc;
   const [syncStatus, setSyncStatus] = useState<boolean>(false);
   const [migrationDataLoaded, setMigrationDataLoaded] = useState(false);
-  const [currentEra, setCurrentEra] = useState<Era>('2020s');
-  const [currentViewType, setCurrentViewType] = useState<ViewType>('absolute');
 
   const yHoveredLeftStates = doc?.getArray<string>('usTileHoveredLeftStates');
   const yHoveredRightStates = doc?.getArray<string>('usTileHoveredRightStates');
@@ -505,7 +503,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
   const formatMigrationValue = (
     value: number | string,
-    viewType: ViewType = currentViewType
+    viewType: ViewType = currentViewTypeRef.current
   ): string => {
     if (typeof value === 'string') return String(value);
 
@@ -1491,9 +1489,10 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup.on('click', (event) => {
         event.stopPropagation();
-        if (era !== currentEraRef.current) {
-          currentEraRef.current = era;
-          setCurrentEra(era);
+        if (era !== currentEraRef.current && ySharedState) {
+          doc.transact(() => {
+            ySharedState.set('currentEra', era);
+          }, 'era-change');
 
           // immediately update visuals with new era
           renderAllBundledLines();
@@ -1564,9 +1563,10 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup.on('click', (event) => {
         event.stopPropagation();
-        if (viewType !== currentViewTypeRef.current) {
-          currentViewTypeRef.current = viewType;
-          setCurrentViewType(viewType);
+        if (viewType !== currentViewTypeRef.current && ySharedState) {
+          doc.transact(() => {
+            ySharedState.set('currentViewType', viewType);
+          }, 'view-type-change');
 
           // immediately update visuals with new view type
           renderAllBundledLines();
@@ -1986,6 +1986,12 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       if (yTotalMigrationValue && !yTotalMigrationValue.has('value')) {
         yTotalMigrationValue.set('value', 'select states to view data');
       }
+      if (ySharedState && !ySharedState.has('currentEra')) {
+        ySharedState.set('currentEra', '2020s');
+      }
+      if (ySharedState && !ySharedState.has('currentViewType')) {
+        ySharedState.set('currentViewType', 'absolute');
+      }
     }, 'init-yjs-values');
 
     return () => {
@@ -2008,22 +2014,47 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     migrationDataLoaded,
   ]);
 
-  // re-render when currentEra or currentViewType changes
+  // re-render when yjs shared state changes
   useEffect(() => {
-    if (isInitializedRef.current) {
-      renderAllBundledLines(); // just switch to precomputed bundled lines for the new era/view
-      renderVisuals(); // then update highlights and other visual elements
-    }
-  }, [currentEra, currentViewType]);
+    if (!ySharedState) return;
 
-  // sync refs with state
-  useEffect(() => {
-    currentEraRef.current = currentEra;
-  }, [currentEra]);
+    const handleSharedStateChange = () => {
+      if (isInitializedRef.current) {
+        // immediately update refs to ensure we're using the correct era/view type for calculations
+        const era = (ySharedState.get('currentEra') as Era) || '2020s';
+        const viewType =
+          (ySharedState.get('currentViewType') as ViewType) || 'absolute';
 
+        currentEraRef.current = era;
+        currentViewTypeRef.current = viewType;
+
+        renderAllBundledLines(); // just switch to precomputed bundled lines for the new era/view
+        renderVisuals(); // then update highlights and other visual elements
+      }
+    };
+
+    ySharedState.observe(handleSharedStateChange);
+    return () => ySharedState.unobserve(handleSharedStateChange);
+  }, [ySharedState]);
+
+  // sync refs with yjs shared state
   useEffect(() => {
-    currentViewTypeRef.current = currentViewType;
-  }, [currentViewType]);
+    if (!ySharedState) return;
+
+    const updateRefs = () => {
+      const era = (ySharedState.get('currentEra') as Era) || '2020s';
+      const viewType =
+        (ySharedState.get('currentViewType') as ViewType) || 'absolute';
+
+      currentEraRef.current = era;
+      currentViewTypeRef.current = viewType;
+    };
+
+    ySharedState.observe(updateRefs);
+    updateRefs(); // initial sync
+
+    return () => ySharedState.unobserve(updateRefs);
+  }, [ySharedState]);
 
   useEffect(() => {
     if (
@@ -2137,11 +2168,10 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             const era = parentButton?.getAttribute('data-era') as Era;
 
             if (era && ['1960s', '1990s', '2020s'].includes(era)) {
-              // update ref immediately for instant response
-              currentEraRef.current = era;
-
-              // update state for react consistency
-              setCurrentEra(era);
+              // update yjs shared state
+              doc.transact(() => {
+                ySharedState?.set('currentEra', era);
+              }, 'era-change');
 
               // immediately update visuals with new era
               renderAllBundledLines();
@@ -2164,11 +2194,10 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             ) as ViewType;
 
             if (viewType && ['absolute', 'rate'].includes(viewType)) {
-              // update ref immediately for instant response
-              currentViewTypeRef.current = viewType;
-
-              // update state for react consistency
-              setCurrentViewType(viewType);
+              // update yjs shared state
+              doc.transact(() => {
+                ySharedState?.set('currentViewType', viewType);
+              }, 'view-type-change');
 
               // immediately update visuals with new view type
               renderAllBundledLines();
