@@ -28,5 +28,25 @@
     "code": "QF",
     "name": "Qantas",
     "continent": "australia"
+  },
+  {
+    "code": "EK",
+    "name": "Emirates",
+    "continent": "middle east"
+  },
+  {
+    "code": "AC",
+    "name": "Air Canada",
+    "continent": "north america"
+  },
+  {
+    "code": "AF",
+    "name": "Air France",
+    "continent": "europe"
+  },
+  {
+    "code": "NZ",
+    "name": "Air New Zealand",
+    "continent": "new zealand"
   }
 ]

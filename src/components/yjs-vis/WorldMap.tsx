@@ -51,6 +51,63 @@ interface Flight {
   };
 }
 
+// define puzzle description structure
+interface PuzzleDescription {
+  title: string;
+  description: string;
+  friends: {
+    alex: {
+      name: string;
+      description: string;
+      origin_airport: string;
+      available_dates: string[];
+      preferred_airlines: string[];
+      max_budget: number;
+    };
+    bailey: {
+      name: string;
+      description: string;
+      origin_airport: string;
+      available_dates: string[];
+      preferred_airlines: string[];
+      max_budget: number;
+    };
+  };
+  constraints: {
+    destination_region: string;
+    destination_airports: string[];
+    must_arrive_same_day: boolean;
+    must_use_same_airline: boolean;
+    both_must_afford: boolean;
+    both_must_be_available: boolean;
+    common_airlines: string[];
+    overlap_dates: string[];
+  };
+  evaluation_criteria: {
+    valid_solution: {
+      same_destination: string;
+      same_date: string;
+      same_airline: string;
+      within_budgets: string;
+      date_availability: string;
+      airline_preferences: string;
+      european_destination: string;
+    };
+  };
+  hints: {
+    overlap_dates: string;
+    budget_consideration: string;
+    airline_overlap: string;
+    multiple_solutions: string;
+  };
+}
+
+// validation result interface
+interface ValidationResult {
+  isValid: boolean;
+  failedCriteria: string[];
+}
+
 // yjs shared value types
 type WorldMapStateValue = string | number | boolean | null; // arrays will be y.array, not directly in map value for this type
 
@@ -156,6 +213,116 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const allFlights = useRef<Flight[]>([]);
   // all airport data loaded once, used to map iatas to airport objects
   const allAirports = useRef<Airport[]>([]);
+  // puzzle description data
+  const puzzleDescription = useRef<PuzzleDescription | null>(null);
+
+  // state for validation results
+  const [validationResult, setValidationResult] = useState<ValidationResult>({
+    isValid: false,
+    failedCriteria: [],
+  });
+
+  // validation function
+  const validateSelectedFlights = (flights: Flight[]): ValidationResult => {
+    if (!puzzleDescription.current || flights.length !== 2) {
+      return { isValid: false, failedCriteria: [] };
+    }
+
+    const puzzle = puzzleDescription.current;
+    const [flight1, flight2] = flights;
+    const failedCriteria: string[] = [];
+
+    // identify which flight belongs to which friend based on origin airport
+    let alexFlight: Flight | null = null;
+    let baileyFlight: Flight | null = null;
+
+    if (
+      flight1.origin === puzzle.friends.alex.origin_airport &&
+      flight2.origin === puzzle.friends.bailey.origin_airport
+    ) {
+      alexFlight = flight1;
+      baileyFlight = flight2;
+    } else if (
+      flight1.origin === puzzle.friends.bailey.origin_airport &&
+      flight2.origin === puzzle.friends.alex.origin_airport
+    ) {
+      alexFlight = flight2;
+      baileyFlight = flight1;
+    } else {
+      // flights don't match the required origins
+      failedCriteria.push(
+        "flights must originate from alex's and bailey's home airports"
+      );
+      return { isValid: false, failedCriteria };
+    }
+
+    // check same destination
+    if (alexFlight.destination !== baileyFlight.destination) {
+      failedCriteria.push(
+        puzzle.evaluation_criteria.valid_solution.same_destination
+      );
+    }
+
+    // check same date
+    if (alexFlight.date !== baileyFlight.date) {
+      failedCriteria.push(puzzle.evaluation_criteria.valid_solution.same_date);
+    }
+
+    // check same airline
+    if (alexFlight.airline.code !== baileyFlight.airline.code) {
+      failedCriteria.push(
+        puzzle.evaluation_criteria.valid_solution.same_airline
+      );
+    }
+
+    // check within budgets
+    if (alexFlight.price > puzzle.friends.alex.max_budget) {
+      failedCriteria.push(
+        `alex's flight exceeds $${puzzle.friends.alex.max_budget} budget`
+      );
+    }
+    if (baileyFlight.price > puzzle.friends.bailey.max_budget) {
+      failedCriteria.push(
+        `bailey's flight exceeds $${puzzle.friends.bailey.max_budget} budget`
+      );
+    }
+
+    // check date availability for both friends
+    if (!puzzle.friends.alex.available_dates.includes(alexFlight.date)) {
+      failedCriteria.push('date not available for alex');
+    }
+    if (!puzzle.friends.bailey.available_dates.includes(baileyFlight.date)) {
+      failedCriteria.push('date not available for bailey');
+    }
+
+    // check airline preferences
+    if (
+      !puzzle.friends.alex.preferred_airlines.includes(alexFlight.airline.code)
+    ) {
+      failedCriteria.push('airline not preferred by alex');
+    }
+    if (
+      !puzzle.friends.bailey.preferred_airlines.includes(
+        baileyFlight.airline.code
+      )
+    ) {
+      failedCriteria.push('airline not preferred by bailey');
+    }
+
+    // check european destination
+    if (
+      !puzzle.constraints.destination_airports.includes(alexFlight.destination)
+    ) {
+      failedCriteria.push(
+        puzzle.evaluation_criteria.valid_solution.european_destination
+      );
+    }
+
+    return {
+      isValid: failedCriteria.length === 0,
+      failedCriteria,
+    };
+  };
 
   // set up the getCurrentTransform function for interaction handlers
   useEffect(() => {
@@ -180,6 +347,33 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     }, 2000);
     return () => clearTimeout(timeout);
   }, [doc]);
+
+  // effect to monitor selected flights and trigger validation
+  useEffect(() => {
+    if (!ySelectedFlights || !puzzleDescription.current) return;
+
+    const checkValidation = () => {
+      const selectedFlightIds = ySelectedFlights.toArray();
+      if (selectedFlightIds.length === 2) {
+        const selectedFlights = selectedFlightIds
+          .map((id) => allFlights.current.find((f) => f.id === id))
+          .filter(Boolean) as Flight[];
+
+        if (selectedFlights.length === 2) {
+          const result = validateSelectedFlights(selectedFlights);
+          setValidationResult(result);
+        }
+      } else {
+        // reset validation when not exactly 2 flights selected
+        setValidationResult({ isValid: false, failedCriteria: [] });
+      }
+    };
+
+    ySelectedFlights.observeDeep(checkValidation);
+    checkValidation(); // initial check
+
+    return () => ySelectedFlights.unobserveDeep(checkValidation);
+  }, [ySelectedFlights, puzzleDescription.current]);
 
   // effect to sync transform state from yjs
   useEffect(() => {
@@ -1441,13 +1635,17 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       d3.json<WorldTopology>('/src/assets/traveldata/world110.topo.json'),
       d3.json<Airport[]>('/src/assets/situation/airports.json'),
       d3.json<Flight[]>('/src/assets/situation/flights.json'),
+      d3.json<PuzzleDescription>(
+        '/src/assets/situation/puzzle_description.json'
+      ),
     ])
-      .then(([topology, airportsData, flightsData]) => {
+      .then(([topology, airportsData, flightsData, puzzleData]) => {
         if (
           !topology ||
           !topology.objects.countries ||
           !airportsData ||
-          !flightsData
+          !flightsData ||
+          !puzzleData
         ) {
           console.error('failed to load data.');
           return;
@@ -1455,6 +1653,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
         allFlights.current = flightsData;
         allAirports.current = airportsData; // store all airport data
+        puzzleDescription.current = puzzleData; // store puzzle description data
 
         const geoFeature = topojson.feature(
           topology,
@@ -2045,6 +2244,76 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           </filter>
         </defs>
       </svg>
+
+      {/* validation indicator in top right */}
+      {ySelectedFlights && ySelectedFlights.toArray().length === 2 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '0px',
+            right: '0px',
+            zIndex: 1001,
+            background: validationResult.isValid ? '#16a34a' : '#f43f5e',
+            color: 'white',
+            padding: '16px 20px',
+            borderRadius: '0 0 0 12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            maxWidth: '320px',
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          {validationResult.isValid ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '24px' }}>✅</div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Valid Solution!
+                </div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>
+                  congratulations! you found a matching flight pair.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>❌</span>
+                solution invalid
+              </div>
+              <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
+                {validationResult.failedCriteria.length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                    {validationResult.failedCriteria.map((criteria, index) => (
+                      <li key={index} style={{ marginBottom: '4px' }}>
+                        {criteria}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  'select exactly 2 flights to validate.'
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 };

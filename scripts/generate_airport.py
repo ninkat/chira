@@ -11,6 +11,8 @@ airports = [
     {"IATA": "YVR", "Airport Name": "Vancouver International Airport", "City": "Vancouver", "Latitude": 49.1947, "Longitude": -123.1792},
     {"IATA": "JFK", "Airport Name": "John Fortnite Kennedy International Airport", "City": "New York", "Latitude": 40.6413, "Longitude": -73.7781},
     {"IATA": "LAX", "Airport Name": "Los Angeles International Airport", "City": "Los Angeles", "Latitude": 33.9416, "Longitude": -118.4085},
+    {"IATA": "ORD", "Airport Name": "O'Hare International Airport", "City": "Chicago", "Latitude": 40.9762, "Longitude": -87.9073},
+    {"IATA": "DFW", "Airport Name": "Dallas/Fort Worth International Airport", "City": "Dallas", "Latitude": 32.8998, "Longitude": -97.0403},
     
     # europe
     {"IATA": "LHR", "Airport Name": "Heathrow Airport", "City": "London", "Latitude": 51.4700, "Longitude": -0.4543},
@@ -25,11 +27,21 @@ airports = [
     {"IATA": "WAW", "Airport Name": "Warsaw Chopin Airport", "City": "Warsaw", "Latitude": 52.1657, "Longitude": 20.9671},
     {"IATA": "BUD", "Airport Name": "Budapest Ferenc Liszt International", "City": "Budapest", "Latitude": 47.4298, "Longitude": 19.2610},
     {"IATA": "SVO", "Airport Name": "Sheremetyevo International Airport", "City": "Moscow", "Latitude": 55.9728, "Longitude": 37.4147},
+    {"IATA": "FCO", "Airport Name": "Leonardo da Vinci International Airport", "City": "Rome", "Latitude": 42.3601, "Longitude": 12.2429},
+    {"IATA": "ARN", "Airport Name": "Stockholm Arlanda Airport", "City": "Stockholm", "Latitude": 59.6519, "Longitude": 17.9186},
+    
+    # middle east
+    {"IATA": "DXB", "Airport Name": "Dubai International Airport", "City": "Dubai", "Latitude": 25.2532, "Longitude": 55.3657},
+    {"IATA": "DOH", "Airport Name": "Hamad International Airport", "City": "Doha", "Latitude": 25.2731, "Longitude": 51.6080},
+    {"IATA": "TLV", "Airport Name": "Ben Gurion Airport", "City": "Tel Aviv", "Latitude": 32.0004, "Longitude": 34.8706},
     
     # south america
     {"IATA": "GRU", "Airport Name": "São Paulo/Guarulhos International Airport", "City": "São Paulo", "Latitude": -23.4356, "Longitude": -46.4731},
     {"IATA": "EZE", "Airport Name": "Ezeiza International Airport", "City": "Buenos Aires", "Latitude": -34.8222, "Longitude": -58.5358},
     {"IATA": "BOG", "Airport Name": "El Dorado International Airport", "City": "Bogotá", "Latitude": 4.7016, "Longitude": -74.1469},
+    {"IATA": "LIM", "Airport Name": "Jorge Chávez International Airport", "City": "Lima", "Latitude": -12.0219, "Longitude": -77.1143},
+    {"IATA": "SCL", "Airport Name": "Arturo Merino Benítez International Airport", "City": "Santiago", "Latitude": -33.3928, "Longitude": -70.7856},
+    {"IATA": "GIG", "Airport Name": "Rio de Janeiro/Galeão International Airport", "City": "Rio de Janeiro", "Latitude": -22.8099, "Longitude": -43.2506},
     
     # africa
     {"IATA": "CAI", "Airport Name": "Cairo International Airport", "City": "Cairo", "Latitude": 30.1219, "Longitude": 31.4056},
@@ -46,10 +58,17 @@ airports = [
     {"IATA": "BKK", "Airport Name": "Suvarnabhumi Airport", "City": "Bangkok", "Latitude": 13.6900, "Longitude": 100.7501},
     {"IATA": "DEL", "Airport Name": "Indira Gandhi International Airport", "City": "New Delhi", "Latitude": 28.5562, "Longitude": 77.1000},
     {"IATA": "MNL", "Airport Name": "Ninoy Aquino International Airport", "City": "Manila", "Latitude": 14.5086, "Longitude": 121.0194},
+    {"IATA": "HKG", "Airport Name": "Hong Kong International Airport", "City": "Hong Kong", "Latitude": 22.3080, "Longitude": 113.9185},
+    {"IATA": "KUL", "Airport Name": "Kuala Lumpur International Airport", "City": "Kuala Lumpur", "Latitude": 2.7456, "Longitude": 101.7072},
+    {"IATA": "CGK", "Airport Name": "Soekarno-Hatta International Airport", "City": "Jakarta", "Latitude": -6.1256, "Longitude": 106.6558},
+    {"IATA": "BOM", "Airport Name": "Chhatrapati Shivaji Maharaj International Airport", "City": "Mumbai", "Latitude": 19.0896, "Longitude": 72.8656},
     
     # australia
     {"IATA": "SYD", "Airport Name": "Sydney Kingsford Smith Airport", "City": "Sydney", "Latitude": -33.9399, "Longitude": 151.1753},
-    {"IATA": "PER", "Airport Name": "Perth Airport", "City": "Perth", "Latitude": -31.9403, "Longitude": 115.9669}
+    {"IATA": "PER", "Airport Name": "Perth Airport", "City": "Perth", "Latitude": -31.9403, "Longitude": 115.9669},
+    
+    # new zealand
+    {"IATA": "AKL", "Airport Name": "Auckland Airport", "City": "Auckland", "Latitude": -37.0082, "Longitude": 174.7850}
 ]
 
 # define airlines with continental dominance
@@ -59,177 +78,343 @@ airlines = [
     {"code": "LA", "name": "LATAM Airlines", "continent": "south america"},
     {"code": "ET", "name": "Ethiopian Airlines", "continent": "africa"},
     {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"},
-    {"code": "QF", "name": "Qantas", "continent": "australia"}
+    {"code": "QF", "name": "Qantas", "continent": "australia"},
+    {"code": "EK", "name": "Emirates", "continent": "middle east"},
+    {"code": "AC", "name": "Air Canada", "continent": "north america"},
+    {"code": "AF", "name": "Air France", "continent": "europe"},
+    {"code": "NZ", "name": "Air New Zealand", "continent": "new zealand"}
 ]
 
-# map airports to continents for airline assignment
-airport_continent_map = {
-    # north america
-    "YYZ": "north america", "YVR": "north america", "JFK": "north america", "LAX": "north america",
-    # europe
-    "LHR": "europe", "CDG": "europe", "AMS": "europe", "FRA": "europe", "MAD": "europe", 
-    "ZRH": "europe", "LIS": "europe", "VIE": "europe", "PRG": "europe", "WAW": "europe", 
-    "BUD": "europe", "SVO": "europe",
-    # south america
-    "GRU": "south america", "EZE": "south america", "BOG": "south america",
-    # africa
-    "CAI": "africa", "JNB": "africa", "CMN": "africa", "NBO": "africa",
-    # asia
-    "NRT": "asia", "ICN": "asia", "PEK": "asia", "PVG": "asia", "SIN": "asia", 
-    "BKK": "asia", "DEL": "asia", "MNL": "asia",
-    # australia
-    "SYD": "australia", "PER": "australia"
+# PUZZLE SCENARIO DEFINITION
+PUZZLE_CONFIG = {
+    "friend_a": {
+        "origin": "YYZ",  # toronto
+        "name": "Alex",
+        "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
+        "preferred_airlines": ["AA", "AC"],  # american airlines, air canada
+        "max_budget": 1500,
+        "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500"
+    },
+    "friend_b": {
+        "origin": "LAX",  # los angeles
+        "name": "Bailey",
+        "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
+        "preferred_airlines": ["AC", "LH"],  # air canada, lufthansa
+        "max_budget": 1800,
+        "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800"
+    },
+    "destination_region": "europe",
+    "common_airline": "AC",  # air canada
+    "overlap_dates": ["2025-06-10", "2025-06-11", "2025-06-12"],  # when both are available
+    "solution_destinations": [
+        {"airport": "LHR", "date": "2025-06-10"},  # london
+        {"airport": "ARN", "date": "2025-06-11"},  # stockholm  
+        {"airport": "FRA", "date": "2025-06-12"}   # frankfurt
+    ]
 }
 
-def get_dominant_airline(origin_iata: str, destination_iata: str) -> dict:
-    """
-    determine the dominant airline for a route based on continental dominance rules.
-    the airline from the origin's continent gets higher probability.
-    """
-    origin_continent = airport_continent_map.get(origin_iata, "unknown")
-    dest_continent = airport_continent_map.get(destination_iata, "unknown")
-    
-    # find airlines for each continent
-    origin_airline = next((a for a in airlines if a["continent"] == origin_continent), None)
-    dest_airline = next((a for a in airlines if a["continent"] == dest_continent), None)
-    
-    # determine which airline to use based on dominance rules
-    if origin_continent == dest_continent and origin_airline:
-        # same continent - use that continent's airline with high probability
-        if random.random() < 0.8:
-            return origin_airline
-    elif origin_airline and dest_airline:
-        # different continents - origin airline gets 60% probability
-        if random.random() < 0.6:
-            return origin_airline
-        else:
-            return dest_airline
-    elif origin_airline:
-        return origin_airline
-    elif dest_airline:
-        return dest_airline
-    
-    # fallback to random airline if no continent match
-    return random.choice(airlines)
+# european airports for the puzzle
+EUROPEAN_AIRPORTS = ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PRG", "WAW", "BUD", "SVO", "FCO", "ARN"]
+
+# define points of interest (routes that should have many flights)
+POINTS_OF_INTEREST = {
+    "YYZ": EUROPEAN_AIRPORTS,  # toronto to all european cities
+    "LAX": EUROPEAN_AIRPORTS,  # los angeles to all european cities
+}
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    """
-    Calculate the great-circle distance between two points on Earth using the Haversine formula.
-    Returns distance in kilometers.
-    """
-    # Convert latitude and longitude from degrees to radians
+    """calculate the great-circle distance between two points on earth using the haversine formula."""
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    
-    # Haversine formula
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
     c = 2 * math.asin(math.sqrt(a))
-    r = 6371  # Earth's radius in kilometers
+    r = 6371  # earth's radius in kilometers
     return c * r
 
 def calculate_flight_time(distance_km):
-    """
-    Calculate realistic flight time based on distance.
-    Assumes average speed of 800 km/h for long-haul flights and 600 km/h for short-haul.
-    Adds random deviation and minimum flight time.
-    """
-    # Base speed in km/h (varies by distance)
+    """calculate realistic flight time based on distance."""
     base_speed = 800 if distance_km > 2000 else 600
-    
-    # Calculate base time in hours
     base_time = distance_km / base_speed
-    
-    # Add random deviation (±15%)
     deviation = random.uniform(-0.15, 0.15)
     flight_time = base_time * (1 + deviation)
-    
-    # Ensure minimum flight time of 1 hour
     return max(1.0, round(flight_time, 1))
 
-def calculate_flight_price(distance_km, flight_time):
-    """
-    Calculate realistic flight price based on distance and flight time.
-    Base price per km decreases with distance and tapers off for very long flights.
-    """
-    # Base price per km with stronger tapering for longer distances
-    base_price_per_km = 0.15 * (1 - min(0.5, distance_km / 8000))
-    
-    # Calculate base price with distance tapering
+def calculate_flight_price(distance_km, flight_time, is_solution=False):
+    """calculate flight price, with special handling for solution flights."""
+    base_price_per_km = 0.25 * (1 - min(0.4, distance_km / 8000))
     base_price = distance_km * base_price_per_km
-    
-    # Add premium for longer flights with diminishing returns
-    # The premium increases more slowly for longer flights
-    time_multiplier = 1 + (flight_time / 15)  # Reduced from 10 to 15 for slower increase
-    
-    # Add random variation (±15%)
-    variation = random.uniform(-0.15, 0.15)
-    
-    # Calculate final price with additional tapering for very long flights
+    time_multiplier = 1 + (flight_time / 8)
+    variation = random.uniform(-0.20, 0.20)
     final_price = base_price * time_multiplier * (1 + variation)
     
-    # Apply additional tapering for very long flights
     if distance_km > 4000:
-        # Reduce price for very long flights
-        tapering_factor = 1 - min(0.3, (distance_km - 4000) / 10000)
+        tapering_factor = 1 - min(0.15, (distance_km - 4000) / 15000)
         final_price *= tapering_factor
     
-    # Ensure minimum price of $100 and maximum of $1200
-    return round(max(100, min(1200, final_price)), 2)
-
-# Step 2: Generate 5000 random flights
-def random_date(start, end):
-    delta = end - start
-    return start + timedelta(days=random.randint(0, delta.days))
-
-start_date = datetime(2025, 6, 1)
-end_date = datetime(2025, 6, 14)
-iata_codes = [a["IATA"] for a in airports]
-airport_dict = {a["IATA"]: a for a in airports}
-
-flights = []
-flight_keys = set()
-flight_id = 1  # initialize flight id counter
-
-while len(flights) < 5000:
-    origin, destination = random.sample(iata_codes, 2)
-    date = random_date(start_date, end_date).strftime("%Y-%m-%d")
-    key = (origin, destination, date)
-    if key in flight_keys:
-        continue
-    flight_keys.add(key)
+    # special pricing for solution flights to ensure they fit budget constraints
+    if is_solution:
+        # ensure friend a's flight is under $1500 and friend b's is under $1800
+        if final_price > 1400:  # leave some buffer
+            final_price = random.uniform(1200, 1400)
+        elif final_price < 800:  # ensure it's not suspiciously cheap
+            final_price = random.uniform(800, 1200)
     
-    # Get coordinates for both airports
-    origin_airport = airport_dict[origin]
-    dest_airport = airport_dict[destination]
-    
-    # Calculate distance and flight time
-    distance = calculate_distance(
-        origin_airport["Latitude"],
-        origin_airport["Longitude"],
-        dest_airport["Latitude"],
-        dest_airport["Longitude"]
-    )
-    flight_time = calculate_flight_time(distance)
-    price = calculate_flight_price(distance, flight_time)
-    
-    # get dominant airline for the route
-    airline = get_dominant_airline(origin, destination)
-    
-    flights.append({
-        "id": flight_id,  # add unique flight id
-        "origin": origin,
-        "destination": destination,
-        "price": price,
-        "duration": flight_time,
-        "date": date,
-        "distance_km": round(distance, 1),  # add distance for reference
-        "airline": airline
-    })
-    flight_id += 1  # increment flight id counter
+    return round(max(200, min(2500, final_price)), 2)
 
-# Step 3: Save to JSON files
-# ensure the directory exists
+def get_airline_for_route(origin, destination, force_airline=None):
+    """get airline for a route, with option to force specific airline."""
+    if force_airline:
+        return next(a for a in airlines if a["code"] == force_airline)
+    
+    # for puzzle routes, prefer the relevant airlines
+    if origin in ["YYZ", "LAX"] and destination in EUROPEAN_AIRPORTS:
+        if origin == "YYZ":
+            return random.choice([a for a in airlines if a["code"] in ["AA", "AC"]])
+        elif origin == "LAX":
+            return random.choice([a for a in airlines if a["code"] in ["AC", "LH"]])
+    
+    # fallback to random airline
+    return random.choice(airlines)
+
+def generate_solution_flights():
+    """generate multiple solution flights that satisfy the puzzle constraints."""
+    flights = []
+    flight_id = 1
+    
+    config = PUZZLE_CONFIG
+    airport_dict = {a["IATA"]: a for a in airports}
+    
+    # generate solution flights for each destination
+    for solution in config["solution_destinations"]:
+        destination = solution["airport"]
+        date = solution["date"]
+        
+        # solution flight for friend a (toronto to destination on air canada)
+        origin_a = airport_dict[config["friend_a"]["origin"]]
+        dest = airport_dict[destination]
+        distance_a = calculate_distance(origin_a["Latitude"], origin_a["Longitude"], 
+                                       dest["Latitude"], dest["Longitude"])
+        flight_time_a = calculate_flight_time(distance_a)
+        price_a = calculate_flight_price(distance_a, flight_time_a, is_solution=True)
+        
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_a"]["origin"],
+            "destination": destination,
+            "price": price_a,
+            "duration": flight_time_a,
+            "date": date,
+            "distance_km": round(distance_a, 1),
+            "airline": {"code": "AC", "name": "Air Canada", "continent": "north america"}
+        })
+        flight_id += 1
+        
+        # solution flight for friend b (los angeles to destination on air canada)
+        origin_b = airport_dict[config["friend_b"]["origin"]]
+        distance_b = calculate_distance(origin_b["Latitude"], origin_b["Longitude"], 
+                                       dest["Latitude"], dest["Longitude"])
+        flight_time_b = calculate_flight_time(distance_b)
+        price_b = calculate_flight_price(distance_b, flight_time_b, is_solution=True)
+        
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_b"]["origin"],
+            "destination": destination,
+            "price": price_b,
+            "duration": flight_time_b,
+            "date": date,
+            "distance_km": round(distance_b, 1),
+            "airline": {"code": "AC", "name": "Air Canada", "continent": "north america"}
+        })
+        flight_id += 1
+    
+    return flights, flight_id
+
+def generate_interest_flights(start_flight_id):
+    """generate many flights for points of interest (origin cities to european destinations)."""
+    flights = []
+    flight_id = start_flight_id
+    airport_dict = {a["IATA"]: a for a in airports}
+    
+    # generate dates around the puzzle timeframe
+    all_dates = []
+    for i in range(-7, 15):  # week before to 2 weeks after
+        date = datetime(2025, 6, 8) + timedelta(days=i)
+        all_dates.append(date.strftime("%Y-%m-%d"))
+    
+    # generate many flights for each interest route
+    for origin in POINTS_OF_INTEREST:
+        for destination in POINTS_OF_INTEREST[origin]:
+            # generate 25-40 flights per route to make search more interesting
+            num_flights = random.randint(25, 40)
+            
+            # track which dates we've used for solution routes to avoid duplicates
+            solution_dates_used = set()
+            
+            # check if this route matches any solution routes
+            for solution in PUZZLE_CONFIG["solution_destinations"]:
+                if ((origin == PUZZLE_CONFIG["friend_a"]["origin"] and 
+                     destination == solution["airport"]) or 
+                    (origin == PUZZLE_CONFIG["friend_b"]["origin"] and 
+                     destination == solution["airport"])):
+                    solution_dates_used.add(solution["date"])
+            
+            for _ in range(num_flights):
+                origin_airport = airport_dict[origin]
+                dest_airport = airport_dict[destination]
+                distance = calculate_distance(origin_airport["Latitude"], origin_airport["Longitude"],
+                                            dest_airport["Latitude"], dest_airport["Longitude"])
+                flight_time = calculate_flight_time(distance)
+                price = calculate_flight_price(distance, flight_time)
+                
+                # ensure we don't duplicate the exact solution flight
+                date = random.choice(all_dates)
+                
+                # avoid duplicating any solution flights
+                attempts = 0
+                while date in solution_dates_used and attempts < 10:
+                    date = random.choice(all_dates)
+                    attempts += 1
+                
+                airline = get_airline_for_route(origin, destination)
+                
+                flights.append({
+                    "id": flight_id,
+                    "origin": origin,
+                    "destination": destination,
+                    "price": price,
+                    "duration": flight_time,
+                    "date": date,
+                    "distance_km": round(distance, 1),
+                    "airline": airline
+                })
+                flight_id += 1
+    
+    return flights, flight_id
+
+def generate_filler_flights(start_flight_id, target_total=5000):
+    """generate filler flights for other routes with limited quantities."""
+    flights = []
+    flight_id = start_flight_id
+    airport_dict = {a["IATA"]: a for a in airports}
+    iata_codes = [a["IATA"] for a in airports]
+    
+    # generate dates
+    all_dates = []
+    for i in range(-14, 30):  # 2 weeks before to month after
+        date = datetime(2025, 6, 8) + timedelta(days=i)
+        all_dates.append(date.strftime("%Y-%m-%d"))
+    
+    # track routes we've already covered
+    covered_routes = set()
+    for origin in POINTS_OF_INTEREST:
+        for destination in POINTS_OF_INTEREST[origin]:
+            covered_routes.add((origin, destination))
+    
+    # add solution routes
+    for solution in PUZZLE_CONFIG["solution_destinations"]:
+        covered_routes.add((PUZZLE_CONFIG["friend_a"]["origin"], solution["airport"]))
+        covered_routes.add((PUZZLE_CONFIG["friend_b"]["origin"], solution["airport"]))
+    
+    while len(flights) < (target_total - start_flight_id + 1):
+        origin, destination = random.sample(iata_codes, 2)
+        route = (origin, destination)
+        
+        # skip if already covered or if we've generated enough for this route
+        existing_count = sum(1 for f in flights if f["origin"] == origin and f["destination"] == destination)
+        if route in covered_routes or existing_count >= 5:
+            continue
+        
+        origin_airport = airport_dict[origin]
+        dest_airport = airport_dict[destination]
+        distance = calculate_distance(origin_airport["Latitude"], origin_airport["Longitude"],
+                                    dest_airport["Latitude"], dest_airport["Longitude"])
+        flight_time = calculate_flight_time(distance)
+        price = calculate_flight_price(distance, flight_time)
+        date = random.choice(all_dates)
+        airline = get_airline_for_route(origin, destination)
+        
+        flights.append({
+            "id": flight_id,
+            "origin": origin,
+            "destination": destination,
+            "price": price,
+            "duration": flight_time,
+            "date": date,
+            "distance_km": round(distance, 1),
+            "airline": airline
+        })
+        flight_id += 1
+    
+    return flights
+
+# generate all flights
+print("🔍 generating puzzle flights...")
+solution_flights, next_id = generate_solution_flights()
+print(f"✅ generated {len(solution_flights)} solution flights")
+
+interest_flights, next_id = generate_interest_flights(next_id)
+print(f"✅ generated {len(interest_flights)} interest flights")
+
+filler_flights = generate_filler_flights(next_id, 5000)
+print(f"✅ generated {len(filler_flights)} filler flights")
+
+all_flights = solution_flights + interest_flights + filler_flights
+print(f"📊 total flights generated: {len(all_flights)}")
+
+# create puzzle description
+puzzle_description = {
+    "title": "European Rendezvous Challenge",
+    "description": "Two friends want to meet in Europe for a vacation. Help them find flights that work for both!",
+    "friends": {
+        "alex": {
+            "name": "Alex",
+            "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500",
+            "origin_airport": "YYZ",
+            "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
+            "preferred_airlines": ["AA", "AC"],
+            "max_budget": 1500
+        },
+        "bailey": {
+            "name": "Bailey", 
+            "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800",
+            "origin_airport": "LAX",
+            "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
+            "preferred_airlines": ["AC", "LH"],
+            "max_budget": 1800
+        }
+    },
+    "constraints": {
+        "destination_region": "europe",
+        "destination_airports": ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PRG", "WAW", "BUD", "SVO", "FCO", "ARN"],
+        "must_arrive_same_day": True,
+        "must_use_same_airline": True,
+        "both_must_afford": True,
+        "both_must_be_available": True,
+        "common_airlines": ["AC"],
+        "overlap_dates": ["2025-06-10", "2025-06-11", "2025-06-12"]
+    },
+    "evaluation_criteria": {
+        "valid_solution": {
+            "same_destination": "flights must go to the same european airport",
+            "same_date": "flights must be on the same date", 
+            "same_airline": "flights must be on the same airline",
+            "within_budgets": "alex's flight <= $1500, bailey's flight <= $1800",
+            "date_availability": "date must be in both friends' available dates",
+            "airline_preferences": "airline must be in both friends' preferred airlines",
+            "european_destination": "destination must be a european airport"
+        }
+    },
+    "hints": {
+        "overlap_dates": "look for dates when both friends are available (june 10-12)",
+        "budget_consideration": "both friends need to stay within their budgets",
+        "airline_overlap": "find the airline both friends can use (air canada)",
+        "multiple_solutions": "there may be several valid combinations - any that meet all criteria work!"
+    }
+}
+
+# save to json files
 os.makedirs("assets", exist_ok=True)
 
 try:
@@ -240,9 +425,22 @@ try:
         json.dump(airlines, f, indent=2)
 
     with open("assets/flights.json", "w") as f:
-        json.dump(flights, f, indent=2)
+        json.dump(all_flights, f, indent=2)
+    
+    with open("assets/puzzle_description.json", "w") as f:
+        json.dump(puzzle_description, f, indent=2)
 
-    print("✅ airports.json, airlines.json, and flights.json have been created.")
+    print("✅ all files created successfully!")
+    print("\n🎯 PUZZLE SCENARIO:")
+    print("=" * 50)
+    print(f"🏠 Alex {puzzle_description['friends']['alex']['description']}")
+    print(f"🏠 Bailey {puzzle_description['friends']['bailey']['description']}")
+    print(f"🎯 Goal: Meet in {puzzle_description['constraints']['destination_region']}")
+    print(f"✈️  Must use same airline and arrive same day")
+    print(f"💡 Hint: Look for {puzzle_description['constraints']['common_airlines'][0]}")
+    print(f"🎲 Multiple solutions exist - any valid combination works!")
+    print("=" * 50)
+    
 except Exception as e:
-    print(f"❌ Error writing files: {e}")
-    print(f"Current working directory: {os.getcwd()}")
+    print(f"❌ error writing files: {e}")
+    print(f"current working directory: {os.getcwd()}")

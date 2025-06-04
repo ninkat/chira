@@ -1,0 +1,88 @@
+{
+  "title": "European Rendezvous Challenge",
+  "description": "Two friends want to meet in Europe for a vacation. Help them find flights that work for both!",
+  "friends": {
+    "alex": {
+      "name": "Alex",
+      "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500",
+      "origin_airport": "YYZ",
+      "available_dates": [
+        "2025-06-08",
+        "2025-06-09",
+        "2025-06-10",
+        "2025-06-11",
+        "2025-06-12"
+      ],
+      "preferred_airlines": [
+        "AA",
+        "AC"
+      ],
+      "max_budget": 1500
+    },
+    "bailey": {
+      "name": "Bailey",
+      "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800",
+      "origin_airport": "LAX",
+      "available_dates": [
+        "2025-06-10",
+        "2025-06-11",
+        "2025-06-12",
+        "2025-06-13",
+        "2025-06-14"
+      ],
+      "preferred_airlines": [
+        "AC",
+        "LH"
+      ],
+      "max_budget": 1800
+    }
+  },
+  "constraints": {
+    "destination_region": "europe",
+    "destination_airports": [
+      "LHR",
+      "CDG",
+      "AMS",
+      "FRA",
+      "MAD",
+      "ZRH",
+      "LIS",
+      "VIE",
+      "PRG",
+      "WAW",
+      "BUD",
+      "SVO",
+      "FCO",
+      "ARN"
+    ],
+    "must_arrive_same_day": true,
+    "must_use_same_airline": true,
+    "both_must_afford": true,
+    "both_must_be_available": true,
+    "common_airlines": [
+      "AC"
+    ],
+    "overlap_dates": [
+      "2025-06-10",
+      "2025-06-11",
+      "2025-06-12"
+    ]
+  },
+  "evaluation_criteria": {
+    "valid_solution": {
+      "same_destination": "flights must go to the same european airport",
+      "same_date": "flights must be on the same date",
+      "same_airline": "flights must be on the same airline",
+      "within_budgets": "alex's flight <= $1500, bailey's flight <= $1800",
+      "date_availability": "date must be in both friends' available dates",
+      "airline_preferences": "airline must be in both friends' preferred airlines",
+      "european_destination": "destination must be a european airport"
+    }
+  },
+  "hints": {
+    "overlap_dates": "look for dates when both friends are available (june 10-12)",
+    "budget_consideration": "both friends need to stay within their budgets",
+    "airline_overlap": "find the airline both friends can use (air canada)",
+    "multiple_solutions": "there may be several valid combinations - any that meet all criteria work!"
+  }
+}
