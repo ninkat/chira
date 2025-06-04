@@ -34,6 +34,7 @@ import Court from '@/components/yjs-vis/Court';
 import Subreddit from '@/components/yjs-vis/Subreddit';
 import USTileYjs from '@/components/yjs-vis/USTileYjs';
 import AusPol from '@/components/yjs-vis/AusPol';
+import Tutorial from '@/components/yjs-vis/Tutorial';
 import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
 
@@ -51,7 +52,8 @@ type VisualizationType =
   | 'court'
   | 'subreddit'
   | 'ustileyjs'
-  | 'auspol';
+  | 'auspol'
+  | 'tutorial';
 
 // main display component that:
 // - manages webcam feed
@@ -82,7 +84,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [currentVisualization, setCurrentVisualization] =
-    useState<VisualizationType>('ustileyjs');
+    useState<VisualizationType>('tutorial');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
@@ -391,6 +393,9 @@ const Display: React.FC = () => {
           )}
           {currentVisualization === 'auspol' && (
             <AusPol getCurrentTransformRef={getCurrentTransformRef} />
+          )}
+          {currentVisualization === 'tutorial' && (
+            <Tutorial getCurrentTransformRef={getCurrentTransformRef} />
           )}
         </div>
       </YjsProvider>

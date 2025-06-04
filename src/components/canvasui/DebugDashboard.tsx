@@ -43,7 +43,8 @@ interface DebugDashboardProps {
     | 'court'
     | 'subreddit'
     | 'ustileyjs'
-    | 'auspol';
+    | 'auspol'
+    | 'tutorial';
   onVisualizationSelect: (
     visualization:
       | 'senate'
@@ -53,6 +54,7 @@ interface DebugDashboardProps {
       | 'subreddit'
       | 'ustileyjs'
       | 'auspol'
+      | 'tutorial'
   ) => void;
 }
 
@@ -339,6 +341,7 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                         | 'subreddit'
                         | 'ustileyjs'
                         | 'auspol'
+                        | 'tutorial'
                     )
                   }
                   style={{
@@ -355,13 +358,14 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     transition: 'all 0.2s ease',
                   }}
                 >
-                  <option value='senate'>us senate</option>
-                  <option value='worldmap'>travel map</option>
-                  <option value='movies'>movie graph</option>
-                  <option value='court'>court visualization</option>
-                  <option value='subreddit'>subreddit</option>
-                  <option value='ustileyjs'>us migration</option>
-                  <option value='auspol'>australian house</option>
+                  <option value='worldmap'>🌎travel map</option>
+                  <option value='ustileyjs'>🔁us migration</option>
+                  <option value='tutorial'>⚙️tutorial</option>
+                  <option value='senate'>🏛️us senate</option>
+                  <option value='movies'>🎥movie graph</option>
+                  <option value='court'>💬court visualization</option>
+                  <option value='subreddit'>💬subreddit</option>
+                  <option value='auspol'>🇦🇺australian house</option>
                 </select>
               </div>
             </div>
