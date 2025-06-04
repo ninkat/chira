@@ -89,19 +89,19 @@ airlines = [
 PUZZLE_CONFIG = {
     "friend_a": {
         "origin": "YYZ",  # toronto
-        "name": "Alex",
+        "name": "User 1",
         "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
         "preferred_airlines": ["AA", "AC"],  # american airlines, air canada
         "max_budget": 1500,
         "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500"
     },
     "friend_b": {
-        "origin": "LAX",  # los angeles
-        "name": "Bailey",
+        "origin": "YYZ",  # toronto (same as friend_a now)
+        "name": "User 2",
         "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
         "preferred_airlines": ["AC", "LH"],  # air canada, lufthansa
         "max_budget": 1800,
-        "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800"
+        "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1800"
     },
     "destination_region": "europe",
     "common_airline": "AC",  # air canada
@@ -119,7 +119,6 @@ EUROPEAN_AIRPORTS = ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PR
 # define points of interest (routes that should have many flights)
 POINTS_OF_INTEREST = {
     "YYZ": EUROPEAN_AIRPORTS,  # toronto to all european cities
-    "LAX": EUROPEAN_AIRPORTS,  # los angeles to all european cities
 }
 
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -168,11 +167,8 @@ def get_airline_for_route(origin, destination, force_airline=None):
         return next(a for a in airlines if a["code"] == force_airline)
     
     # for puzzle routes, prefer the relevant airlines
-    if origin in ["YYZ", "LAX"] and destination in EUROPEAN_AIRPORTS:
-        if origin == "YYZ":
-            return random.choice([a for a in airlines if a["code"] in ["AA", "AC"]])
-        elif origin == "LAX":
-            return random.choice([a for a in airlines if a["code"] in ["AC", "LH"]])
+    if origin == "YYZ" and destination in EUROPEAN_AIRPORTS:
+        return random.choice([a for a in airlines if a["code"] in ["AA", "AC", "LH"]])
     
     # fallback to random airline
     return random.choice(airlines)
@@ -210,7 +206,7 @@ def generate_solution_flights():
         })
         flight_id += 1
         
-        # solution flight for friend b (los angeles to destination on air canada)
+        # solution flight for friend b (toronto to destination on air canada)
         origin_b = airport_dict[config["friend_b"]["origin"]]
         distance_b = calculate_distance(origin_b["Latitude"], origin_b["Longitude"], 
                                        dest["Latitude"], dest["Longitude"])
@@ -365,51 +361,45 @@ print(f"📊 total flights generated: {len(all_flights)}")
 
 # create puzzle description
 puzzle_description = {
-    "title": "European Rendezvous Challenge",
-    "description": "Two friends want to meet in Europe for a vacation. Help them find flights that work for both!",
+    "title": "Travel Rendezvous Challenge",
+    "description": "Two users want to meet for a vacation. Help them find flights that work for both!",
     "friends": {
-        "alex": {
-            "name": "Alex",
+        "user_1": {
+            "name": "User 1",
             "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500",
             "origin_airport": "YYZ",
             "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
             "preferred_airlines": ["AA", "AC"],
             "max_budget": 1500
         },
-        "bailey": {
-            "name": "Bailey", 
-            "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800",
-            "origin_airport": "LAX",
+        "user_2": {
+            "name": "User 2", 
+            "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1800",
+            "origin_airport": "YYZ",
             "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
             "preferred_airlines": ["AC", "LH"],
             "max_budget": 1800
         }
     },
     "constraints": {
-        "destination_region": "europe",
-        "destination_airports": ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PRG", "WAW", "BUD", "SVO", "FCO", "ARN"],
         "must_arrive_same_day": True,
-        "must_use_same_airline": True,
         "both_must_afford": True,
         "both_must_be_available": True,
-        "common_airlines": ["AC"],
         "overlap_dates": ["2025-06-10", "2025-06-11", "2025-06-12"]
     },
     "evaluation_criteria": {
         "valid_solution": {
-            "same_destination": "flights must go to the same european airport",
+            "same_destination": "flights must go to the same destination airport",
             "same_date": "flights must be on the same date", 
-            "same_airline": "flights must be on the same airline",
-            "within_budgets": "alex's flight <= $1500, bailey's flight <= $1800",
-            "date_availability": "date must be in both friends' available dates",
-            "airline_preferences": "airline must be in both friends' preferred airlines",
-            "european_destination": "destination must be a european airport"
+            "within_budgets": "user_1's flight <= $1500, user_2's flight <= $1800",
+            "date_availability": "date must be in both users' available dates",
+            "airline_preferences": "each user must use one of their preferred airlines"
         }
     },
     "hints": {
-        "overlap_dates": "look for dates when both friends are available (june 10-12)",
-        "budget_consideration": "both friends need to stay within their budgets",
-        "airline_overlap": "find the airline both friends can use (air canada)",
+        "overlap_dates": "look for dates when both users are available (june 10-12)",
+        "budget_consideration": "both users need to stay within their budgets",
+        "airline_preferences": "each user must use one of their preferred airlines",
         "multiple_solutions": "there may be several valid combinations - any that meet all criteria work!"
     }
 }
@@ -433,11 +423,11 @@ try:
     print("✅ all files created successfully!")
     print("\n🎯 PUZZLE SCENARIO:")
     print("=" * 50)
-    print(f"🏠 Alex {puzzle_description['friends']['alex']['description']}")
-    print(f"🏠 Bailey {puzzle_description['friends']['bailey']['description']}")
-    print(f"🎯 Goal: Meet in {puzzle_description['constraints']['destination_region']}")
-    print(f"✈️  Must use same airline and arrive same day")
-    print(f"💡 Hint: Look for {puzzle_description['constraints']['common_airlines'][0]}")
+    print(f"🏠 User 1 {puzzle_description['friends']['user_1']['description']}")
+    print(f"🏠 User 2 {puzzle_description['friends']['user_2']['description']}")
+    print(f"🎯 Goal: Meet for a vacation")
+    print(f"✈️  Must arrive same day, each using preferred airlines")
+    print(f"💡 Hint: User 1 prefers {puzzle_description['friends']['user_1']['preferred_airlines']}, User 2 prefers {puzzle_description['friends']['user_2']['preferred_airlines']}")
     print(f"🎲 Multiple solutions exist - any valid combination works!")
     print("=" * 50)
     

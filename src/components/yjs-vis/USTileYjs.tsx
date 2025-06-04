@@ -117,6 +117,9 @@ interface MigrationData {
 // era types
 type Era = '1960s' | '1990s' | '2020s';
 
+// view type for absolute vs rate data
+type ViewType = 'absolute' | 'rate';
+
 // constants for hover and selection styling
 const defaultFill = 'rgba(170,170,170,0.4)';
 const leftHandHoverFill = 'rgba(232, 27, 35, 0.6)';
@@ -315,19 +318,28 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     '1990s': [],
     '2020s': [],
   });
+  const migrationRateDataByEra = useRef<Record<Era, Migration[]>>({
+    '1960s': [],
+    '1990s': [],
+    '2020s': [],
+  });
   const stateCentroidsRef = useRef<Record<string, [number, number]>>({});
   const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
   const bundledPathsRef = useRef<
-    Record<Era, Map<string, { points: Point[]; value: number }>>
+    Record<
+      Era,
+      Record<ViewType, Map<string, { points: Point[]; value: number }>>
+    >
   >({
-    '1960s': new Map(),
-    '1990s': new Map(),
-    '2020s': new Map(),
-  }); // store bundled paths with migration values for all eras
+    '1960s': { absolute: new Map(), rate: new Map() },
+    '1990s': { absolute: new Map(), rate: new Map() },
+    '2020s': { absolute: new Map(), rate: new Map() },
+  }); // store bundled paths with migration values for all eras and view types
   const allBundledLinesRef = useRef<SVGGElement | null>(null); // group for all bundled lines
   const isInitializedRef = useRef(false);
   const buttonContainerRef = useRef<SVGGElement | null>(null);
   const currentEraRef = useRef<Era>('2020s');
+  const currentViewTypeRef = useRef<ViewType>('absolute');
   const calculateAndStoreMigrationsRef = useRef<(() => void) | null>(null);
 
   const yjsContext = useContext(YjsContext);
@@ -335,6 +347,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const [syncStatus, setSyncStatus] = useState<boolean>(false);
   const [migrationDataLoaded, setMigrationDataLoaded] = useState(false);
   const [currentEra, setCurrentEra] = useState<Era>('2020s');
+  const [currentViewType, setCurrentViewType] = useState<ViewType>('absolute');
 
   const yHoveredLeftStates = doc?.getArray<string>('usTileHoveredLeftStates');
   const yHoveredRightStates = doc?.getArray<string>('usTileHoveredRightStates');
@@ -408,11 +421,18 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     return () => ySharedState.unobserve(updateLocalTransform);
   }, [doc, syncStatus, ySharedState]);
 
-  // load all three era migration files
+  // load all migration data files (both absolute and rate)
   useEffect(() => {
     const loadMigrationData = async () => {
       try {
-        const [data1960s, data1990s, data2020s] = await Promise.all([
+        const [
+          data1960s,
+          data1990s,
+          data2020s,
+          rateData1960s,
+          rateData1990s,
+          rateData2020s,
+        ] = await Promise.all([
           d3.json<MigrationData>(
             '/src/assets/domesticmigration/migration_1960s.json'
           ),
@@ -422,13 +442,34 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
           d3.json<MigrationData>(
             '/src/assets/domesticmigration/migration_2020s.json'
           ),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_rate_1960s.json'
+          ),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_rate_1990s.json'
+          ),
+          d3.json<MigrationData>(
+            '/src/assets/domesticmigration/migration_rate_2020s.json'
+          ),
         ]);
 
-        if (data1960s && data1990s && data2020s) {
+        if (
+          data1960s &&
+          data1990s &&
+          data2020s &&
+          rateData1960s &&
+          rateData1990s &&
+          rateData2020s
+        ) {
           migrationDataByEra.current = {
             '1960s': data1960s.migrations,
             '1990s': data1990s.migrations,
             '2020s': data2020s.migrations,
+          };
+          migrationRateDataByEra.current = {
+            '1960s': rateData1960s.migrations,
+            '1990s': rateData1990s.migrations,
+            '2020s': rateData2020s.migrations,
           };
           setMigrationDataLoaded(true);
         }
@@ -451,11 +492,35 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   const getPairKey = (origin: string, destination: string): string =>
     `${origin}->${destination}`;
 
-  const formatMigrationValue = (value: number | string): string => {
+  // helper function to get current dataset based on era and view type
+  const getCurrentMigrationData = (
+    era: Era,
+    viewType: ViewType
+  ): Migration[] => {
+    if (viewType === 'rate') {
+      return migrationRateDataByEra.current[era] || [];
+    }
+    return migrationDataByEra.current[era] || [];
+  };
+
+  const formatMigrationValue = (
+    value: number | string,
+    viewType: ViewType = currentViewType
+  ): string => {
     if (typeof value === 'string') return String(value);
 
     const numValue = Number(value);
 
+    // for rate data, show per 100k inhabitants
+    if (viewType === 'rate') {
+      if (numValue >= 1000) {
+        const thousands = Math.round(numValue / 1000);
+        return `${thousands}K per 100K`;
+      }
+      return `${numValue} per 100K`;
+    }
+
+    // for absolute data, use existing formatting
     // if value is a million or more, round to nearest ten thousand and show as X.XM
     if (numValue >= 1000000) {
       const millions = numValue / 1000000;
@@ -473,11 +538,13 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     return String(numValue);
   };
 
-  // compute bundled paths for all migration flows using force-directed edge bundling for all eras
+  // compute bundled paths for all migration flows using force-directed edge bundling for all eras and view types
   const computeBundledPaths = () => {
     if (Object.keys(stateCentroidsRef.current).length === 0) {
       return;
     }
+
+    console.log('computing bundled paths for all 6 combinations...');
 
     // convert state centroids to the format expected by ForceEdgeBundling
     const nodes: DataNodes = {};
@@ -490,137 +557,145 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       }
     );
 
-    // compute bundled paths for each era
+    // compute bundled paths for each era and view type combination
     const eras: Era[] = ['1960s', '1990s', '2020s'];
+    const viewTypes: ViewType[] = ['absolute', 'rate'];
 
     eras.forEach((era) => {
-      const allMigrationData = includeAlaskaHawaii
-        ? migrationDataByEra.current[era]
-        : migrationDataByEra.current[era].filter(
-            (migration) =>
-              !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
-                migration.origin
-              ) &&
-              !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
-                migration.destination
-              )
-          );
+      viewTypes.forEach((viewType) => {
+        console.log(`computing bundled paths for ${era} ${viewType}...`);
 
-      // sort by migration value and take only the top 300 flows
-      const currentMigrationData = allMigrationData
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 300);
+        const allMigrationData = includeAlaskaHawaii
+          ? getCurrentMigrationData(era, viewType)
+          : getCurrentMigrationData(era, viewType).filter(
+              (migration) =>
+                !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                  migration.origin
+                ) &&
+                !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
+                  migration.destination
+                )
+            );
 
-      // convert migration data to edges format and create a value mapping
-      const edgesWithValues: { edge: Edge; value: number }[] =
-        currentMigrationData
-          .filter(
-            (migration) =>
-              nodes[migration.origin] && nodes[migration.destination]
-          )
-          .map((migration) => ({
-            edge: { source: migration.origin, target: migration.destination },
-            value: migration.value,
-          }));
+        // sort by migration value and take only the top 300 flows
+        const currentMigrationData = allMigrationData
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 300);
 
-      const edges: Edge[] = edgesWithValues.map((item) => item.edge);
+        // convert migration data to edges format and create a value mapping
+        const edgesWithValues: { edge: Edge; value: number }[] =
+          currentMigrationData
+            .filter(
+              (migration) =>
+                nodes[migration.origin] && nodes[migration.destination]
+            )
+            .map((migration) => ({
+              edge: { source: migration.origin, target: migration.destination },
+              value: migration.value,
+            }));
 
-      if (edges.length === 0) {
-        return;
-      }
+        const edges: Edge[] = edgesWithValues.map((item) => item.edge);
 
-      try {
-        // check if ForceEdgeBundling is available
-        if (!ForceEdgeBundling || typeof ForceEdgeBundling !== 'function') {
-          throw new Error('ForceEdgeBundling is not available');
+        if (edges.length === 0) {
+          return;
         }
 
-        // create and configure the bundling algorithm with proper type handling
-        const bundling = ForceEdgeBundling() as {
-          nodes: (nl?: DataNodes) => unknown;
-          edges: (ll?: Edge[]) => unknown;
-          compatibility_threshold: (t?: number) => unknown;
-          bundling_stiffness: (k?: number) => unknown;
-          step_size: (step?: number) => unknown;
-          cycles: (c?: number) => unknown;
-          iterations: (i?: number) => unknown;
-          iterations_rate: (i?: number) => unknown;
-          subdivision_points_seed: (p?: number) => unknown;
-          subdivision_rate: (r?: number) => unknown;
-          (): Point[][];
-        };
+        try {
+          // check if ForceEdgeBundling is available
+          if (!ForceEdgeBundling || typeof ForceEdgeBundling !== 'function') {
+            throw new Error('ForceEdgeBundling is not available');
+          }
 
-        // configure the bundling algorithm
-        (bundling.nodes as (nl: DataNodes) => unknown)(nodes);
-        (bundling.edges as (ll: Edge[]) => unknown)(edges);
-        (bundling.compatibility_threshold as (t: number) => unknown)(
-          EDGE_BUNDLING_COMPATIBILITY_THRESHOLD
-        );
-        (bundling.bundling_stiffness as (k: number) => unknown)(
-          EDGE_BUNDLING_STIFFNESS
-        );
-        (bundling.step_size as (step: number) => unknown)(
-          EDGE_BUNDLING_STEP_SIZE
-        );
-        (bundling.cycles as (c: number) => unknown)(EDGE_BUNDLING_CYCLES);
-        (bundling.iterations as (i: number) => unknown)(
-          EDGE_BUNDLING_ITERATIONS
-        );
-        (bundling.iterations_rate as (i: number) => unknown)(
-          EDGE_BUNDLING_ITERATIONS_RATE
-        );
-        (bundling.subdivision_points_seed as (p: number) => unknown)(
-          EDGE_BUNDLING_SUBDIVISION_SEED
-        );
-        (bundling.subdivision_rate as (r: number) => unknown)(
-          EDGE_BUNDLING_SUBDIVISION_RATE
-        );
+          // create and configure the bundling algorithm with proper type handling
+          const bundling = ForceEdgeBundling() as {
+            nodes: (nl?: DataNodes) => unknown;
+            edges: (ll?: Edge[]) => unknown;
+            compatibility_threshold: (t?: number) => unknown;
+            bundling_stiffness: (k?: number) => unknown;
+            step_size: (step?: number) => unknown;
+            cycles: (c?: number) => unknown;
+            iterations: (i?: number) => unknown;
+            iterations_rate: (i?: number) => unknown;
+            subdivision_points_seed: (p?: number) => unknown;
+            subdivision_rate: (r?: number) => unknown;
+            (): Point[][];
+          };
 
-        // compute bundled paths
-        const bundledPaths = (bundling as () => Point[][])();
+          // configure the bundling algorithm
+          (bundling.nodes as (nl: DataNodes) => unknown)(nodes);
+          (bundling.edges as (ll: Edge[]) => unknown)(edges);
+          (bundling.compatibility_threshold as (t: number) => unknown)(
+            EDGE_BUNDLING_COMPATIBILITY_THRESHOLD
+          );
+          (bundling.bundling_stiffness as (k: number) => unknown)(
+            EDGE_BUNDLING_STIFFNESS
+          );
+          (bundling.step_size as (step: number) => unknown)(
+            EDGE_BUNDLING_STEP_SIZE
+          );
+          (bundling.cycles as (c: number) => unknown)(EDGE_BUNDLING_CYCLES);
+          (bundling.iterations as (i: number) => unknown)(
+            EDGE_BUNDLING_ITERATIONS
+          );
+          (bundling.iterations_rate as (i: number) => unknown)(
+            EDGE_BUNDLING_ITERATIONS_RATE
+          );
+          (bundling.subdivision_points_seed as (p: number) => unknown)(
+            EDGE_BUNDLING_SUBDIVISION_SEED
+          );
+          (bundling.subdivision_rate as (r: number) => unknown)(
+            EDGE_BUNDLING_SUBDIVISION_RATE
+          );
 
-        // store bundled paths for this era with correct values
-        bundledPathsRef.current[era].clear();
-        edges.forEach((edge, index) => {
-          const pairKey = getPairKey(edge.source, edge.target);
-          bundledPathsRef.current[era].set(pairKey, {
-            points: bundledPaths[index],
-            value: edgesWithValues[index].value,
+          // compute bundled paths
+          const bundledPaths = (bundling as () => Point[][])();
+
+          // store bundled paths for this era and view type with correct values
+          bundledPathsRef.current[era][viewType].clear();
+          edges.forEach((edge, index) => {
+            const pairKey = getPairKey(edge.source, edge.target);
+            bundledPathsRef.current[era][viewType].set(pairKey, {
+              points: bundledPaths[index],
+              value: edgesWithValues[index].value,
+            });
           });
-        });
-      } catch (error) {
-        console.error(
-          `error computing bundled paths for era ${era}, falling back to straight lines:`,
-          error
-        );
+        } catch (error) {
+          console.error(
+            `error computing bundled paths for era ${era} viewtype ${viewType}, falling back to straight lines:`,
+            error
+          );
 
-        // fallback to straight line paths if bundling fails
-        bundledPathsRef.current[era].clear();
-        edgesWithValues.forEach(({ edge, value }) => {
-          const pairKey = getPairKey(edge.source, edge.target);
-          const originNode = nodes[edge.source];
-          const targetNode = nodes[edge.target];
+          // fallback to straight line paths if bundling fails
+          bundledPathsRef.current[era][viewType].clear();
+          edgesWithValues.forEach(({ edge, value }) => {
+            const pairKey = getPairKey(edge.source, edge.target);
+            const originNode = nodes[edge.source];
+            const targetNode = nodes[edge.target];
 
-          // create a simple straight line path as fallback
-          const straightPath: Point[] = [
-            { x: originNode.x, y: originNode.y },
-            { x: targetNode.x, y: targetNode.y },
-          ];
+            // create a simple straight line path as fallback
+            const straightPath: Point[] = [
+              { x: originNode.x, y: originNode.y },
+              { x: targetNode.x, y: targetNode.y },
+            ];
 
-          bundledPathsRef.current[era].set(pairKey, {
-            points: straightPath,
-            value: value,
+            bundledPathsRef.current[era][viewType].set(pairKey, {
+              points: straightPath,
+              value: value,
+            });
           });
-        });
-      }
+        }
+      });
     });
+
+    console.log('finished computing all bundled paths');
   };
 
-  // render all bundled migration lines on the map for the current era
+  // render all bundled migration lines on the map for the current era and view type
   const renderAllBundledLines = () => {
     if (
       !svgRef.current ||
-      bundledPathsRef.current[currentEraRef.current].size === 0
+      bundledPathsRef.current[currentEraRef.current][currentViewTypeRef.current]
+        .size === 0
     )
       return;
 
@@ -659,9 +734,11 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
     allBundledLinesRef.current = bundledLinesGroup.node();
 
-    // get the bundled paths for the current era
+    // get the bundled paths for the current era and view type
     const currentEraBundledPaths =
-      bundledPathsRef.current[currentEraRef.current];
+      bundledPathsRef.current[currentEraRef.current][
+        currentViewTypeRef.current
+      ];
 
     // calculate min and max values for logarithmic scaling
     const values = Array.from(currentEraBundledPaths.values()).map(
@@ -755,9 +832,11 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     // clear any existing highlighted lines
     highlightedLinesGroup.selectAll('*').remove();
 
-    // get the bundled paths for the current era
+    // get the bundled paths for the current era and view type
     const currentEraBundledPaths =
-      bundledPathsRef.current[currentEraRef.current];
+      bundledPathsRef.current[currentEraRef.current][
+        currentViewTypeRef.current
+      ];
 
     // calculate global min/max values including both bundled paths AND active links for proper scaling
     const bundledValues = Array.from(currentEraBundledPaths.values()).map(
@@ -848,6 +927,12 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
           const originalLine = bundledLinesGroup.select(
             `path[data-pair-key="${pairKey}"]`
           );
+
+          // check if originalLine exists and has a node
+          if (originalLine.empty() || !originalLine.node()) {
+            return; // skip this link if no corresponding background line exists
+          }
+
           const pathData = originalLine.attr('data-path-data');
           const gradientId = originalLine.attr('data-gradient-id');
 
@@ -1030,7 +1115,8 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       !yPinnedRightStates ||
       !yActiveMigrationLinks ||
       !yTotalMigrationValue ||
-      migrationDataByEra.current[currentEraRef.current].length === 0
+      getCurrentMigrationData(currentEraRef.current, currentViewTypeRef.current)
+        .length === 0
     )
       return;
 
@@ -1071,8 +1157,14 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
           // calculate migration from selected origins to all other states (excluding origins)
           const migrationData = includeAlaskaHawaii
-            ? migrationDataByEra.current[currentEraRef.current]
-            : migrationDataByEra.current[currentEraRef.current].filter(
+            ? getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              )
+            : getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              ).filter(
                 (migration) =>
                   !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
                     migration.origin
@@ -1137,8 +1229,14 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
           // calculate migration from all other states (excluding destinations) to selected destinations
           const migrationData = includeAlaskaHawaii
-            ? migrationDataByEra.current[currentEraRef.current]
-            : migrationDataByEra.current[currentEraRef.current].filter(
+            ? getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              )
+            : getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              ).filter(
                 (migration) =>
                   !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
                     migration.origin
@@ -1206,8 +1304,14 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
           // use current era data
           const migrationData = includeAlaskaHawaii
-            ? migrationDataByEra.current[currentEraRef.current]
-            : migrationDataByEra.current[currentEraRef.current].filter(
+            ? getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              )
+            : getCurrentMigrationData(
+                currentEraRef.current,
+                currentViewTypeRef.current
+              ).filter(
                 (migration) =>
                   !['ALASKA', 'HAWAII', 'DISTRICT OF COLUMBIA'].includes(
                     migration.origin
@@ -1313,7 +1417,8 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
       yActiveMigrationLinks.map((ymap) => ymap.toJSON() as MigrationLinkInfo) ||
       [];
     const totalMigrationDisplayValue = formatMigrationValue(
-      yTotalMigrationValue.get('value') || 'select states to view data'
+      yTotalMigrationValue.get('value') || 'select states to view data',
+      currentViewTypeRef.current
     );
 
     const padding = mainPadding;
@@ -1367,7 +1472,8 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .attr(
           'stroke',
           isActive ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.4)'
-        );
+        )
+        .style('pointer-events', 'all');
 
       buttonGroup
         .append('text')
@@ -1385,55 +1491,137 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup.on('click', (event) => {
         event.stopPropagation();
-        currentEraRef.current = era;
-        setCurrentEra(era);
-        if (calculateAndStoreMigrationsRef.current) {
-          calculateAndStoreMigrationsRef.current();
+        if (era !== currentEraRef.current) {
+          currentEraRef.current = era;
+          setCurrentEra(era);
+
+          // immediately update visuals with new era
+          renderAllBundledLines();
+
+          if (calculateAndStoreMigrationsRef.current) {
+            calculateAndStoreMigrationsRef.current();
+          }
+          updateInfoPanel();
         }
-        updateInfoPanel();
-        // just re-render with pre-computed bundled paths for the new era
       });
     });
 
-    // total migration section
-    const totalMigrationY =
-      buttonContainerY + buttonSectionHeight + sectionSpacing;
+    // view type buttons section
+    const viewTypeButtonY = buttonContainerY + buttonSectionHeight + 10;
+    const viewTypeButtonContainer = panelContentGroup
+      .append('g')
+      .attr('class', 'd3-view-type-button-container')
+      .attr('transform', `translate(${padding}, ${viewTypeButtonY})`)
+      .style('pointer-events', 'all');
 
-    panelContentGroup
-      .append('text')
-      .attr('class', 'tooltip-title-total')
-      .attr('x', padding)
-      .attr('y', totalMigrationY + 20)
-      .style('font-size', '20px')
-      .style('fill', 'rgba(255, 255, 255, 0.75)')
-      .style('font-weight', '500')
-      .text('total migration');
+    const viewTypes: ViewType[] = ['absolute', 'rate'];
+    const viewTypeButtonWidth =
+      (tooltipPanelWidth - 2 * padding - buttonSpacing) / 2;
 
-    panelContentGroup
-      .append('text')
-      .attr('class', 'tooltip-total-migration-value')
-      .attr('x', padding)
-      .attr('y', totalMigrationY + 20 + titleSpacing + 40)
-      .style(
-        'font-size',
-        totalMigrationDisplayValue === 'select states to view data'
-          ? '24px'
-          : '48px'
-      )
-      .style('font-weight', '700')
-      .style('fill', panelTxtColor)
-      .style(
-        'opacity',
-        totalMigrationDisplayValue === 'select states to view data' ||
-          totalMigrationDisplayValue === '0'
-          ? 0.5
-          : 1
-      )
-      .text(totalMigrationDisplayValue);
+    viewTypes.forEach((viewType, i) => {
+      const buttonGroup = viewTypeButtonContainer
+        .append('g')
+        .attr('class', 'view-type-button')
+        .attr('data-view-type', viewType)
+        .attr(
+          'transform',
+          `translate(${i * (viewTypeButtonWidth + buttonSpacing)}, 0)`
+        )
+        .style('cursor', 'pointer');
+
+      const isActive = viewType === currentViewTypeRef.current;
+
+      buttonGroup
+        .append('rect')
+        .attr('class', 'view-type-button-rect')
+        .attr('width', viewTypeButtonWidth)
+        .attr('height', 36) // slightly smaller than era buttons
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr(
+          'fill',
+          isActive ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.15)'
+        )
+        .attr(
+          'stroke',
+          isActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.3)'
+        )
+        .style('pointer-events', 'all');
+
+      buttonGroup
+        .append('text')
+        .attr('x', viewTypeButtonWidth / 2)
+        .attr('y', 18 + 4)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '14px')
+        .style('font-weight', isActive ? '600' : '400')
+        .style(
+          'fill',
+          isActive ? 'rgba(33, 33, 33, 0.8)' : 'rgba(255, 255, 255, 0.8)'
+        )
+        .style('pointer-events', 'none')
+        .text(viewType === 'absolute' ? 'absolute' : 'per 100K');
+
+      buttonGroup.on('click', (event) => {
+        event.stopPropagation();
+        if (viewType !== currentViewTypeRef.current) {
+          currentViewTypeRef.current = viewType;
+          setCurrentViewType(viewType);
+
+          // immediately update visuals with new view type
+          renderAllBundledLines();
+
+          if (calculateAndStoreMigrationsRef.current) {
+            calculateAndStoreMigrationsRef.current();
+          }
+          updateInfoPanel();
+        }
+      });
+    });
+
+    // total migration section (only show for absolute view)
+    let migrationFlowsY = viewTypeButtonY + 36 + sectionSpacing;
+
+    if (currentViewTypeRef.current === 'absolute') {
+      const totalMigrationY = viewTypeButtonY + 36 + sectionSpacing;
+
+      panelContentGroup
+        .append('text')
+        .attr('class', 'tooltip-title-total')
+        .attr('x', padding)
+        .attr('y', totalMigrationY + 20)
+        .style('font-size', '20px')
+        .style('fill', 'rgba(255, 255, 255, 0.75)')
+        .style('font-weight', '500')
+        .text('total migration');
+
+      panelContentGroup
+        .append('text')
+        .attr('class', 'tooltip-total-migration-value')
+        .attr('x', padding)
+        .attr('y', totalMigrationY + 20 + titleSpacing + 40)
+        .style(
+          'font-size',
+          totalMigrationDisplayValue === 'select states to view data'
+            ? '24px'
+            : '48px'
+        )
+        .style('font-weight', '700')
+        .style('fill', panelTxtColor)
+        .style(
+          'opacity',
+          totalMigrationDisplayValue === 'select states to view data' ||
+            totalMigrationDisplayValue === '0'
+            ? 0.5
+            : 1
+        )
+        .text(totalMigrationDisplayValue);
+
+      migrationFlowsY =
+        totalMigrationY + 20 + titleSpacing + 40 + sectionSpacing;
+    }
 
     // migration flows section
-    const migrationFlowsY =
-      totalMigrationY + 20 + titleSpacing + 40 + sectionSpacing;
 
     panelContentGroup
       .append('text')
@@ -1478,7 +1666,7 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
         .style('font-size', '18px')
         .style('font-weight', '500')
         .style('fill', 'rgba(255, 255, 255, 0.8)')
-        .text(formatMigrationValue(link.value));
+        .text(formatMigrationValue(link.value, currentViewTypeRef.current));
     });
   };
 
@@ -1820,18 +2008,22 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
     migrationDataLoaded,
   ]);
 
-  // re-render when currentEra changes
+  // re-render when currentEra or currentViewType changes
   useEffect(() => {
     if (isInitializedRef.current) {
-      renderAllBundledLines(); // ensure background lines for the new era are drawn first
+      renderAllBundledLines(); // just switch to precomputed bundled lines for the new era/view
       renderVisuals(); // then update highlights and other visual elements
     }
-  }, [currentEra]);
+  }, [currentEra, currentViewType]);
 
-  // sync ref with state
+  // sync refs with state
   useEffect(() => {
     currentEraRef.current = currentEra;
   }, [currentEra]);
+
+  useEffect(() => {
+    currentViewTypeRef.current = currentViewType;
+  }, [currentViewType]);
 
   useEffect(() => {
     if (
@@ -1880,10 +2072,29 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
                 handedness === 'left'
                   ? yHoveredLeftStates
                   : yHoveredRightStates;
-              if (targetArray) {
+              const oppositeHoveredArray =
+                handedness === 'left'
+                  ? yHoveredRightStates
+                  : yHoveredLeftStates;
+              const oppositePinnedArray =
+                handedness === 'left' ? yPinnedRightStates : yPinnedLeftStates;
+
+              if (targetArray && oppositeHoveredArray && oppositePinnedArray) {
                 const currentStates = new Set(targetArray.toArray());
+                const oppositeHoveredStates = new Set(
+                  oppositeHoveredArray.toArray()
+                );
+                const oppositePinnedStates = new Set(
+                  oppositePinnedArray.toArray()
+                );
+
                 statesToAdd.forEach((stateName) => {
-                  if (!currentStates.has(stateName)) {
+                  // only add if not already in current group and not in opposite group
+                  const isInOppositeGroup =
+                    oppositeHoveredStates.has(stateName) ||
+                    oppositePinnedStates.has(stateName);
+
+                  if (!currentStates.has(stateName) && !isInOppositeGroup) {
                     targetArray.push([stateName]);
                   }
                 });
@@ -1932,12 +2143,42 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
               // update state for react consistency
               setCurrentEra(era);
 
+              // immediately update visuals with new era
+              renderAllBundledLines();
+
               // trigger recalculation with new era data
               if (calculateAndStoreMigrationsRef.current) {
                 calculateAndStoreMigrationsRef.current();
               }
 
-              // trigger immediate visual update (no bundled path recomputation needed)
+              // trigger immediate visual update
+              updateInfoPanel();
+            }
+          }
+          // check if this is a view type button
+          else if (element.classList.contains('view-type-button-rect')) {
+            // find the parent view type button group element that contains the data-view-type
+            const parentButton = element.closest('g.view-type-button');
+            const viewType = parentButton?.getAttribute(
+              'data-view-type'
+            ) as ViewType;
+
+            if (viewType && ['absolute', 'rate'].includes(viewType)) {
+              // update ref immediately for instant response
+              currentViewTypeRef.current = viewType;
+
+              // update state for react consistency
+              setCurrentViewType(viewType);
+
+              // immediately update visuals with new view type
+              renderAllBundledLines();
+
+              // trigger recalculation with new view type data
+              if (calculateAndStoreMigrationsRef.current) {
+                calculateAndStoreMigrationsRef.current();
+              }
+
+              // trigger immediate visual update
               updateInfoPanel();
             }
           }
@@ -1952,7 +2193,15 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
             doc.transact(() => {
               const targetArray =
                 handedness === 'left' ? yPinnedLeftStates : yPinnedRightStates;
-              if (!targetArray) return;
+              const oppositeHoveredArray =
+                handedness === 'left'
+                  ? yHoveredRightStates
+                  : yHoveredLeftStates;
+              const oppositePinnedArray =
+                handedness === 'left' ? yPinnedRightStates : yPinnedLeftStates;
+
+              if (!targetArray || !oppositeHoveredArray || !oppositePinnedArray)
+                return;
 
               const currentPinned = targetArray.toArray();
               const index = currentPinned.indexOf(stateName);
@@ -1961,8 +2210,15 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
                 // unpin if already pinned
                 targetArray.delete(index, 1);
               } else {
-                // pin if not already pinned
-                targetArray.push([stateName]);
+                // check if state is in opposite group (hovered or pinned)
+                const isInOppositeGroup =
+                  oppositeHoveredArray.toArray().includes(stateName) ||
+                  oppositePinnedArray.toArray().includes(stateName);
+
+                if (!isInOppositeGroup) {
+                  // pin if not already pinned and not in opposite group
+                  targetArray.push([stateName]);
+                }
               }
             }, `pin-toggle-${handedness}`);
 

@@ -675,6 +675,75 @@ export function handleThumbIndex(
           clickState.state = 'potential_click';
           clickState.startTime = now;
         }
+
+        // handle hover state based on hand (same logic as handleOne)
+        // get element at current position
+        const currentElement = document.elementFromPoint(
+          point.clientX,
+          point.clientY
+        );
+
+        if (handLabel === 'right') {
+          // handle right hand hover
+          if (currentElement !== lastHoveredElementRight && currentElement) {
+            // send pointerout to previous element
+            if (lastHoveredElementRight) {
+              onInteraction({
+                type: 'pointerout',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: 'right',
+                element: lastHoveredElementRight,
+              });
+            }
+
+            // send pointerover to new element
+            if (isInteractableElement(currentElement)) {
+              onInteraction({
+                type: 'pointerover',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: 'right',
+                element: currentElement,
+              });
+            }
+
+            // update right hand hover state
+            lastHoveredElementRight = currentElement;
+          }
+        } else {
+          // handle left hand hover
+          if (currentElement !== lastHoveredElementLeft && currentElement) {
+            // send pointerout to previous element
+            if (lastHoveredElementLeft) {
+              onInteraction({
+                type: 'pointerout',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: 'left',
+                element: lastHoveredElementLeft,
+              });
+            }
+
+            // send pointerover to new element
+            if (isInteractableElement(currentElement)) {
+              onInteraction({
+                type: 'pointerover',
+                point,
+                timestamp: Date.now(),
+                sourceType: 'gesture',
+                handedness: 'left',
+                element: currentElement,
+              });
+            }
+
+            // update left hand hover state
+            lastHoveredElementLeft = currentElement;
+          }
+        }
       }
     } else if (gesture === 'one') {
       // if we were in potential click state and now see "one", complete the click gesture

@@ -333,50 +333,78 @@ def generate_migration_value(origin: str, destination: str, era: str) -> int:
     
     return max(min_value, int(base_value))
 
-def generate_migration_data(era: str) -> List[Dict]:
-    """generate complete migration data for all state pairs for a specific era."""
-    migrations = []
+def generate_migration_data(era: str) -> Tuple[List[Dict], List[Dict]]:
+    """generate complete migration data for all state pairs for a specific era.
+    returns tuple of (absolute_migrations, rate_migrations)."""
+    absolute_migrations = []
+    rate_migrations = []
     states = list(STATE_POPULATIONS_2020S.keys())
     
     # set random seed for reproducible results within each era
     random.seed(hash(era) % 1000000)
     
+    current_state_populations = ALL_STATE_POPULATIONS[era]
+    
     for origin in states:
         for destination in states:
             if origin != destination:
-                if origin in ALL_STATE_POPULATIONS[era] and destination in ALL_STATE_POPULATIONS[era]:
-                    value = generate_migration_value(origin, destination, era)
-                    migrations.append({
+                if origin in current_state_populations and destination in current_state_populations:
+                    absolute_value = generate_migration_value(origin, destination, era)
+                    
+                    # calculate migration rate per 100,000 inhabitants of origin state
+                    origin_population = current_state_populations[origin]
+                    rate_value = int((absolute_value / origin_population) * 100000)
+                    
+                    absolute_migrations.append({
                         "origin": origin,
                         "destination": destination,
-                        "value": value
+                        "value": absolute_value
+                    })
+                    
+                    rate_migrations.append({
+                        "origin": origin,
+                        "destination": destination,
+                        "value": rate_value
                     })
     
-    return migrations
+    return absolute_migrations, rate_migrations
 
 def main():
     """generate and save migration data for multiple eras."""
     eras = ["1960s", "1990s", "2020s"]
     
     for era in eras:
-        print(f"generating more realistic migration data for {era}...")
-        migrations = generate_migration_data(era)
+        print(f"generating migration data for {era}...")
+        absolute_migrations, rate_migrations = generate_migration_data(era)
         
-        # sort by value in descending order for easier inspection
-        migrations.sort(key=lambda x: x["value"], reverse=True)
+        # sort both datasets by value in descending order for easier inspection
+        absolute_migrations.sort(key=lambda x: x["value"], reverse=True)
+        rate_migrations.sort(key=lambda x: x["value"], reverse=True)
         
-        data = {"migrations": migrations}
+        # save absolute migration data
+        absolute_data = {"migrations": absolute_migrations}
+        absolute_filename = f"src/assets/migration_{era}.json"
+        with open(absolute_filename, "w") as f:
+            json.dump(absolute_data, f, indent=2)
         
-        output_filename = f"src/assets/migration_{era}.json"
-        with open(output_filename, "w") as f:
-            json.dump(data, f, indent=2)
+        # save migration rate data (per 100,000 inhabitants)
+        rate_data = {"migrations": rate_migrations}
+        rate_filename = f"src/assets/migration_rate_{era}.json"
+        with open(rate_filename, "w") as f:
+            json.dump(rate_data, f, indent=2)
         
-        print(f"generated {len(migrations)} migration records for {era}")
-        print(f"data saved to {output_filename}")
+        print(f"generated {len(absolute_migrations)} migration records for {era}")
+        print(f"absolute data saved to {absolute_filename}")
+        print(f"rate data saved to {rate_filename}")
         
-        # show top 10 migration flows for this era
-        print(f"\ntop 10 migration flows for {era}:")
-        for i, migration in enumerate(migrations[:10]):
+        # show top 10 migration flows for this era (absolute numbers)
+        print(f"\ntop 10 absolute migration flows for {era}:")
+        for i, migration in enumerate(absolute_migrations[:10]):
+            print(f"  {i+1}. {migration['origin']} → {migration['destination']}: {migration['value']:,}")
+        
+        # show top 10 migration rates for this era
+        print(f"\ntop 10 migration rates for {era} (per 100,000 inhabitants):")
+        for i, migration in enumerate(rate_migrations[:10]):
             print(f"  {i+1}. {migration['origin']} → {migration['destination']}: {migration['value']:,}")
         print("-" * 50)
 

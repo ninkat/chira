@@ -56,7 +56,7 @@ interface PuzzleDescription {
   title: string;
   description: string;
   friends: {
-    alex: {
+    user_1: {
       name: string;
       description: string;
       origin_airport: string;
@@ -64,7 +64,7 @@ interface PuzzleDescription {
       preferred_airlines: string[];
       max_budget: number;
     };
-    bailey: {
+    user_2: {
       name: string;
       description: string;
       origin_airport: string;
@@ -74,24 +74,18 @@ interface PuzzleDescription {
     };
   };
   constraints: {
-    destination_region: string;
-    destination_airports: string[];
     must_arrive_same_day: boolean;
-    must_use_same_airline: boolean;
     both_must_afford: boolean;
     both_must_be_available: boolean;
-    common_airlines: string[];
     overlap_dates: string[];
   };
   evaluation_criteria: {
     valid_solution: {
       same_destination: string;
       same_date: string;
-      same_airline: string;
       within_budgets: string;
       date_availability: string;
       airline_preferences: string;
-      european_destination: string;
     };
   };
   hints: {
@@ -230,97 +224,93 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     const puzzle = puzzleDescription.current;
     const [flight1, flight2] = flights;
-    const failedCriteria: string[] = [];
 
-    // identify which flight belongs to which friend based on origin airport
-    let alexFlight: Flight | null = null;
-    let baileyFlight: Flight | null = null;
+    // helper function to validate a specific assignment
+    const validateAssignment = (
+      user1Flight: Flight,
+      user2Flight: Flight
+    ): string[] => {
+      const assignmentFailures: string[] = [];
 
-    if (
-      flight1.origin === puzzle.friends.alex.origin_airport &&
-      flight2.origin === puzzle.friends.bailey.origin_airport
-    ) {
-      alexFlight = flight1;
-      baileyFlight = flight2;
-    } else if (
-      flight1.origin === puzzle.friends.bailey.origin_airport &&
-      flight2.origin === puzzle.friends.alex.origin_airport
-    ) {
-      alexFlight = flight2;
-      baileyFlight = flight1;
-    } else {
-      // flights don't match the required origins
-      failedCriteria.push(
-        "flights must originate from alex's and bailey's home airports"
-      );
-      return { isValid: false, failedCriteria };
-    }
+      // check both flights originate from the same airport as users
+      if (user1Flight.origin !== puzzle.friends.user_1.origin_airport) {
+        assignmentFailures.push(
+          `flight doesn't originate from user 1's home airport`
+        );
+      }
+      if (user2Flight.origin !== puzzle.friends.user_2.origin_airport) {
+        assignmentFailures.push(
+          `flight doesn't originate from user 2's home airport`
+        );
+      }
 
-    // check same destination
-    if (alexFlight.destination !== baileyFlight.destination) {
-      failedCriteria.push(
-        puzzle.evaluation_criteria.valid_solution.same_destination
-      );
-    }
+      // check same destination
+      if (user1Flight.destination !== user2Flight.destination) {
+        assignmentFailures.push(
+          puzzle.evaluation_criteria.valid_solution.same_destination
+        );
+      }
 
-    // check same date
-    if (alexFlight.date !== baileyFlight.date) {
-      failedCriteria.push(puzzle.evaluation_criteria.valid_solution.same_date);
-    }
+      // check same date
+      if (user1Flight.date !== user2Flight.date) {
+        assignmentFailures.push(
+          puzzle.evaluation_criteria.valid_solution.same_date
+        );
+      }
 
-    // check same airline
-    if (alexFlight.airline.code !== baileyFlight.airline.code) {
-      failedCriteria.push(
-        puzzle.evaluation_criteria.valid_solution.same_airline
-      );
-    }
+      // check within budgets
+      if (user1Flight.price > puzzle.friends.user_1.max_budget) {
+        assignmentFailures.push(
+          `user 1's flight exceeds $${puzzle.friends.user_1.max_budget} budget`
+        );
+      }
+      if (user2Flight.price > puzzle.friends.user_2.max_budget) {
+        assignmentFailures.push(
+          `user 2's flight exceeds $${puzzle.friends.user_2.max_budget} budget`
+        );
+      }
 
-    // check within budgets
-    if (alexFlight.price > puzzle.friends.alex.max_budget) {
-      failedCriteria.push(
-        `alex's flight exceeds $${puzzle.friends.alex.max_budget} budget`
-      );
-    }
-    if (baileyFlight.price > puzzle.friends.bailey.max_budget) {
-      failedCriteria.push(
-        `bailey's flight exceeds $${puzzle.friends.bailey.max_budget} budget`
-      );
-    }
+      // check date availability for both users
+      if (!puzzle.friends.user_1.available_dates.includes(user1Flight.date)) {
+        assignmentFailures.push('date not available for user 1');
+      }
+      if (!puzzle.friends.user_2.available_dates.includes(user2Flight.date)) {
+        assignmentFailures.push('date not available for user 2');
+      }
 
-    // check date availability for both friends
-    if (!puzzle.friends.alex.available_dates.includes(alexFlight.date)) {
-      failedCriteria.push('date not available for alex');
-    }
-    if (!puzzle.friends.bailey.available_dates.includes(baileyFlight.date)) {
-      failedCriteria.push('date not available for bailey');
-    }
+      // check airline preferences
+      if (
+        !puzzle.friends.user_1.preferred_airlines.includes(
+          user1Flight.airline.code
+        )
+      ) {
+        assignmentFailures.push('airline not preferred by user 1');
+      }
+      if (
+        !puzzle.friends.user_2.preferred_airlines.includes(
+          user2Flight.airline.code
+        )
+      ) {
+        assignmentFailures.push('airline not preferred by user 2');
+      }
 
-    // check airline preferences
-    if (
-      !puzzle.friends.alex.preferred_airlines.includes(alexFlight.airline.code)
-    ) {
-      failedCriteria.push('airline not preferred by alex');
-    }
-    if (
-      !puzzle.friends.bailey.preferred_airlines.includes(
-        baileyFlight.airline.code
-      )
-    ) {
-      failedCriteria.push('airline not preferred by bailey');
-    }
+      return assignmentFailures;
+    };
 
-    // check european destination
-    if (
-      !puzzle.constraints.destination_airports.includes(alexFlight.destination)
-    ) {
-      failedCriteria.push(
-        puzzle.evaluation_criteria.valid_solution.european_destination
-      );
+    // try both possible assignments
+    const assignment1Failures = validateAssignment(flight1, flight2); // user 1 gets flight1, user 2 gets flight2
+    const assignment2Failures = validateAssignment(flight2, flight1); // user 1 gets flight2, user 2 gets flight1
+
+    // if either assignment works (has no failures), the solution is valid
+    if (assignment1Failures.length === 0 || assignment2Failures.length === 0) {
+      return { isValid: true, failedCriteria: [] };
     }
 
+    // if both assignments fail, return the failures from the first assignment
+    // (we could combine both, but that might be confusing)
     return {
-      isValid: failedCriteria.length === 0,
-      failedCriteria,
+      isValid: false,
+      failedCriteria: assignment1Failures,
     };
   };
 
@@ -1633,10 +1623,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     Promise.all([
       d3.json<WorldTopology>('/src/assets/traveldata/world110.topo.json'),
-      d3.json<Airport[]>('/src/assets/situation/airports.json'),
-      d3.json<Flight[]>('/src/assets/situation/flights.json'),
+      d3.json<Airport[]>('/src/assets/situation2/airports.json'),
+      d3.json<Flight[]>('/src/assets/situation2/flights.json'),
       d3.json<PuzzleDescription>(
-        '/src/assets/situation/puzzle_description.json'
+        '/src/assets/situation2/puzzle_description.json'
       ),
     ])
       .then(([topology, airportsData, flightsData, puzzleData]) => {
@@ -1773,7 +1763,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     handedness === 'left'
                       ? yHoveredAirportIATAsLeft
                       : yHoveredAirportIATAsRight;
-                  if (!targetArray.toArray().includes(airportIATA)) {
+                  const oppositeHoveredArray =
+                    handedness === 'left'
+                      ? yHoveredAirportIATAsRight
+                      : yHoveredAirportIATAsLeft;
+                  const oppositeSelectedArray =
+                    handedness === 'left'
+                      ? ySelectedAirportIATAsRight
+                      : ySelectedAirportIATAsLeft;
+
+                  // check if airport is already in opposite group (hovered or selected)
+                  const isInOppositeGroup =
+                    oppositeHoveredArray.toArray().includes(airportIATA) ||
+                    oppositeSelectedArray.toArray().includes(airportIATA);
+
+                  if (
+                    !targetArray.toArray().includes(airportIATA) &&
+                    !isInOppositeGroup
+                  ) {
                     targetArray.push([airportIATA]);
                   }
                 }
@@ -1794,20 +1801,22 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                   handedness &&
                   yWorldMapState &&
                   yHoveredAirportIATAsLeft &&
-                  yHoveredAirportIATAsRight
+                  yHoveredAirportIATAsRight &&
+                  ySelectedAirportIATAsLeft &&
+                  ySelectedAirportIATAsRight
                 ) {
                   const targetArray =
                     handedness === 'left'
                       ? yHoveredAirportIATAsLeft
                       : yHoveredAirportIATAsRight;
+                  const targetSelectedArray =
+                    handedness === 'left'
+                      ? ySelectedAirportIATAsLeft
+                      : ySelectedAirportIATAsRight;
                   const index = targetArray.toArray().indexOf(airportIATA);
                   if (index > -1) {
                     // only remove if not currently selected by this hand for stickiness
-                    const selectedKey =
-                      handedness === 'left'
-                        ? 'selectedLeftAirportIATA'
-                        : 'selectedRightAirportIATA';
-                    if (yWorldMapState.get(selectedKey) !== airportIATA) {
+                    if (!targetSelectedArray.toArray().includes(airportIATA)) {
                       targetArray.delete(index, 1);
                     }
                   }
@@ -1836,6 +1845,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     handedness === 'left'
                       ? ySelectedAirportIATAsLeft
                       : ySelectedAirportIATAsRight;
+                  const oppositeSelectionArray =
+                    handedness === 'left'
+                      ? ySelectedAirportIATAsRight
+                      : ySelectedAirportIATAsLeft;
+                  const oppositeHoveredArray =
+                    handedness === 'left'
+                      ? yHoveredAirportIATAsRight
+                      : yHoveredAirportIATAsLeft;
 
                   const currentSelectedIndex = targetSelectionArray
                     .toArray()
@@ -1845,8 +1862,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     // airport is already selected by this hand, so deselect it
                     targetSelectionArray.delete(currentSelectedIndex, 1);
                   } else {
-                    // airport is not selected by this hand, so select it
-                    targetSelectionArray.push([airportIATA]);
+                    // check if airport is in opposite group (selected or hovered)
+                    const isInOppositeGroup =
+                      oppositeSelectionArray.toArray().includes(airportIATA) ||
+                      oppositeHoveredArray.toArray().includes(airportIATA);
+
+                    if (!isInOppositeGroup) {
+                      // airport is not in opposite group, so select it
+                      targetSelectionArray.push([airportIATA]);
+                    }
                   }
                 }
                 // handle flight selection (pinning)
