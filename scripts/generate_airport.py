@@ -13,6 +13,8 @@ airports = [
     {"IATA": "LAX", "Airport Name": "Los Angeles International Airport", "City": "Los Angeles", "Latitude": 33.9416, "Longitude": -118.4085},
     {"IATA": "ORD", "Airport Name": "O'Hare International Airport", "City": "Chicago", "Latitude": 40.9762, "Longitude": -87.9073},
     {"IATA": "DFW", "Airport Name": "Dallas/Fort Worth International Airport", "City": "Dallas", "Latitude": 32.8998, "Longitude": -97.0403},
+    {"IATA": "BOS", "Airport Name": "Boston Logan International Airport", "City": "Boston", "Latitude": 42.3656, "Longitude": -71.0096},
+    {"IATA": "DCA", "Airport Name": "Ronald Reagan Washington National Airport", "City": "Washington", "Latitude": 38.8512, "Longitude": -77.0402},
     
     # europe
     {"IATA": "LHR", "Airport Name": "Heathrow Airport", "City": "London", "Latitude": 51.4700, "Longitude": -0.4543},
@@ -62,6 +64,10 @@ airports = [
     {"IATA": "KUL", "Airport Name": "Kuala Lumpur International Airport", "City": "Kuala Lumpur", "Latitude": 2.7456, "Longitude": 101.7072},
     {"IATA": "CGK", "Airport Name": "Soekarno-Hatta International Airport", "City": "Jakarta", "Latitude": -6.1256, "Longitude": 106.6558},
     {"IATA": "BOM", "Airport Name": "Chhatrapati Shivaji Maharaj International Airport", "City": "Mumbai", "Latitude": 19.0896, "Longitude": 72.8656},
+    {"IATA": "HAN", "Airport Name": "Noi Bai International Airport", "City": "Hanoi", "Latitude": 21.2187, "Longitude": 105.8047},
+    {"IATA": "TPE", "Airport Name": "Taoyuan International Airport", "City": "Taipei", "Latitude": 25.0777, "Longitude": 121.2322},
+    {"IATA": "IKA", "Airport Name": "Imam Khomeini International Airport", "City": "Tehran", "Latitude": 35.4161, "Longitude": 51.1522},
+    {"IATA": "KIX", "Airport Name": "Kansai International Airport", "City": "Osaka", "Latitude": 34.4320, "Longitude": 135.2304},
     
     # australia
     {"IATA": "SYD", "Airport Name": "Sydney Kingsford Smith Airport", "City": "Sydney", "Latitude": -33.9399, "Longitude": 151.1753},
@@ -92,16 +98,16 @@ PUZZLE_CONFIG = {
         "name": "User 1",
         "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
         "preferred_airlines": ["AA", "AC"],  # american airlines, air canada
-        "max_budget": 1500,
-        "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500"
+        "max_budget": 1200,
+        "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1200"
     },
     "friend_b": {
         "origin": "YYZ",  # toronto (same as friend_a now)
         "name": "User 2",
         "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
         "preferred_airlines": ["AC", "LH"],  # air canada, lufthansa
-        "max_budget": 1800,
-        "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1800"
+        "max_budget": 1500,
+        "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1500"
     },
     "destination_region": "europe",
     "common_airline": "AC",  # air canada
@@ -141,25 +147,37 @@ def calculate_flight_time(distance_km):
 
 def calculate_flight_price(distance_km, flight_time, is_solution=False):
     """calculate flight price, with special handling for solution flights."""
-    base_price_per_km = 0.25 * (1 - min(0.4, distance_km / 8000))
+    # base price calculation with diminishing returns for longer distances
+    base_price_per_km = 0.15 * (1 - min(0.5, distance_km / 10000))
     base_price = distance_km * base_price_per_km
-    time_multiplier = 1 + (flight_time / 8)
-    variation = random.uniform(-0.20, 0.20)
+    
+    # time-based adjustments (longer flights have higher operational costs)
+    time_multiplier = 1 + (flight_time / 12)  # reduced impact of flight time
+    
+    # market variation (random factor)
+    variation = random.uniform(-0.15, 0.20)  # slightly asymmetric to favor price increases
+    
+    # calculate initial price
     final_price = base_price * time_multiplier * (1 + variation)
     
-    if distance_km > 4000:
-        tapering_factor = 1 - min(0.15, (distance_km - 4000) / 15000)
+    # distance-based tapering for long-haul flights
+    if distance_km > 5000:
+        tapering_factor = 1 - min(0.25, (distance_km - 5000) / 20000)
         final_price *= tapering_factor
+    
+    # minimum price floor based on distance
+    min_price = max(150, distance_km * 0.08)
     
     # special pricing for solution flights to ensure they fit budget constraints
     if is_solution:
-        # ensure friend a's flight is under $1500 and friend b's is under $1800
-        if final_price > 1400:  # leave some buffer
-            final_price = random.uniform(1200, 1400)
-        elif final_price < 800:  # ensure it's not suspiciously cheap
-            final_price = random.uniform(800, 1200)
+        # ensure friend a's flight is under $1200 and friend b's is under $1500
+        if final_price > 1100:  # leave some buffer
+            final_price = random.uniform(900, 1100)
+        elif final_price < 600:  # ensure it's not suspiciously cheap
+            final_price = random.uniform(600, 800)
     
-    return round(max(200, min(2500, final_price)), 2)
+    # cap at 2000 but make it rare
+    return round(max(min_price, min(2000, final_price)), 2)
 
 def get_airline_for_route(origin, destination, force_airline=None):
     """get airline for a route, with option to force specific airline."""
@@ -233,10 +251,10 @@ def generate_interest_flights(start_flight_id):
     flight_id = start_flight_id
     airport_dict = {a["IATA"]: a for a in airports}
     
-    # generate dates around the puzzle timeframe
+    # generate dates from june 1 to june 14
     all_dates = []
-    for i in range(-7, 15):  # week before to 2 weeks after
-        date = datetime(2025, 6, 8) + timedelta(days=i)
+    for i in range(14):  # june 1 to june 14
+        date = datetime(2025, 6, 1) + timedelta(days=i)
         all_dates.append(date.strftime("%Y-%m-%d"))
     
     # generate many flights for each interest route
@@ -296,10 +314,10 @@ def generate_filler_flights(start_flight_id, target_total=5000):
     airport_dict = {a["IATA"]: a for a in airports}
     iata_codes = [a["IATA"] for a in airports]
     
-    # generate dates
+    # generate dates from june 1 to june 14
     all_dates = []
-    for i in range(-14, 30):  # 2 weeks before to month after
-        date = datetime(2025, 6, 8) + timedelta(days=i)
+    for i in range(14):  # june 1 to june 14
+        date = datetime(2025, 6, 1) + timedelta(days=i)
         all_dates.append(date.strftime("%Y-%m-%d"))
     
     # track routes we've already covered
@@ -366,19 +384,19 @@ puzzle_description = {
     "friends": {
         "user_1": {
             "name": "User 1",
-            "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500",
+            "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1200",
             "origin_airport": "YYZ",
             "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
             "preferred_airlines": ["AA", "AC"],
-            "max_budget": 1500
+            "max_budget": 1200
         },
         "user_2": {
             "name": "User 2", 
-            "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1800",
+            "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1500",
             "origin_airport": "YYZ",
             "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
             "preferred_airlines": ["AC", "LH"],
-            "max_budget": 1800
+            "max_budget": 1500
         }
     },
     "constraints": {
@@ -391,7 +409,7 @@ puzzle_description = {
         "valid_solution": {
             "same_destination": "flights must go to the same destination airport",
             "same_date": "flights must be on the same date", 
-            "within_budgets": "user_1's flight <= $1500, user_2's flight <= $1800",
+            "within_budgets": "user_1's flight <= $1200, user_2's flight <= $1500",
             "date_availability": "date must be in both users' available dates",
             "airline_preferences": "each user must use one of their preferred airlines"
         }
