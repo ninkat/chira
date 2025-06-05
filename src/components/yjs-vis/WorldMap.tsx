@@ -216,8 +216,30 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     failedCriteria: [],
   });
 
+  // ref to track previous filter state for scroll reset detection
+  const previousFilterStateRef = useRef<{
+    leftIATAs: string[];
+    rightIATAs: string[];
+  }>({
+    leftIATAs: [],
+    rightIATAs: [],
+  });
+
   // validation function
   const validateSelectedFlights = (flights: Flight[]): ValidationResult => {
+    console.log(
+      '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    );
+    console.log('--- debugging validateselectedflights ---');
+    console.log(
+      'this function deals with validating if the two selected flights form a valid solution.'
+    );
+    console.log('it checks against the puzzle description constraints.');
+    console.log('selected flights:', flights);
+    console.log('puzzle description:', puzzleDescription.current);
+    console.log(
+      '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    );
     if (!puzzleDescription.current || flights.length !== 2) {
       return { isValid: false, failedCriteria: [] };
     }
@@ -680,6 +702,22 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       new Set([...selectedRightIATAs, ...hoveredRightIATAs])
     );
 
+    // check if filter state has changed and reset scroll position if needed
+    const previousFilterState = previousFilterStateRef.current;
+    const filterStateChanged =
+      JSON.stringify(leftFilterIATAs.sort()) !==
+        JSON.stringify(previousFilterState.leftIATAs.sort()) ||
+      JSON.stringify(rightFilterIATAs.sort()) !==
+        JSON.stringify(previousFilterState.rightIATAs.sort());
+
+    if (filterStateChanged && yPanelState) {
+      yPanelState.set('flightsScrollY', 0);
+      previousFilterStateRef.current = {
+        leftIATAs: [...leftFilterIATAs],
+        rightIATAs: [...rightFilterIATAs],
+      };
+    }
+
     let currentFilteredFlights: Flight[] = [];
     if (leftFilterIATAs.length > 0 && rightFilterIATAs.length > 0) {
       currentFilteredFlights = allFlights.current.filter(
@@ -1080,7 +1118,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .text(`${flight.duration.toFixed(1)}h`);
 
         // flight date (same size and styling as airline name)
-        const flightDate = new Date(flight.date);
+        // parse date as local date to avoid timezone issues
+        const dateParts = flight.date.split('-');
+        const flightDate = new Date(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        );
         const formattedDate = flightDate.toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'long',
@@ -1189,7 +1233,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     } else {
       const prices = flightsToAnalyze.map((f) => f.price);
       const durations = flightsToAnalyze.map((f) => f.duration);
-      const dates = flightsToAnalyze.map((f) => new Date(f.date));
+      // parse dates as local dates to avoid timezone issues
+      const dates = flightsToAnalyze.map((f) => {
+        const dateParts = f.date.split('-');
+        return new Date(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        );
+      });
 
       const histHeight = 40; // increased from 32 for better visibility
       const numBins = 8;
@@ -1493,7 +1545,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
               // check if any hovered flight's date falls in this bin
               const binContainsHoveredFlight = hoveredFlightsData.some(
                 (flight) => {
-                  const flightDate = new Date(flight.date).getTime();
+                  // parse date as local date to avoid timezone issues
+                  const dateParts = flight.date.split('-');
+                  const flightDate = new Date(
+                    parseInt(dateParts[0]),
+                    parseInt(dateParts[1]) - 1,
+                    parseInt(dateParts[2])
+                  ).getTime();
                   const binStart = d.x0!.getTime();
                   const binEnd = d.x1!.getTime();
                   // fix for edge values: use <= for the last bin to include max value

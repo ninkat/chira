@@ -42,6 +42,20 @@
     "Longitude": -97.0403
   },
   {
+    "IATA": "BOS",
+    "Airport Name": "Boston Logan International Airport",
+    "City": "Boston",
+    "Latitude": 42.3656,
+    "Longitude": -71.0096
+  },
+  {
+    "IATA": "DCA",
+    "Airport Name": "Ronald Reagan Washington National Airport",
+    "City": "Washington",
+    "Latitude": 38.8512,
+    "Longitude": -77.0402
+  },
+  {
     "IATA": "LHR",
     "Airport Name": "Heathrow Airport",
     "City": "London",
@@ -313,6 +327,34 @@
     "City": "Mumbai",
     "Latitude": 19.0896,
     "Longitude": 72.8656
+  },
+  {
+    "IATA": "HAN",
+    "Airport Name": "Noi Bai International Airport",
+    "City": "Hanoi",
+    "Latitude": 21.2187,
+    "Longitude": 105.8047
+  },
+  {
+    "IATA": "TPE",
+    "Airport Name": "Taoyuan International Airport",
+    "City": "Taipei",
+    "Latitude": 25.0777,
+    "Longitude": 121.2322
+  },
+  {
+    "IATA": "IKA",
+    "Airport Name": "Imam Khomeini International Airport",
+    "City": "Tehran",
+    "Latitude": 35.4161,
+    "Longitude": 51.1522
+  },
+  {
+    "IATA": "KIX",
+    "Airport Name": "Kansai International Airport",
+    "City": "Osaka",
+    "Latitude": 34.432,
+    "Longitude": 135.2304
   },
   {
     "IATA": "SYD",

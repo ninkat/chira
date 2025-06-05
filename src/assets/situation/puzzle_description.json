@@ -1,10 +1,10 @@
 {
-  "title": "European Rendezvous Challenge",
-  "description": "Two friends want to meet in Europe for a vacation. Help them find flights that work for both!",
+  "title": "Travel Rendezvous Challenge",
+  "description": "Two users want to meet for a vacation. Help them find flights that work for both!",
   "friends": {
-    "alex": {
-      "name": "Alex",
-      "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1500",
+    "user_1": {
+      "name": "User 1",
+      "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1200",
       "origin_airport": "YYZ",
       "available_dates": [
         "2025-06-08",
@@ -17,12 +17,12 @@
         "AA",
         "AC"
       ],
-      "max_budget": 1500
+      "max_budget": 750
     },
-    "bailey": {
-      "name": "Bailey",
-      "description": "lives in los angeles, available june 10-14, prefers air canada or lufthansa, budget max $1800",
-      "origin_airport": "LAX",
+    "user_2": {
+      "name": "User 2",
+      "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1500",
+      "origin_airport": "YYZ",
       "available_dates": [
         "2025-06-10",
         "2025-06-11",
@@ -34,34 +34,13 @@
         "AC",
         "LH"
       ],
-      "max_budget": 1800
+      "max_budget": 850
     }
   },
   "constraints": {
-    "destination_region": "europe",
-    "destination_airports": [
-      "LHR",
-      "CDG",
-      "AMS",
-      "FRA",
-      "MAD",
-      "ZRH",
-      "LIS",
-      "VIE",
-      "PRG",
-      "WAW",
-      "BUD",
-      "SVO",
-      "FCO",
-      "ARN"
-    ],
     "must_arrive_same_day": true,
-    "must_use_same_airline": true,
     "both_must_afford": true,
     "both_must_be_available": true,
-    "common_airlines": [
-      "AC"
-    ],
     "overlap_dates": [
       "2025-06-10",
       "2025-06-11",
@@ -70,19 +49,17 @@
   },
   "evaluation_criteria": {
     "valid_solution": {
-      "same_destination": "flights must go to the same european airport",
+      "same_destination": "flights must go to the same destination airport",
       "same_date": "flights must be on the same date",
-      "same_airline": "flights must be on the same airline",
-      "within_budgets": "alex's flight <= $1500, bailey's flight <= $1800",
-      "date_availability": "date must be in both friends' available dates",
-      "airline_preferences": "airline must be in both friends' preferred airlines",
-      "european_destination": "destination must be a european airport"
+      "within_budgets": "user_1's flight <= $750, user_2's flight <= $850",
+      "date_availability": "date must be in both users' available dates",
+      "airline_preferences": "each user must use one of their preferred airlines"
     }
   },
   "hints": {
-    "overlap_dates": "look for dates when both friends are available (june 10-12)",
-    "budget_consideration": "both friends need to stay within their budgets",
-    "airline_overlap": "find the airline both friends can use (air canada)",
+    "overlap_dates": "look for dates when both users are available (june 10-12)",
+    "budget_consideration": "both users need to stay within their budgets",
+    "airline_preferences": "each user must use one of their preferred airlines",
     "multiple_solutions": "there may be several valid combinations - any that meet all criteria work!"
   }
 }

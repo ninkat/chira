@@ -94,37 +94,40 @@ airlines = [
 # PUZZLE SCENARIO DEFINITION
 PUZZLE_CONFIG = {
     "friend_a": {
-        "origin": "YYZ",  # toronto
+        "origin": "FCO",  # rome
         "name": "User 1",
-        "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
-        "preferred_airlines": ["AA", "AC"],  # american airlines, air canada
-        "max_budget": 1200,
-        "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1200"
+        "available_dates": ["2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-19"],
+        "preferred_airlines": ["LH", "SQ"],  # lufthansa, singapore airlines
+        "max_budget": 950,
+        "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $950"
     },
     "friend_b": {
-        "origin": "YYZ",  # toronto (same as friend_a now)
+        "origin": "FCO",  # rome (same as friend_a)
         "name": "User 2",
-        "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
-        "preferred_airlines": ["AC", "LH"],  # air canada, lufthansa
-        "max_budget": 1500,
-        "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1500"
+        "available_dates": ["2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21"],
+        "preferred_airlines": ["EK", "SQ"],  # emirates, singapore airlines
+        "max_budget": 1100,
+        "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $1100"
     },
-    "destination_region": "europe",
-    "common_airline": "AC",  # air canada
-    "overlap_dates": ["2025-06-10", "2025-06-11", "2025-06-12"],  # when both are available
+    "destination_region": "asia",
+    "common_airline": "SQ",  # singapore airlines - overlapping preference
+    "overlap_dates": ["2025-07-17", "2025-07-18", "2025-07-19"],  # when both are available
     "solution_destinations": [
-        {"airport": "LHR", "date": "2025-06-10"},  # london
-        {"airport": "ARN", "date": "2025-06-11"},  # stockholm  
-        {"airport": "FRA", "date": "2025-06-12"}   # frankfurt
+        {"airport": "SIN", "date": "2025-07-17"},  # singapore
+        {"airport": "BKK", "date": "2025-07-18"},  # bangkok  
+        {"airport": "DEL", "date": "2025-07-19"}   # new delhi
     ]
 }
 
 # european airports for the puzzle
 EUROPEAN_AIRPORTS = ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PRG", "WAW", "BUD", "SVO", "FCO", "ARN"]
 
+# asian airports for the puzzle
+ASIAN_AIRPORTS = ["NRT", "ICN", "PEK", "PVG", "SIN", "BKK", "DEL", "MNL", "HKG", "KUL", "CGK", "BOM", "HAN", "TPE", "IKA", "KIX"]
+
 # define points of interest (routes that should have many flights)
 POINTS_OF_INTEREST = {
-    "YYZ": EUROPEAN_AIRPORTS,  # toronto to all european cities
+    "FCO": ASIAN_AIRPORTS,  # rome to all asian cities
 }
 
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -170,9 +173,9 @@ def calculate_flight_price(distance_km, flight_time, is_solution=False):
     
     # special pricing for solution flights to ensure they fit budget constraints
     if is_solution:
-        # ensure friend a's flight is under $1200 and friend b's is under $1500
-        if final_price > 1100:  # leave some buffer
-            final_price = random.uniform(900, 1100)
+        # ensure friend a's flight is under $950 and friend b's is under $1100
+        if final_price > 850:  # leave some buffer
+            final_price = random.uniform(750, 850)
         elif final_price < 600:  # ensure it's not suspiciously cheap
             final_price = random.uniform(600, 800)
     
@@ -185,8 +188,8 @@ def get_airline_for_route(origin, destination, force_airline=None):
         return next(a for a in airlines if a["code"] == force_airline)
     
     # for puzzle routes, prefer the relevant airlines
-    if origin == "YYZ" and destination in EUROPEAN_AIRPORTS:
-        return random.choice([a for a in airlines if a["code"] in ["AA", "AC", "LH"]])
+    if origin == "FCO" and destination in ASIAN_AIRPORTS:
+        return random.choice([a for a in airlines if a["code"] in ["SQ", "LH", "EK"]])
     
     # fallback to random airline
     return random.choice(airlines)
@@ -204,7 +207,7 @@ def generate_solution_flights():
         destination = solution["airport"]
         date = solution["date"]
         
-        # solution flight for friend a (toronto to destination on air canada)
+        # solution flight for friend a (rome to destination on singapore airlines)
         origin_a = airport_dict[config["friend_a"]["origin"]]
         dest = airport_dict[destination]
         distance_a = calculate_distance(origin_a["Latitude"], origin_a["Longitude"], 
@@ -220,11 +223,11 @@ def generate_solution_flights():
             "duration": flight_time_a,
             "date": date,
             "distance_km": round(distance_a, 1),
-            "airline": {"code": "AC", "name": "Air Canada", "continent": "north america"}
+            "airline": {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"}
         })
         flight_id += 1
         
-        # solution flight for friend b (toronto to destination on air canada)
+        # solution flight for friend b (rome to destination on singapore airlines)
         origin_b = airport_dict[config["friend_b"]["origin"]]
         distance_b = calculate_distance(origin_b["Latitude"], origin_b["Longitude"], 
                                        dest["Latitude"], dest["Longitude"])
@@ -239,22 +242,22 @@ def generate_solution_flights():
             "duration": flight_time_b,
             "date": date,
             "distance_km": round(distance_b, 1),
-            "airline": {"code": "AC", "name": "Air Canada", "continent": "north america"}
+            "airline": {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"}
         })
         flight_id += 1
     
     return flights, flight_id
 
 def generate_interest_flights(start_flight_id):
-    """generate many flights for points of interest (origin cities to european destinations)."""
+    """generate many flights for points of interest (origin cities to asian destinations)."""
     flights = []
     flight_id = start_flight_id
     airport_dict = {a["IATA"]: a for a in airports}
     
-    # generate dates from june 1 to june 14
+    # generate dates from july 8 to july 21
     all_dates = []
-    for i in range(14):  # june 1 to june 14
-        date = datetime(2025, 6, 1) + timedelta(days=i)
+    for i in range(14):  # july 1 to july 21
+        date = datetime(2025, 7, 8) + timedelta(days=i)
         all_dates.append(date.strftime("%Y-%m-%d"))
     
     # generate many flights for each interest route
@@ -314,10 +317,10 @@ def generate_filler_flights(start_flight_id, target_total=5000):
     airport_dict = {a["IATA"]: a for a in airports}
     iata_codes = [a["IATA"] for a in airports]
     
-    # generate dates from june 1 to june 14
+    # generate dates from july 1 to july 21
     all_dates = []
-    for i in range(14):  # june 1 to june 14
-        date = datetime(2025, 6, 1) + timedelta(days=i)
+    for i in range(21):  # july 1 to july 21
+        date = datetime(2025, 7, 1) + timedelta(days=i)
         all_dates.append(date.strftime("%Y-%m-%d"))
     
     # track routes we've already covered
@@ -384,38 +387,38 @@ puzzle_description = {
     "friends": {
         "user_1": {
             "name": "User 1",
-            "description": "lives in toronto, available june 8-12, prefers american airlines or air canada, budget max $1200",
-            "origin_airport": "YYZ",
-            "available_dates": ["2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12"],
-            "preferred_airlines": ["AA", "AC"],
-            "max_budget": 750
+            "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $950",
+            "origin_airport": "FCO",
+            "available_dates": ["2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-19"],
+            "preferred_airlines": ["LH", "SQ"],
+            "max_budget": 950
         },
         "user_2": {
             "name": "User 2", 
-            "description": "lives in toronto, available june 10-14, prefers air canada or lufthansa, budget max $1500",
-            "origin_airport": "YYZ",
-            "available_dates": ["2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14"],
-            "preferred_airlines": ["AC", "LH"],
-            "max_budget": 850
+            "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $1100",
+            "origin_airport": "FCO",
+            "available_dates": ["2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21"],
+            "preferred_airlines": ["EK", "SQ"],
+            "max_budget": 1100
         }
     },
     "constraints": {
         "must_arrive_same_day": True,
         "both_must_afford": True,
         "both_must_be_available": True,
-        "overlap_dates": ["2025-06-10", "2025-06-11", "2025-06-12"]
+        "overlap_dates": ["2025-07-17", "2025-07-18", "2025-07-19"]
     },
     "evaluation_criteria": {
         "valid_solution": {
             "same_destination": "flights must go to the same destination airport",
             "same_date": "flights must be on the same date", 
-            "within_budgets": "user_1's flight <= $750, user_2's flight <= $850",
+            "within_budgets": "user_1's flight <= $950, user_2's flight <= $1100",
             "date_availability": "date must be in both users' available dates",
             "airline_preferences": "each user must use one of their preferred airlines"
         }
     },
     "hints": {
-        "overlap_dates": "look for dates when both users are available (june 10-12)",
+        "overlap_dates": "look for dates when both users are available (july 17-19)",
         "budget_consideration": "both users need to stay within their budgets",
         "airline_preferences": "each user must use one of their preferred airlines",
         "multiple_solutions": "there may be several valid combinations - any that meet all criteria work!"
