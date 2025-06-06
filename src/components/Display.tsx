@@ -28,11 +28,11 @@ import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
 import { useWebcamFeed } from '@/hooks/useWebcamFeed';
 import { useMemoryUsage } from '@/hooks/useMemoryUsage';
 import Senate from '@/components/yjs-vis/Senate';
-import WorldMap from '@/components/yjs-vis/WorldMap';
+import TravelTask from '@/components/yjs-vis/TravelTask';
 import Movies from '@/components/yjs-vis/Movies';
 import Court from '@/components/yjs-vis/Court';
 import Subreddit from '@/components/yjs-vis/Subreddit';
-import USTileYjs from '@/components/yjs-vis/USTileYjs';
+import DoMi from '@/components/yjs-vis/DoMi';
 import AusPol from '@/components/yjs-vis/AusPol';
 import Tutorial from '@/components/yjs-vis/Tutorial';
 import { YjsProvider } from '@/context/YjsContext';
@@ -47,11 +47,11 @@ const WS_URL = videoUrl.toString();
 // define the type for visualization selection
 type VisualizationType =
   | 'senate'
-  | 'worldmap'
+  | 'traveltask'
   | 'movies'
   | 'court'
   | 'subreddit'
-  | 'ustileyjs'
+  | 'domi'
   | 'auspol'
   | 'tutorial';
 
@@ -84,7 +84,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [currentVisualization, setCurrentVisualization] =
-    useState<VisualizationType>('worldmap');
+    useState<VisualizationType>('domi');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(
@@ -376,8 +376,8 @@ const Display: React.FC = () => {
           {currentVisualization === 'senate' && (
             <Senate getCurrentTransformRef={getCurrentTransformRef} />
           )}
-          {currentVisualization === 'worldmap' && (
-            <WorldMap getCurrentTransformRef={getCurrentTransformRef} />
+          {currentVisualization === 'traveltask' && (
+            <TravelTask getCurrentTransformRef={getCurrentTransformRef} />
           )}
           {currentVisualization === 'movies' && (
             <Movies getCurrentTransformRef={getCurrentTransformRef} />
@@ -388,8 +388,8 @@ const Display: React.FC = () => {
           {currentVisualization === 'subreddit' && (
             <Subreddit getCurrentTransformRef={getCurrentTransformRef} />
           )}
-          {currentVisualization === 'ustileyjs' && (
-            <USTileYjs getCurrentTransformRef={getCurrentTransformRef} />
+          {currentVisualization === 'domi' && (
+            <DoMi getCurrentTransformRef={getCurrentTransformRef} />
           )}
           {currentVisualization === 'auspol' && (
             <AusPol getCurrentTransformRef={getCurrentTransformRef} />

@@ -38,21 +38,21 @@ interface DebugDashboardProps {
   // visualization selection props
   selectedVisualization:
     | 'senate'
-    | 'worldmap'
+    | 'traveltask'
     | 'movies'
     | 'court'
     | 'subreddit'
-    | 'ustileyjs'
+    | 'domi'
     | 'auspol'
     | 'tutorial';
   onVisualizationSelect: (
     visualization:
       | 'senate'
-      | 'worldmap'
+      | 'traveltask'
       | 'movies'
       | 'court'
       | 'subreddit'
-      | 'ustileyjs'
+      | 'domi'
       | 'auspol'
       | 'tutorial'
   ) => void;
@@ -335,11 +335,11 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     onVisualizationSelect(
                       e.target.value as
                         | 'senate'
-                        | 'worldmap'
+                        | 'traveltask'
                         | 'movies'
                         | 'court'
                         | 'subreddit'
-                        | 'ustileyjs'
+                        | 'domi'
                         | 'auspol'
                         | 'tutorial'
                     )
@@ -358,8 +358,8 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                     transition: 'all 0.2s ease',
                   }}
                 >
-                  <option value='worldmap'>🌎travel map</option>
-                  <option value='ustileyjs'>🔁us migration</option>
+                  <option value='traveltask'>🌎travel map</option>
+                  <option value='domi'>🔁us migration</option>
                   <option value='tutorial'>⚙️tutorial</option>
                   <option value='senate'>🏛️us senate</option>
                   <option value='movies'>🎥movie graph</option>

@@ -176,8 +176,8 @@ interface MigrationLinkInfo {
 // define a non-null version of geojsonproperties for extension
 // yjs shared value types (removed unused types)
 
-// props interface for the USTileYjs component
-interface USTileYjsProps {
+// props interface for the DoMi component
+interface DoMiProps {
   getCurrentTransformRef: React.MutableRefObject<GetCurrentTransformFn | null>;
 }
 
@@ -310,7 +310,7 @@ const externalLabelAdjustments: Record<string, [number, number]> = {
   MARYLAND: [0, 0], // no adjustment from base position
 };
 
-const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
+const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const panelSvgRef = useRef<SVGSVGElement>(null); // ref for the info panel svg
   const migrationDataByEra = useRef<Record<Era, Migration[]>>({
@@ -2408,4 +2408,4 @@ const USTileYjs: React.FC<USTileYjsProps> = ({ getCurrentTransformRef }) => {
   );
 };
 
-export default USTileYjs;
+export default DoMi;

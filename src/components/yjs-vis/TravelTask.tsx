@@ -139,7 +139,7 @@ const panelWidth = totalWidth / 4;
 const panelBackground = 'rgba(33, 33, 33, 0.2)';
 const panelTextColor = 'white';
 
-const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
+const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement | null>(null); // main group for d3 transformations
   const panelSvgRef = useRef<SVGSVGElement>(null); // ref for the info panel svg
@@ -227,19 +227,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
   // validation function
   const validateSelectedFlights = (flights: Flight[]): ValidationResult => {
-    console.log(
-      '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-    );
-    console.log('--- debugging validateselectedflights ---');
-    console.log(
-      'this function deals with validating if the two selected flights form a valid solution.'
-    );
-    console.log('it checks against the puzzle description constraints.');
-    console.log('selected flights:', flights);
-    console.log('puzzle description:', puzzleDescription.current);
-    console.log(
-      '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-    );
     if (!puzzleDescription.current || flights.length !== 2) {
       return { isValid: false, failedCriteria: [] };
     }
@@ -2400,4 +2387,4 @@ const WorldMap: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   );
 };
 
-export default WorldMap;
+export default TravelTask;
