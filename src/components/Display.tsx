@@ -84,7 +84,7 @@ const Display: React.FC = () => {
 
   // state for selected visualization
   const [currentVisualization, setCurrentVisualization] =
-    useState<VisualizationType>('domi');
+    useState<VisualizationType>('traveltask');
 
   // gesture state management
   const [leftGestureData, setLeftGestureData] = useState<GestureData | null>(

@@ -1894,6 +1894,10 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     handedness === 'left'
                       ? ySelectedAirportIATAsRight
                       : ySelectedAirportIATAsLeft;
+                  const targetHoveredArray =
+                    handedness === 'left'
+                      ? yHoveredAirportIATAsLeft
+                      : yHoveredAirportIATAsRight;
                   const oppositeHoveredArray =
                     handedness === 'left'
                       ? yHoveredAirportIATAsRight
@@ -1907,14 +1911,46 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     // airport is already selected by this hand, so deselect it
                     targetSelectionArray.delete(currentSelectedIndex, 1);
                   } else {
-                    // check if airport is in opposite group (selected or hovered)
-                    const isInOppositeGroup =
-                      oppositeSelectionArray.toArray().includes(airportIATA) ||
-                      oppositeHoveredArray.toArray().includes(airportIATA);
+                    // check if airport is selected in opposite group
+                    const oppositeSelectedIndex = oppositeSelectionArray
+                      .toArray()
+                      .indexOf(airportIATA);
 
-                    if (!isInOppositeGroup) {
-                      // airport is not in opposite group, so select it
+                    if (oppositeSelectedIndex > -1) {
+                      // airport is selected in opposite group, so move it to this group
+                      oppositeSelectionArray.delete(oppositeSelectedIndex, 1);
                       targetSelectionArray.push([airportIATA]);
+                      // remove from both hovered arrays since it's now pinned
+                      const targetHoveredIndex = targetHoveredArray
+                        .toArray()
+                        .indexOf(airportIATA);
+                      if (targetHoveredIndex > -1) {
+                        targetHoveredArray.delete(targetHoveredIndex, 1);
+                      }
+                      const oppositeHoveredIndex = oppositeHoveredArray
+                        .toArray()
+                        .indexOf(airportIATA);
+                      if (oppositeHoveredIndex > -1) {
+                        oppositeHoveredArray.delete(oppositeHoveredIndex, 1);
+                      }
+                    } else {
+                      // check if airport is only hovered in opposite group
+                      const isHoveredInOppositeGroup = oppositeHoveredArray
+                        .toArray()
+                        .includes(airportIATA);
+
+                      if (!isHoveredInOppositeGroup) {
+                        // airport is not in opposite group at all, so select it
+                        targetSelectionArray.push([airportIATA]);
+                        // remove from current hovered array since it's now pinned
+                        const targetHoveredIndex = targetHoveredArray
+                          .toArray()
+                          .indexOf(airportIATA);
+                        if (targetHoveredIndex > -1) {
+                          targetHoveredArray.delete(targetHoveredIndex, 1);
+                        }
+                      }
+                      // if airport is only hovered in opposite group, do nothing
                     }
                   }
                 }
