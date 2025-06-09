@@ -68,6 +68,9 @@ airports = [
     {"IATA": "TPE", "Airport Name": "Taoyuan International Airport", "City": "Taipei", "Latitude": 25.0777, "Longitude": 121.2322},
     {"IATA": "IKA", "Airport Name": "Imam Khomeini International Airport", "City": "Tehran", "Latitude": 35.4161, "Longitude": 51.1522},
     {"IATA": "KIX", "Airport Name": "Kansai International Airport", "City": "Osaka", "Latitude": 34.4320, "Longitude": 135.2304},
+    {"IATA": "BLR", "Airport Name": "Kempegowda International Airport", "City": "Bangalore", "Latitude": 13.1986, "Longitude": 77.7066},
+    {"IATA": "CAN", "Airport Name": "Guangzhou Baiyun International Airport", "City": "Guangzhou", "Latitude": 23.3924, "Longitude": 113.2988},
+    {"IATA": "CTU", "Airport Name": "Chengdu Shuangliu International Airport", "City": "Chengdu", "Latitude": 30.5785, "Longitude": 103.9467},
     
     # australia
     {"IATA": "SYD", "Airport Name": "Sydney Kingsford Smith Airport", "City": "Sydney", "Latitude": -33.9399, "Longitude": 151.1753},
@@ -98,16 +101,16 @@ PUZZLE_CONFIG = {
         "name": "User 1",
         "available_dates": ["2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-19"],
         "preferred_airlines": ["LH", "SQ"],  # lufthansa, singapore airlines
-        "max_budget": 950,
-        "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $950"
+        "max_budget": 700,
+        "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $700"
     },
     "friend_b": {
         "origin": "FCO",  # rome (same as friend_a)
         "name": "User 2",
         "available_dates": ["2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21"],
         "preferred_airlines": ["EK", "SQ"],  # emirates, singapore airlines
-        "max_budget": 1100,
-        "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $1100"
+        "max_budget": 810,
+        "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $810"
     },
     "destination_region": "asia",
     "common_airline": "SQ",  # singapore airlines - overlapping preference
@@ -123,7 +126,7 @@ PUZZLE_CONFIG = {
 EUROPEAN_AIRPORTS = ["LHR", "CDG", "AMS", "FRA", "MAD", "ZRH", "LIS", "VIE", "PRG", "WAW", "BUD", "SVO", "FCO", "ARN"]
 
 # asian airports for the puzzle
-ASIAN_AIRPORTS = ["NRT", "ICN", "PEK", "PVG", "SIN", "BKK", "DEL", "MNL", "HKG", "KUL", "CGK", "BOM", "HAN", "TPE", "IKA", "KIX"]
+ASIAN_AIRPORTS = ["NRT", "ICN", "PEK", "PVG", "SIN", "BKK", "DEL", "MNL", "HKG", "KUL", "CGK", "BOM", "HAN", "TPE", "IKA", "KIX", "BLR", "CAN", "CTU"]
 
 # define points of interest (routes that should have many flights)
 POINTS_OF_INTEREST = {
@@ -168,16 +171,15 @@ def calculate_flight_price(distance_km, flight_time, is_solution=False):
         tapering_factor = 1 - min(0.25, (distance_km - 5000) / 20000)
         final_price *= tapering_factor
     
-    # minimum price floor based on distance
-    min_price = max(150, distance_km * 0.08)
-    
     # special pricing for solution flights to ensure they fit budget constraints
     if is_solution:
-        # ensure friend a's flight is under $950 and friend b's is under $1100
-        if final_price > 850:  # leave some buffer
-            final_price = random.uniform(750, 850)
-        elif final_price < 600:  # ensure it's not suspiciously cheap
-            final_price = random.uniform(600, 800)
+        # ensure friend a's flight is under $700 and friend b's is under $810
+        # force all solution flights to be within budget
+        final_price = random.uniform(550, 680)  # always within user 1's budget
+        return round(final_price, 2)
+    
+    # minimum price floor based on distance (only for non-solution flights)
+    min_price = max(150, distance_km * 0.08)
     
     # cap at 2000 but make it rare
     return round(max(min_price, min(2000, final_price)), 2)
@@ -193,6 +195,65 @@ def get_airline_for_route(origin, destination, force_airline=None):
     
     # fallback to random airline
     return random.choice(airlines)
+
+def would_create_unintended_solution(origin, destination, date, price, airline_code, existing_flights):
+    """check if this flight would create a solution in a non-solution city."""
+    # get solution cities from config
+    solution_cities = {sol["airport"] for sol in PUZZLE_CONFIG["solution_destinations"]}
+    
+    # if this destination is a solution city, it's allowed
+    if destination in solution_cities:
+        return False
+    
+    # check if this flight could pair with another to create a valid solution
+    config = PUZZLE_CONFIG
+    
+    # only check flights from rome (FCO) to prevent non-solution city solutions
+    if origin != "FCO":
+        return False
+    
+    # check if this could be a valid flight for user 1 AND check existing flights for user 2
+    if (date in config["friend_a"]["available_dates"] and
+        price <= config["friend_a"]["max_budget"] and
+        airline_code in config["friend_a"]["preferred_airlines"]):
+        
+        # look for any existing user 2 flights to same destination on same date that would work
+        for flight in existing_flights:
+            if (flight["origin"] == config["friend_b"]["origin"] and
+                flight["destination"] == destination and
+                flight["date"] == date and
+                flight["price"] <= config["friend_b"]["max_budget"] and
+                flight["airline"]["code"] in config["friend_b"]["preferred_airlines"] and
+                date in config["friend_b"]["available_dates"]):
+                return True
+    
+    # check if this could be a valid flight for user 2 AND check existing flights for user 1
+    if (date in config["friend_b"]["available_dates"] and
+        price <= config["friend_b"]["max_budget"] and
+        airline_code in config["friend_b"]["preferred_airlines"]):
+        
+        # look for any existing user 1 flights to same destination on same date that would work
+        for flight in existing_flights:
+            if (flight["origin"] == config["friend_a"]["origin"] and
+                flight["destination"] == destination and
+                flight["date"] == date and
+                flight["price"] <= config["friend_a"]["max_budget"] and
+                flight["airline"]["code"] in config["friend_a"]["preferred_airlines"] and
+                date in config["friend_a"]["available_dates"]):
+                return True
+    
+    # also check if this flight would make it possible for future flights to create solutions
+    # by being too perfect (same price, date, airline for both users)
+    overlap_dates = set(config["friend_a"]["available_dates"]) & set(config["friend_b"]["available_dates"])
+    common_airlines = set(config["friend_a"]["preferred_airlines"]) & set(config["friend_b"]["preferred_airlines"])
+    
+    if (date in overlap_dates and
+        airline_code in common_airlines and
+        price <= config["friend_a"]["max_budget"] and
+        price <= config["friend_b"]["max_budget"]):
+        return True
+    
+    return False
 
 def generate_solution_flights():
     """generate multiple solution flights that satisfy the puzzle constraints."""
@@ -245,6 +306,127 @@ def generate_solution_flights():
             "airline": {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"}
         })
         flight_id += 1
+        
+        # add additional solution flights with different airline combinations
+        # user 1 with lufthansa, user 2 with emirates
+        if destination in ["SIN", "BKK"]:  # add alternative airlines for singapore and bangkok
+            # lufthansa flight for user 1
+            price_lh = calculate_flight_price(distance_a, flight_time_a, is_solution=True)
+            flights.append({
+                "id": flight_id,
+                "origin": config["friend_a"]["origin"],
+                "destination": destination,
+                "price": price_lh,
+                "duration": flight_time_a,
+                "date": date,
+                "distance_km": round(distance_a, 1),
+                "airline": {"code": "LH", "name": "Lufthansa", "continent": "europe"}
+            })
+            flight_id += 1
+            
+            # emirates flight for user 2
+            price_ek = calculate_flight_price(distance_b, flight_time_b, is_solution=True)
+            flights.append({
+                "id": flight_id,
+                "origin": config["friend_b"]["origin"],
+                "destination": destination,
+                "price": price_ek,
+                "duration": flight_time_b,
+                "date": date,
+                "distance_km": round(distance_b, 1),
+                "airline": {"code": "EK", "name": "Emirates", "continent": "middle east"}
+            })
+            flight_id += 1
+        
+        # generate strategic decoy flights that are cheaper but guaranteed incompatible
+        # these will mislead users who sort by price but cannot create valid solutions
+        
+        # decoy 1: cheap flight for user 1 with wrong airline (no matching user 2 flight)
+        decoy_price_1 = price_a * random.uniform(0.6, 0.8)  # 20-40% cheaper
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_a"]["origin"],
+            "destination": destination,
+            "price": round(decoy_price_1, 2),
+            "duration": flight_time_a,
+            "date": date,
+            "distance_km": round(distance_a, 1),
+            "airline": {"code": "AA", "name": "American Airlines", "continent": "north america"}  # wrong airline for user 1
+        })
+        flight_id += 1
+        
+        # decoy 2: cheap flight for user 2 on wrong date (no user 1 available)
+        wrong_date = "2025-07-14"  # not in either user's available dates
+        decoy_price_2 = price_b * random.uniform(0.5, 0.7)  # 30-50% cheaper
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_b"]["origin"],
+            "destination": destination,
+            "price": round(decoy_price_2, 2),
+            "duration": flight_time_b,
+            "date": wrong_date,
+            "distance_km": round(distance_b, 1),
+            "airline": {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"}
+        })
+        flight_id += 1
+        
+        # decoy 3: orphaned cheap flight for user 1 only (no user 2 available this date)
+        orphan_date = "2025-07-15"  # only user 1 is available
+        orphan_price = price_a * random.uniform(0.4, 0.6)  # very cheap
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_a"]["origin"],
+            "destination": destination,
+            "price": round(orphan_price, 2),
+            "duration": flight_time_a,
+            "date": orphan_date,
+            "distance_km": round(distance_a, 1),
+            "airline": {"code": "LH", "name": "Lufthansa", "continent": "europe"}
+        })
+        flight_id += 1
+        
+        # decoy 4: orphaned cheap flight for user 2 only (no user 1 available this date)
+        orphan_date_2 = "2025-07-21"  # only user 2 is available
+        orphan_price_2 = price_b * random.uniform(0.3, 0.55)  # extremely cheap
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_b"]["origin"],
+            "destination": destination,
+            "price": round(orphan_price_2, 2),
+            "duration": flight_time_b,
+            "date": orphan_date_2,
+            "distance_km": round(distance_b, 1),
+            "airline": {"code": "EK", "name": "Emirates", "continent": "middle east"}
+        })
+        flight_id += 1
+        
+        # decoy 5: cheap but over user 1's budget (appears valid but unaffordable)
+        over_budget_price = config["friend_a"]["max_budget"] + random.uniform(50, 150)
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_a"]["origin"],
+            "destination": destination,
+            "price": round(over_budget_price, 2),
+            "duration": flight_time_a,
+            "date": date,
+            "distance_km": round(distance_a, 1),
+            "airline": {"code": "LH", "name": "Lufthansa", "continent": "europe"}
+        })
+        flight_id += 1
+        
+        # decoy 6: tantalizing near-budget flight (just slightly over user 1's limit)
+        near_budget_price = config["friend_a"]["max_budget"] + random.uniform(5, 25)
+        flights.append({
+            "id": flight_id,
+            "origin": config["friend_a"]["origin"],
+            "destination": destination,
+            "price": round(near_budget_price, 2),
+            "duration": flight_time_a,
+            "date": date,
+            "distance_km": round(distance_a, 1),
+            "airline": {"code": "SQ", "name": "Singapore Airlines", "continent": "asia"}
+        })
+        flight_id += 1
     
     return flights, flight_id
 
@@ -263,8 +445,8 @@ def generate_interest_flights(start_flight_id):
     # generate many flights for each interest route
     for origin in POINTS_OF_INTEREST:
         for destination in POINTS_OF_INTEREST[origin]:
-            # generate 25-40 flights per route to make search more interesting
-            num_flights = random.randint(25, 40)
+            # generate 30-35 flights per route to increase solution chances
+            num_flights = random.randint(20, 25)
             
             # track which dates we've used for solution routes to avoid duplicates
             solution_dates_used = set()
@@ -283,18 +465,31 @@ def generate_interest_flights(start_flight_id):
                 distance = calculate_distance(origin_airport["Latitude"], origin_airport["Longitude"],
                                             dest_airport["Latitude"], dest_airport["Longitude"])
                 flight_time = calculate_flight_time(distance)
-                price = calculate_flight_price(distance, flight_time)
                 
-                # ensure we don't duplicate the exact solution flight
-                date = random.choice(all_dates)
-                
-                # avoid duplicating any solution flights
-                attempts = 0
-                while date in solution_dates_used and attempts < 10:
+                # generate flight with rerolling to avoid unintended solutions
+                max_attempts = 50
+                for attempt in range(max_attempts):
+                    price = calculate_flight_price(distance, flight_time)
                     date = random.choice(all_dates)
-                    attempts += 1
-                
-                airline = get_airline_for_route(origin, destination)
+                    airline = get_airline_for_route(origin, destination)
+                    
+                    # avoid duplicating any solution flights
+                    if date in solution_dates_used:
+                        continue
+                    
+                    # only check for unintended solutions in non-solution cities
+                    # let solution cities generate more freely
+                    solution_cities = {sol["airport"] for sol in PUZZLE_CONFIG["solution_destinations"]}
+                    if destination not in solution_cities and would_create_unintended_solution(origin, destination, date, price, airline["code"], flights):
+                        continue
+                    
+                    # if we get here, the flight is acceptable
+                    break
+                else:
+                    # if we can't find a good flight after max attempts, use fallback values
+                    price = calculate_flight_price(distance, flight_time) * 2  # make it expensive
+                    date = random.choice(all_dates)
+                    airline = random.choice([a for a in airlines if a["code"] not in ["SQ", "LH", "EK"]])
                 
                 flights.append({
                     "id": flight_id,
@@ -348,9 +543,26 @@ def generate_filler_flights(start_flight_id, target_total=5000):
         distance = calculate_distance(origin_airport["Latitude"], origin_airport["Longitude"],
                                     dest_airport["Latitude"], dest_airport["Longitude"])
         flight_time = calculate_flight_time(distance)
-        price = calculate_flight_price(distance, flight_time)
-        date = random.choice(all_dates)
-        airline = get_airline_for_route(origin, destination)
+        
+        # generate flight with rerolling to avoid unintended solutions
+        max_attempts = 30
+        for attempt in range(max_attempts):
+            price = calculate_flight_price(distance, flight_time)
+            date = random.choice(all_dates)
+            airline = get_airline_for_route(origin, destination)
+            
+            # check if this would create an unintended solution (only for non-solution cities)
+            solution_cities = {sol["airport"] for sol in PUZZLE_CONFIG["solution_destinations"]}
+            if destination not in solution_cities and would_create_unintended_solution(origin, destination, date, price, airline["code"], flights):
+                continue
+            
+            # if we get here, the flight is acceptable
+            break
+        else:
+            # if we can't find a good flight after max attempts, use fallback values
+            price = calculate_flight_price(distance, flight_time) * 2  # make it expensive
+            date = random.choice(all_dates)
+            airline = random.choice([a for a in airlines if a["code"] not in ["SQ", "LH", "EK"]])
         
         flights.append({
             "id": flight_id,
@@ -387,19 +599,19 @@ puzzle_description = {
     "friends": {
         "user_1": {
             "name": "User 1",
-            "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $950",
+            "description": "lives in rome, available july 15-19, prefers lufthansa or singapore airlines, budget max $700",
             "origin_airport": "FCO",
             "available_dates": ["2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-19"],
             "preferred_airlines": ["LH", "SQ"],
-            "max_budget": 950
+            "max_budget": 700
         },
         "user_2": {
             "name": "User 2", 
-            "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $1100",
+            "description": "lives in rome, available july 17-21, prefers emirates or singapore airlines, budget max $810",
             "origin_airport": "FCO",
             "available_dates": ["2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21"],
             "preferred_airlines": ["EK", "SQ"],
-            "max_budget": 1100
+            "max_budget": 810
         }
     },
     "constraints": {
@@ -412,7 +624,7 @@ puzzle_description = {
         "valid_solution": {
             "same_destination": "flights must go to the same destination airport",
             "same_date": "flights must be on the same date", 
-            "within_budgets": "user_1's flight <= $950, user_2's flight <= $1100",
+            "within_budgets": "user_1's flight <= $700, user_2's flight <= $810",
             "date_availability": "date must be in both users' available dates",
             "airline_preferences": "each user must use one of their preferred airlines"
         }
