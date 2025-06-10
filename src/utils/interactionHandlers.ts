@@ -12,13 +12,284 @@ import {
 import {
   drawOneGestureFeedback,
   drawGrabbingGestureFeedback,
-  drawGrabbingHoverPoint,
   drawThumbIndexGestureFeedback,
   drawOkGestureFeedback,
   drawZoomFeedback,
   drawFistGestureFeedback,
   drawRippleEffect,
 } from '@/utils/drawingUtils';
+
+// quadtree implementation for spatial indexing of dom elements
+interface QuadTreeBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface QuadTreeElement {
+  element: Element;
+  bounds: QuadTreeBounds;
+}
+
+class QuadTree {
+  private bounds: QuadTreeBounds;
+  private maxElements: number;
+  private maxDepth: number;
+  private depth: number;
+  private elements: QuadTreeElement[];
+  private nodes: QuadTree[];
+  private isLeaf: boolean;
+
+  constructor(
+    bounds: QuadTreeBounds,
+    maxElements = 10,
+    maxDepth = 5,
+    depth = 0
+  ) {
+    this.bounds = bounds;
+    this.maxElements = maxElements;
+    this.maxDepth = maxDepth;
+    this.depth = depth;
+    this.elements = [];
+    this.nodes = [];
+    this.isLeaf = true;
+  }
+
+  // insert an element into the quadtree
+  insert(element: QuadTreeElement): void {
+    if (!this.intersects(element.bounds)) {
+      return;
+    }
+
+    if (this.isLeaf) {
+      this.elements.push(element);
+
+      // subdivide if we exceed capacity and haven't reached max depth
+      if (
+        this.elements.length > this.maxElements &&
+        this.depth < this.maxDepth
+      ) {
+        this.subdivide();
+      }
+    } else {
+      // insert into child nodes
+      for (const node of this.nodes) {
+        node.insert(element);
+      }
+    }
+  }
+
+  // subdivide the current node into four quadrants
+  private subdivide(): void {
+    const halfWidth = this.bounds.width / 2;
+    const halfHeight = this.bounds.height / 2;
+    const x = this.bounds.x;
+    const y = this.bounds.y;
+
+    // create four child nodes
+    this.nodes = [
+      // top-left
+      new QuadTree(
+        { x, y, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // top-right
+      new QuadTree(
+        { x: x + halfWidth, y, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // bottom-left
+      new QuadTree(
+        { x, y: y + halfHeight, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // bottom-right
+      new QuadTree(
+        {
+          x: x + halfWidth,
+          y: y + halfHeight,
+          width: halfWidth,
+          height: halfHeight,
+        },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+    ];
+
+    // redistribute existing elements to child nodes
+    for (const element of this.elements) {
+      for (const node of this.nodes) {
+        node.insert(element);
+      }
+    }
+
+    // this node is no longer a leaf
+    this.isLeaf = false;
+    this.elements = []; // clear elements from internal node
+  }
+
+  // query elements that intersect with a circle
+  queryCircle(center: Point, radius: number): Element[] {
+    const result: Element[] = [];
+    this.queryCircleRecursive(center, radius, result);
+    return result;
+  }
+
+  private queryCircleRecursive(
+    center: Point,
+    radius: number,
+    result: Element[]
+  ): void {
+    // check if circle intersects with this node's bounds
+    if (!this.circleIntersectsBounds(center, radius, this.bounds)) {
+      return;
+    }
+
+    if (this.isLeaf) {
+      // check each element in this leaf node
+      for (const qtElement of this.elements) {
+        if (this.circleIntersectsRect(center, radius, qtElement.bounds)) {
+          result.push(qtElement.element);
+        }
+      }
+    } else {
+      // recurse into child nodes
+      for (const node of this.nodes) {
+        node.queryCircleRecursive(center, radius, result);
+      }
+    }
+  }
+
+  // check if a bounds intersects with this node's bounds
+  private intersects(bounds: QuadTreeBounds): boolean {
+    return !(
+      bounds.x > this.bounds.x + this.bounds.width ||
+      bounds.x + bounds.width < this.bounds.x ||
+      bounds.y > this.bounds.y + this.bounds.height ||
+      bounds.y + bounds.height < this.bounds.y
+    );
+  }
+
+  // check if circle intersects with bounds
+  private circleIntersectsBounds(
+    center: Point,
+    radius: number,
+    bounds: QuadTreeBounds
+  ): boolean {
+    // find the closest point on the rectangle to the circle center
+    const closestX = Math.max(
+      bounds.x,
+      Math.min(center.x, bounds.x + bounds.width)
+    );
+    const closestY = Math.max(
+      bounds.y,
+      Math.min(center.y, bounds.y + bounds.height)
+    );
+
+    // calculate distance from circle center to closest point
+    const dx = center.x - closestX;
+    const dy = center.y - closestY;
+    const distanceSquared = dx * dx + dy * dy;
+
+    return distanceSquared <= radius * radius;
+  }
+
+  // check if circle intersects with rectangle
+  private circleIntersectsRect(
+    center: Point,
+    radius: number,
+    rect: QuadTreeBounds
+  ): boolean {
+    return this.circleIntersectsBounds(center, radius, rect);
+  }
+
+  // clear all elements from the quadtree
+  clear(): void {
+    this.elements = [];
+    this.nodes = [];
+    this.isLeaf = true;
+  }
+}
+
+// quadtree state management
+const quadTreeState = {
+  left: null as QuadTree | null,
+  right: null as QuadTree | null,
+  lastUpdateTime: 0,
+  updateIntervalMs: 100, // rebuild quadtree every 100ms to handle dynamic content
+};
+
+// function to get element bounds in client coordinates
+function getElementBounds(element: Element): QuadTreeBounds {
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left,
+    y: rect.top,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+// function to build quadtree from current dom elements
+function buildQuadTree(): QuadTree {
+  // use much larger viewport bounds to account for all possible map transforms
+  // this ensures elements don't get excluded when the map is panned/zoomed
+  // the original issue was that elements at the edges could be outside the fixed
+  // (0, 0, 1280, 720) bounds due to map transformations
+  const viewportBounds: QuadTreeBounds = {
+    x: -5000, // expand bounds significantly to handle all transforms
+    y: -5000,
+    width: 10000 + 1280, // original width + buffer
+    height: 10000 + 720, // original height + buffer
+  };
+  const quadTree = new QuadTree(viewportBounds);
+
+  // find all interactable elements in the current viewport
+  const allElements = document.querySelectorAll('*');
+
+  for (const element of allElements) {
+    if (isInteractableElement(element)) {
+      const bounds = getElementBounds(element);
+
+      // only add elements that are visible and have non-zero bounds
+      if (bounds.width > 0 && bounds.height > 0) {
+        quadTree.insert({ element, bounds });
+      }
+    }
+  }
+
+  return quadTree;
+}
+
+// function to get or update quadtree for a hand
+function getQuadTree(handLabel: 'left' | 'right'): QuadTree {
+  const now = Date.now();
+  const shouldUpdate =
+    !quadTreeState[handLabel] ||
+    now - quadTreeState.lastUpdateTime > quadTreeState.updateIntervalMs;
+
+  if (shouldUpdate) {
+    quadTreeState[handLabel] = buildQuadTree();
+    quadTreeState.lastUpdateTime = now;
+  }
+
+  return quadTreeState[handLabel]!;
+}
+
+// function to clear quadtree state (useful for cleanup)
+function clearQuadTreeState(): void {
+  quadTreeState.left = null;
+  quadTreeState.right = null;
+  quadTreeState.lastUpdateTime = 0;
+}
 
 // type for getting current transform from the active visualization
 export type GetCurrentTransformFn = () => {
@@ -175,59 +446,12 @@ const fistDwellState = {
 const FIST_DWELL_TIME = 500;
 
 // helper function to check if element is interactable
-// covers all common svg elements typically used in d3 visualizations
-// and html elements with specific classes for scrolling/interaction
-// note: we don't do text or 'g' because they intercept the event instead of the child elements
+// elements are interactable if they have the 'interactable' class
 function isInteractableElement(element: Element | null): boolean {
   if (!element) return false;
 
-  // check if element is any svg element
-  const isSvgElement = element instanceof SVGElement;
-
-  // list of common interactive svg elements used in d3
-  const interactableSvgElements = [
-    'circle', // nodes, points, bubbles
-    'rect', // bars, boxes
-    'path', // lines, curves, custom shapes
-    'polyline', // connected lines
-    'ellipse', // oval shapes
-  ];
-
-  // check for svg elements
-  if (
-    isSvgElement &&
-    interactableSvgElements.includes(element.tagName.toLowerCase())
-  ) {
-    return true;
-  }
-
-  // check for elements with specific interactable classes (for grouped svg elements)
-  if (isSvgElement) {
-    const interactableSvgClasses = [
-      'flight-item', // worldmap flight items for hover/selection
-    ];
-
-    return interactableSvgClasses.some((className) =>
-      element.classList.contains(className)
-    );
-  }
-
-  // check for html elements with specific classes that should be interactable
-  const isHtmlElement = element instanceof HTMLElement;
-
-  if (isHtmlElement) {
-    // check if element has classes that make it interactable for scrolling
-    const interactableClasses = [
-      'flights-list', // worldmap flights list for scrolling
-      'scrollable-content', // generic scrollable content
-    ];
-
-    return interactableClasses.some((className) =>
-      element.classList.contains(className)
-    );
-  }
-
-  return false;
+  // simple check: element is interactable if it has the 'interactable' class
+  return element.classList.contains('interactable');
 }
 
 // handles "one" gesture (replaces neutral mode)
@@ -350,6 +574,13 @@ export function handleOne(
 
           // send pointerover to new element
           if (isInteractableElement(currentElement)) {
+            console.log(`[SingleHover] right hand hovering over:`, {
+              tagName: currentElement.tagName,
+              className: currentElement.className,
+              id: currentElement.id,
+              element: currentElement,
+            });
+
             onInteraction({
               type: 'pointerover',
               point,
@@ -380,6 +611,13 @@ export function handleOne(
 
           // send pointerover to new element
           if (isInteractableElement(currentElement)) {
+            console.log(`[SingleHover] left hand hovering over:`, {
+              tagName: currentElement.tagName,
+              className: currentElement.className,
+              id: currentElement.id,
+              element: currentElement,
+            });
+
             onInteraction({
               type: 'pointerover',
               point,
@@ -401,9 +639,7 @@ export function handleOne(
   });
 }
 
-// handles "grabbing" gesture (replaces coarse hover mode)
-// calculates the minimum enclosing circle around all fingertips
-// and sends pointerover events to elements within that area
+// handles "grabbing" gesture using quadtree for efficient spatial queries
 export function handleGrabbing(
   ctx: CanvasRenderingContext2D,
   results: GestureRecognizerResult,
@@ -476,34 +712,74 @@ export function handleGrabbing(
       drawGrabbingGestureFeedback(ctx, circle);
 
       if (!drawOnly) {
-        // find all elements within the circle
+        // use quadtree to efficiently find elements in the circle
+        const quadTree = getQuadTree(handLabel);
+
+        // convert canvas coordinates to client coordinates for quadtree query
+        const clientCenter: Point = {
+          x: rect.left + (dimensions.width - circle.center.x),
+          y: rect.top + circle.center.y,
+        };
+
+        // query quadtree for elements intersecting the circle
+        const potentialElements = quadTree.queryCircle(
+          clientCenter,
+          circle.radius
+        );
+
+        // check if gesture is over a panel area to prevent bleed-through
+        const panelElements = document.querySelectorAll('svg.interactable');
+        let isOverPanel = false;
+        let panelSvg: Element | null = null;
+
+        for (const panel of panelElements) {
+          const panelRect = panel.getBoundingClientRect();
+          if (
+            clientCenter.x >= panelRect.left &&
+            clientCenter.x <= panelRect.right &&
+            clientCenter.y >= panelRect.top &&
+            clientCenter.y <= panelRect.bottom
+          ) {
+            isOverPanel = true;
+            panelSvg = panel;
+            break;
+          }
+        }
+
+        // filter to only interactable elements and create final set
         const elementsInCircle = new Set<Element>();
-        // increase sampling density by using a smaller grid size
-        // original: const gridSize = Math.max(5, Math.floor(circle.radius / 20));
-        const gridSize = Math.max(10, Math.floor(circle.radius / 10)); // doubled grid size for more points
-        const step = (circle.radius * 2) / gridSize; // smaller step size
 
-        // add additional sampling points by using a denser grid
-        for (let x = -circle.radius; x <= circle.radius; x += step) {
-          for (let y = -circle.radius; y <= circle.radius; y += step) {
-            if (x * x + y * y <= circle.radius * circle.radius) {
-              const point: InteractionPoint = {
-                x: circle.center.x + x,
-                y: circle.center.y + y,
-                clientX: rect.left + (dimensions.width - (circle.center.x + x)),
-                clientY: rect.top + (circle.center.y + y),
-              };
-
-              const element = document.elementFromPoint(
-                point.clientX,
-                point.clientY
-              );
-              if (element && isInteractableElement(element)) {
-                elementsInCircle.add(element);
-
-                // draw hover point feedback with the drawing utility
-                drawGrabbingHoverPoint(ctx, point);
+        for (const element of potentialElements) {
+          if (isInteractableElement(element)) {
+            // if gesture is over a panel, only include elements that are within that panel
+            if (isOverPanel && panelSvg) {
+              const isElementInPanel = panelSvg.contains(element);
+              if (!isElementInPanel) {
+                continue; // skip elements outside the panel when gesture is over panel
               }
+            }
+
+            // do a final precise check to ensure element actually intersects the circle
+            const elementRect = element.getBoundingClientRect();
+            const elementCenter = {
+              x: elementRect.left + elementRect.width / 2,
+              y: elementRect.top + elementRect.height / 2,
+            };
+
+            const distance = Math.sqrt(
+              Math.pow(elementCenter.x - clientCenter.x, 2) +
+                Math.pow(elementCenter.y - clientCenter.y, 2)
+            );
+
+            // add element if its center is within the circle or if the circle intersects the element bounds
+            if (
+              distance <= circle.radius ||
+              (clientCenter.x >= elementRect.left &&
+                clientCenter.x <= elementRect.right &&
+                clientCenter.y >= elementRect.top &&
+                clientCenter.y <= elementRect.bottom)
+            ) {
+              elementsInCircle.add(element);
             }
           }
         }
@@ -524,6 +800,16 @@ export function handleGrabbing(
             isInteractableElement
           );
           if (interactableElements.length > 0) {
+            console.log(
+              `[CoarseHover] ${handLabel} hand starting to hover over:`,
+              interactableElements.map((el) => ({
+                tagName: el.tagName,
+                className: el.className,
+                id: el.id,
+                element: el,
+              }))
+            );
+
             // send pointerover for each element instead of coarsehoverstart
             interactableElements.forEach((element) => {
               // use the center of the element as the pointer position
@@ -553,6 +839,16 @@ export function handleGrabbing(
             isInteractableElement
           );
           if (interactableElements.length > 0) {
+            console.log(
+              `[CoarseHover] ${handLabel} hand stopping hover over:`,
+              interactableElements.map((el) => ({
+                tagName: el.tagName,
+                className: el.className,
+                id: el.id,
+                element: el,
+              }))
+            );
+
             // send pointerout for each element instead of coarsehoverend
             interactableElements.forEach((element) => {
               // use the center of the element as the pointer position
@@ -1584,6 +1880,9 @@ export function handleNone(
   if (drawOnly) {
     return;
   }
+
+  // clear quadtree state when no gestures are detected to free memory
+  clearQuadTreeState();
 
   const handsToClean: Array<'left' | 'right'> = ['left', 'right'];
 

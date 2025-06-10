@@ -578,7 +578,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         // sort by migration value and take only the top 300 flows
         const currentMigrationData = allMigrationData
           .sort((a, b) => b.value - a.value)
-          .slice(0, 300);
+          .slice(0, 150);
 
         // convert migration data to edges format and create a value mapping
         const edgesWithValues: { edge: Edge; value: number }[] =
@@ -1437,8 +1437,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     const buttonContainer = panelContentGroup
       .append('g')
       .attr('class', 'd3-button-container')
-      .attr('transform', `translate(${padding}, ${buttonContainerY})`)
-      .style('pointer-events', 'all');
+      .attr('transform', `translate(${padding}, ${buttonContainerY})`);
 
     buttonContainerRef.current = buttonContainer.node();
 
@@ -1458,7 +1457,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup
         .append('rect')
-        .attr('class', 'era-button-rect')
+        .attr('class', 'era-button-rect interactable')
         .attr('width', buttonWidth)
         .attr('height', buttonHeight)
         .attr('rx', 6)
@@ -1470,8 +1469,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .attr(
           'stroke',
           isActive ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.4)'
-        )
-        .style('pointer-events', 'all');
+        );
 
       buttonGroup
         .append('text')
@@ -1486,23 +1484,6 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         )
         .style('pointer-events', 'none')
         .text(era);
-
-      buttonGroup.on('click', (event) => {
-        event.stopPropagation();
-        if (era !== currentEraRef.current && ySharedState) {
-          doc.transact(() => {
-            ySharedState.set('currentEra', era);
-          }, 'era-change');
-
-          // immediately update visuals with new era
-          renderAllBundledLines();
-
-          if (calculateAndStoreMigrationsRef.current) {
-            calculateAndStoreMigrationsRef.current();
-          }
-          updateInfoPanel();
-        }
-      });
     });
 
     // view type buttons section
@@ -1510,8 +1491,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     const viewTypeButtonContainer = panelContentGroup
       .append('g')
       .attr('class', 'd3-view-type-button-container')
-      .attr('transform', `translate(${padding}, ${viewTypeButtonY})`)
-      .style('pointer-events', 'all');
+      .attr('transform', `translate(${padding}, ${viewTypeButtonY})`);
 
     const viewTypes: ViewType[] = ['absolute', 'rate'];
     const viewTypeButtonWidth =
@@ -1532,7 +1512,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
       buttonGroup
         .append('rect')
-        .attr('class', 'view-type-button-rect')
+        .attr('class', 'view-type-button-rect interactable')
         .attr('width', viewTypeButtonWidth)
         .attr('height', 36) // slightly smaller than era buttons
         .attr('rx', 4)
@@ -1544,8 +1524,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .attr(
           'stroke',
           isActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.3)'
-        )
-        .style('pointer-events', 'all');
+        );
 
       buttonGroup
         .append('text')
@@ -1560,23 +1539,6 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         )
         .style('pointer-events', 'none')
         .text(viewType === 'absolute' ? 'absolute' : 'per 100K');
-
-      buttonGroup.on('click', (event) => {
-        event.stopPropagation();
-        if (viewType !== currentViewTypeRef.current && ySharedState) {
-          doc.transact(() => {
-            ySharedState.set('currentViewType', viewType);
-          }, 'view-type-change');
-
-          // immediately update visuals with new view type
-          renderAllBundledLines();
-
-          if (calculateAndStoreMigrationsRef.current) {
-            calculateAndStoreMigrationsRef.current();
-          }
-          updateInfoPanel();
-        }
-      });
     });
 
     // total migration section (only show for absolute view)
@@ -1772,8 +1734,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .attr('stdDeviation', '1')
         .attr('flood-opacity', '0.3');
 
-      // create content group with pointer events
-      const contentGroup = panelSvg.append('g').style('pointer-events', 'all');
+      // create content group
+      const contentGroup = panelSvg.append('g');
 
       // create custom panel background with square left corners and rounded right corners
       const borderRadius = 8;
@@ -1835,7 +1797,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .selectAll('path.tile')
         .data(filteredFeatures)
         .join('path')
-        .attr('class', 'tile')
+        .attr('class', 'tile interactable')
         .attr(
           'data-statename',
           (d) =>
@@ -1845,7 +1807,6 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .attr('fill', defaultFill)
         .attr('stroke', '#fff')
         .attr('stroke-width', defaultStrokeWidth)
-        .style('pointer-events', 'all')
         .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
 
       // filter features for internal vs external labels
@@ -2386,13 +2347,13 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         ref={panelSvgRef}
         width={tooltipPanelWidth}
         height={totalHeight}
+        className='interactable'
         style={{
           position: 'fixed',
           top: '50%',
           left: '50%',
           transform: `translate(-${totalWidth / 2}px, -50%)`,
           zIndex: 1000,
-          pointerEvents: 'none',
         }}
       >
         <defs>

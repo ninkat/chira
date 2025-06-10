@@ -675,6 +675,17 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     const contentGroup = panelSvg.append('g').attr('class', 'panel-content');
 
+    // add a background rect that absorbs all events to prevent bleeding through
+    contentGroup
+      .append('rect')
+      .attr('class', 'interactable') // make it interactable to absorb events
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', panelWidth)
+      .attr('height', totalHeight)
+      .attr('fill', 'transparent') // invisible but still catches events
+      .style('pointer-events', 'all'); // ensure it catches all pointer events
+
     const hoveredLeftIATAs = yHoveredAirportIATAsLeft.toArray();
     const hoveredRightIATAs = yHoveredAirportIATAsRight.toArray();
     const selectedLeftIATAs = ySelectedAirportIATAsLeft.toArray();
@@ -1029,15 +1040,17 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         const selectedFlights = ySelectedFlights?.toArray() || [];
         const isSelected = selectedFlights.includes(flight.id);
 
-        // create a group for each flight item to make it interactable
+        // create a group for each flight item
         const flightGroup = flightsListGroup
           .append('g')
           .attr('class', 'flight-item')
           .attr('data-flight-id', flight.id.toString());
 
-        // flight item background
+        // flight item background (make this the interactable element)
         flightGroup
           .append('rect')
+          .attr('class', 'interactable') // add interactable class to the rect
+          .attr('data-flight-id', flight.id.toString()) // add flight id to the rect too
           .attr('x', padding + 4)
           .attr('y', itemY)
           .attr('width', panelWidth - 2 * padding - 8)
@@ -1742,7 +1755,7 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('fill', airportFill)
           .attr('stroke', airportStroke)
           .attr('stroke-width', airportStrokeWidth / initialScale) // use initial scale
-          .attr('class', 'airport')
+          .attr('class', 'airport interactable') // add interactable class
           .attr('data-iata', (d) => d.IATA) // add iata for easy selection
           .append('title')
           .text((d) => `${d['Airport Name']} (${d.IATA})`);
@@ -1789,8 +1802,12 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
             ?.closest('.airport')
             ?.getAttribute('data-iata');
 
-          // check for flight element
-          const flightElement = targetElement?.closest('.flight-item');
+          // check for flight element (could be the rect itself or its parent group)
+          const flightElement =
+            targetElement?.closest('.flight-item') ||
+            (targetElement?.getAttribute('data-flight-id')
+              ? targetElement
+              : null);
           const flightId = flightElement?.getAttribute('data-flight-id');
 
           doc.transact(() => {
@@ -1996,8 +2013,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                 const { point, handedness, element } = event;
                 if (!handedness || !element) return;
 
-                // check if the element is the panel svg or related to flights list
+                // check if the element is within the interactable panel
                 if (
+                  element &&
                   (element === panelSvgRef.current ||
                     panelSvgRef.current?.contains(element)) &&
                   yPanelState
@@ -2331,6 +2349,7 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         ref={panelSvgRef}
         width={panelWidth}
         height={totalHeight}
+        className='interactable'
         style={{
           position: 'fixed',
           top: '0',
