@@ -22,6 +22,74 @@ import {
   type Point,
 } from '@/utils/d3-ForceEdgeBundling';
 
+// performance optimization: add css styles for state classes
+const addPerformanceStyles = () => {
+  const styleId = 'domi-performance-styles';
+
+  // remove existing styles if they exist
+  const existingStyle = document.getElementById(styleId);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    /* default state styling */
+    .tile {
+      fill: rgba(170,170,170,0.4);
+      stroke: #fff;
+      stroke-width: 1.5px;
+      filter: drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2));
+    }
+    
+    /* hover states */
+    .tile.state-hover-left {
+      fill: rgba(232, 27, 35, 0.6);
+      stroke-width: 2.5px;
+    }
+    
+    .tile.state-hover-right {
+      fill: rgba(0, 174, 243, 0.6);
+      stroke-width: 2.5px;
+    }
+    
+    /* pinned states (overrides hover styling) */
+    .tile.state-pinned {
+      stroke: #FFD700;
+      stroke-width: 3px;
+    }
+    
+    /* bundled line default styling */
+    .bundled-migration-line {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    /* highlighted line styling */
+    .bundled-migration-line.line-dimmed {
+      opacity: 0.3;
+    }
+    
+    .highlighted-migration-line {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-opacity: 1;
+    }
+    
+    .highlighted-migration-line-outline {
+      fill: none;
+      stroke: black;
+      stroke-opacity: 0.95;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
 // local interface to handle potentially varying event detail structure for pointerover
 interface PointerOverDetail {
   type: 'pointerover'; // or other relevant types from InteractionEvent
@@ -120,23 +188,17 @@ type Era = '1960s' | '1990s' | '2020s';
 // view type for absolute vs rate data
 type ViewType = 'absolute' | 'rate';
 
-// constants for hover and selection styling
-const defaultFill = 'rgba(170,170,170,0.4)';
-const leftHandHoverFill = 'rgba(232, 27, 35, 0.6)';
-const rightHandHoverFill = 'rgba(0, 174, 243, 0.6)';
-const pinnedStroke = '#FFD700'; // gold stroke for all pinned states
-const defaultStrokeWidth = 1.5;
-const hoverStrokeWidth = 2.5;
-const pinnedStrokeWidth = 3;
+// constants for hover and selection styling (moved to css for performance)
+// note: styling constants are now defined in css classes for better performance
 
 // constants for edge bundling algorithm
 const EDGE_BUNDLING_COMPATIBILITY_THRESHOLD = 0.1; // much lower for aggressive bundling - more edges bundle together
 const EDGE_BUNDLING_STIFFNESS = 0.4; // much higher stiffness for tighter bundles
 const EDGE_BUNDLING_STEP_SIZE = 0.05; // smaller steps for more refined movement
-const EDGE_BUNDLING_CYCLES = 8; // more cycles for aggressive bundling
+const EDGE_BUNDLING_CYCLES = 6; // more cycles for aggressive bundling
 const EDGE_BUNDLING_ITERATIONS = 80; // more iterations for better convergence
 const EDGE_BUNDLING_ITERATIONS_RATE = 0.6666667; // original I_rate - rate at which iteration number decreases i.e. 2/3
-const EDGE_BUNDLING_SUBDIVISION_SEED = 2; // more subdivision points for smoother curves
+const EDGE_BUNDLING_SUBDIVISION_SEED = 1; // more subdivision points for smoother curves
 const EDGE_BUNDLING_SUBDIVISION_RATE = 2; // original P_rate - subdivision rate increase
 
 // constants for layout
@@ -578,7 +640,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         // sort by migration value and take only the top 300 flows
         const currentMigrationData = allMigrationData
           .sort((a, b) => b.value - a.value)
-          .slice(0, 150);
+          .slice(0, 100);
 
         // convert migration data to edges format and create a value mapping
         const edgesWithValues: { edge: Edge; value: number }[] =
@@ -784,13 +846,13 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .append('stop')
         .attr('offset', '0%')
         .attr('stop-color', '#e53e3e') // red for origin
-        .attr('stop-opacity', 0.1);
+        .attr('stop-opacity', 0.2);
 
       gradient
         .append('stop')
         .attr('offset', '100%')
         .attr('stop-color', '#3182ce') // blue for destination
-        .attr('stop-opacity', 0.1);
+        .attr('stop-opacity', 0.2);
 
       // create line generator for the bundled path
       const lineGenerator = d3
@@ -809,13 +871,11 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         .attr('d', pathData)
         .attr('stroke', `url(#${gradientId})`)
         .attr('stroke-width', strokeWidth) // linearly scaled thickness
-        .attr('fill', 'none')
         .attr('data-pair-key', pairKey)
         .attr('data-value', data.value) // store value for potential use
         .attr('data-gradient-id', gradientId) // store gradient id for highlighting
-        .attr('data-path-data', pathData) // store path data for highlighting
-        .style('stroke-linecap', 'round')
-        .style('stroke-linejoin', 'round'); // smoother joins
+        .attr('data-path-data', pathData); // store path data for highlighting
+      // css classes handle fill and stroke styling for performance
     });
   };
 
@@ -829,6 +889,16 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
     // clear any existing highlighted lines
     highlightedLinesGroup.selectAll('*').remove();
+
+    // clear existing highlight and temp gradients from defs to prevent memory leaks
+    // these gradients accumulate over time as they're created on each hover/selection change
+    // but only the path elements (not gradients) were being removed previously
+    svg
+      .select('defs')
+      .selectAll(
+        'linearGradient[id^="highlight-migration-gradient-"], linearGradient[id^="temp-migration-gradient-"]'
+      )
+      .remove();
 
     // get the bundled paths for the current era and view type
     const currentEraBundledPaths =
@@ -848,7 +918,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     const minStrokeWidth = 2;
     const maxStrokeWidth = 12;
 
-    // reset all lines to default appearance with original gradients (recalculate stroke width based on their values)
+    // performance optimization: use css classes for line state changes
     bundledLinesGroup
       .selectAll('path.bundled-migration-line')
       .each(function () {
@@ -875,7 +945,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
             normalizedValue * (maxStrokeWidth - minStrokeWidth);
         }
 
+        // use css classes for performance - remove dimming class
         element
+          .classed('line-dimmed', false)
           .attr('stroke', `url(#${originalGradientId})`)
           .attr('stroke-width', strokeWidth)
           .style('filter', 'none');
@@ -975,13 +1047,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
               .append('path')
               .attr('class', 'highlighted-migration-line-outline')
               .attr('d', pathData)
-              .attr('stroke', 'black')
               .attr('stroke-width', outlineStrokeWidth)
-              .attr('stroke-opacity', 0.95)
-              .attr('fill', 'none')
-              .attr('data-pair-key', pairKey) // for consistency
-              .style('stroke-linecap', 'round')
-              .style('stroke-linejoin', 'round');
+              .attr('data-pair-key', pairKey); // for consistency
+            // css classes handle stroke, fill, opacity, and line caps
 
             // draw the main gradient path on top
             highlightedLinesGroup
@@ -990,11 +1058,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
               .attr('d', pathData)
               .attr('stroke', `url(#${highlightGradientId})`) // use new distinctive gradient
               .attr('stroke-width', backgroundStrokeWidth) // same width as background line
-              .attr('stroke-opacity', 1) // full opacity
-              .attr('fill', 'none')
-              .attr('data-pair-key', pairKey)
-              .style('stroke-linecap', 'round')
-              .style('stroke-linejoin', 'round');
+              .attr('data-pair-key', pairKey);
+            // css classes handle fill, opacity, and line caps
           }
         } else {
           // this link is not in the bundled paths, create a temporary straight line with gradient
@@ -1071,13 +1136,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
                 .append('path')
                 .attr('class', 'highlighted-migration-line-outline temporary')
                 .attr('d', straightLinePath)
-                .attr('stroke', 'black')
                 .attr('stroke-width', temporaryOutlineStrokeWidth)
-                .attr('stroke-opacity', 1)
-                .attr('fill', 'none')
-                .attr('data-pair-key', pairKey)
-                .style('stroke-linecap', 'round')
-                .style('stroke-linejoin', 'round');
+                .attr('data-pair-key', pairKey);
+              // css classes handle stroke, fill, opacity, and line caps
 
               // create highlighted line using temporary gradient with background-equivalent width
               highlightedLinesGroup
@@ -1086,11 +1147,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
                 .attr('d', straightLinePath)
                 .attr('stroke', `url(#${tempGradientId})`) // use temporary gradient
                 .attr('stroke-width', backgroundEquivalentWidth) // same width as background would be
-                .attr('stroke-opacity', 1) // full opacity
-                .attr('fill', 'none')
-                .attr('data-pair-key', pairKey)
-                .style('stroke-linecap', 'round')
-                .style('stroke-linejoin', 'round');
+                .attr('data-pair-key', pairKey);
+              // css classes handle fill, opacity, and line caps
             }
           }
         }
@@ -1644,6 +1702,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         (ymap) => ymap.toJSON() as MigrationLinkInfo
       ) || [];
 
+    // performance optimization: use css classes instead of individual attribute updates
     d3.select(svgRef.current)
       .select('g#map-group')
       .selectAll('path.tile')
@@ -1663,37 +1722,33 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
           ? currentRightPinned.includes(stateName)
           : false;
 
-        let fill = defaultFill;
-        let strokeWidth = defaultStrokeWidth;
-        let strokeColor = '#fff'; // default stroke color
-
         // treat pinned states as permanently hovered for fill color
         const effectiveLeftHover = isLeftHover || isLeftPinned;
         const effectiveRightHover = isRightHover || isRightPinned;
 
-        // apply hover styling (including pinned as permanent hover)
-        if (effectiveLeftHover) {
-          fill = leftHandHoverFill;
-          strokeWidth = hoverStrokeWidth;
-        }
-        if (effectiveRightHover) {
-          fill = rightHandHoverFill;
-          strokeWidth = hoverStrokeWidth;
-        }
+        // apply css classes for performance - much faster than individual attribute updates
+        const element = d3.select(tileElement);
+
+        // remove all state classes first
+        element
+          .classed('state-hover-left', false)
+          .classed('state-hover-right', false)
+          .classed('state-pinned', false);
+
+        // apply appropriate classes based on state
         if (effectiveLeftHover && effectiveRightHover) {
-          fill = leftHandHoverFill;
+          // left takes precedence when both are hovered
+          element.classed('state-hover-left', true);
+        } else if (effectiveLeftHover) {
+          element.classed('state-hover-left', true);
+        } else if (effectiveRightHover) {
+          element.classed('state-hover-right', true);
         }
 
-        // apply pinned styling (overrides stroke color and width)
+        // pinned styling overrides hover styling for stroke
         if (isLeftPinned || isRightPinned) {
-          strokeColor = pinnedStroke;
-          strokeWidth = pinnedStrokeWidth;
+          element.classed('state-pinned', true);
         }
-
-        d3.select(tileElement)
-          .attr('fill', fill)
-          .attr('stroke', strokeColor)
-          .attr('stroke-width', strokeWidth);
       });
 
     // use bundled line highlighting instead of creating new migration lines
@@ -1793,6 +1848,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         }
       });
 
+      // add performance styles to document head
+      addPerformanceStyles();
+
       mapGroup
         .selectAll('path.tile')
         .data(filteredFeatures)
@@ -1803,11 +1861,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
           (d) =>
             (d.properties as StateGeometry['properties'])?.name || 'unknown'
         )
-        .attr('d', pathGenerator)
-        .attr('fill', defaultFill)
-        .attr('stroke', '#fff')
-        .attr('stroke-width', defaultStrokeWidth)
-        .style('filter', 'drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.2))');
+        .attr('d', pathGenerator);
+      // css classes handle styling now for better performance
 
       // filter features for internal vs external labels
       const featuresWithInternalLabels = filteredFeatures.filter((feature) => {
@@ -1961,6 +2016,15 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
       yActiveMigrationLinks?.unobserveDeep(visualObserver);
       yTotalMigrationValue?.unobserve(visualObserver);
       clearAllD3MigrationLines();
+
+      // clean up all gradients when component unmounts to prevent memory leaks
+      if (svgRef.current) {
+        d3.select(svgRef.current)
+          .select('defs')
+          .selectAll('linearGradient')
+          .remove();
+      }
+
       isInitializedRef.current = false;
     };
   }, [

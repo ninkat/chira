@@ -574,13 +574,6 @@ export function handleOne(
 
           // send pointerover to new element
           if (isInteractableElement(currentElement)) {
-            console.log(`[SingleHover] right hand hovering over:`, {
-              tagName: currentElement.tagName,
-              className: currentElement.className,
-              id: currentElement.id,
-              element: currentElement,
-            });
-
             onInteraction({
               type: 'pointerover',
               point,
@@ -611,13 +604,6 @@ export function handleOne(
 
           // send pointerover to new element
           if (isInteractableElement(currentElement)) {
-            console.log(`[SingleHover] left hand hovering over:`, {
-              tagName: currentElement.tagName,
-              className: currentElement.className,
-              id: currentElement.id,
-              element: currentElement,
-            });
-
             onInteraction({
               type: 'pointerover',
               point,
@@ -800,16 +786,6 @@ export function handleGrabbing(
             isInteractableElement
           );
           if (interactableElements.length > 0) {
-            console.log(
-              `[CoarseHover] ${handLabel} hand starting to hover over:`,
-              interactableElements.map((el) => ({
-                tagName: el.tagName,
-                className: el.className,
-                id: el.id,
-                element: el,
-              }))
-            );
-
             // send pointerover for each element instead of coarsehoverstart
             interactableElements.forEach((element) => {
               // use the center of the element as the pointer position
@@ -839,16 +815,6 @@ export function handleGrabbing(
             isInteractableElement
           );
           if (interactableElements.length > 0) {
-            console.log(
-              `[CoarseHover] ${handLabel} hand stopping hover over:`,
-              interactableElements.map((el) => ({
-                tagName: el.tagName,
-                className: el.className,
-                id: el.id,
-                element: el,
-              }))
-            );
-
             // send pointerout for each element instead of coarsehoverend
             interactableElements.forEach((element) => {
               // use the center of the element as the pointer position

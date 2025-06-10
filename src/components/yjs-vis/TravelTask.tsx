@@ -670,8 +670,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     const panelSvg = d3.select(panelSvgRef.current);
 
-    // clear existing content (keep defs)
+    // clear existing content including any flight-related clipPaths in defs
     panelSvg.selectAll('g.panel-content').remove();
+    panelSvg.select('defs').selectAll('clipPath[id^="flights-"]').remove();
 
     const contentGroup = panelSvg.append('g').attr('class', 'panel-content');
 
@@ -1003,10 +1004,11 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         (a, b) => a.price - b.price
       );
 
-      // create clipping path for flights list
+      // create clipping path for flights list (ensure unique id and remove any existing one first)
       const clipId = 'flights-clip';
-      panelSvg
-        .select('defs')
+      const defs = panelSvg.select('defs');
+      defs.select(`clipPath#${clipId}`).remove();
+      defs
         .append('clipPath')
         .attr('id', clipId)
         .append('rect')
@@ -2183,6 +2185,14 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       if (animationFrameRef.current)
         cancelAnimationFrame(animationFrameRef.current);
       clearAllLines();
+
+      // clean up panel svg content
+      if (panelSvgRef.current) {
+        const panelSvg = d3.select(panelSvgRef.current);
+        panelSvg.selectAll('g.panel-content').remove();
+        panelSvg.select('defs').selectAll('clipPath[id^="flights-"]').remove();
+      }
+
       yHoveredAirportIATAsLeft?.unobserveDeep(yjsObserver);
       yHoveredAirportIATAsRight?.unobserveDeep(yjsObserver);
       ySelectedAirportIATAsLeft?.unobserveDeep(yjsObserver);
