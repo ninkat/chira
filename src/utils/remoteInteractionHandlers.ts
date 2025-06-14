@@ -107,6 +107,29 @@ const remoteFistDwellState = {
 // dwell time in milliseconds (matching local implementation)
 const FIST_DWELL_TIME = 500;
 
+// state for grabbing gesture dwell time to create sticky brushes
+const remoteGrabbingDwellState = {
+  left: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+    position: null as Point | null,
+    radius: 0,
+  },
+  right: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+    position: null as Point | null,
+    radius: 0,
+  },
+};
+
+// dwell time and thresholds for sticky brush creation
+const GRABBING_DWELL_TIME = 2000; // 1 second
+const GRABBING_POSITION_THRESHOLD = 30; // pixels
+const GRABBING_RADIUS_THRESHOLD = 20; // pixels
+
 // helper function to draw a move tool indicator (four cardinal arrows)
 function drawMoveToolIndicator(
   ctx: CanvasRenderingContext2D,
@@ -180,59 +203,119 @@ function drawMoveToolIndicator(
   ctx.stroke();
 }
 
-// helper function to draw a zoom tool indicator (two outward arrows)
+// helper function to draw a zoom tool indicator with arrows aligned with the hand positions
 function drawZoomToolIndicator(
   ctx: CanvasRenderingContext2D,
-  point: InteractionPoint
+  center: InteractionPoint,
+  point1: Point,
+  point2: Point
 ): void {
   const arrowLength = 14;
   const arrowWidth = 6;
-  const centerOffset = 8; // offset from center point
 
-  // draw diagonal outward arrows for zoom
-  // top-right arrow
-  ctx.beginPath();
-  ctx.moveTo(point.x + centerOffset, point.y - centerOffset);
-  ctx.lineTo(
-    point.x + centerOffset + arrowLength,
-    point.y - centerOffset - arrowLength
-  );
-  ctx.lineTo(
-    point.x + centerOffset + arrowLength - arrowWidth,
-    point.y - centerOffset - arrowLength + arrowWidth
-  );
-  ctx.moveTo(
-    point.x + centerOffset + arrowLength,
-    point.y - centerOffset - arrowLength
-  );
-  ctx.lineTo(
-    point.x + centerOffset + arrowLength - arrowWidth,
-    point.y - centerOffset - arrowLength
-  );
-  ctx.strokeStyle = 'white';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  // Calculate the direction vector from center to each hand
+  const dir1 = {
+    x: point1.x - center.x,
+    y: point1.y - center.y,
+  };
 
-  // bottom-left arrow
-  ctx.beginPath();
-  ctx.moveTo(point.x - centerOffset, point.y + centerOffset);
-  ctx.lineTo(
-    point.x - centerOffset - arrowLength,
-    point.y + centerOffset + arrowLength
-  );
-  ctx.lineTo(
-    point.x - centerOffset - arrowLength + arrowWidth,
-    point.y + centerOffset + arrowLength - arrowWidth
-  );
-  ctx.moveTo(
-    point.x - centerOffset - arrowLength,
-    point.y + centerOffset + arrowLength
-  );
-  ctx.lineTo(
-    point.x - centerOffset - arrowLength,
-    point.y + centerOffset + arrowLength - arrowWidth
-  );
-  ctx.stroke();
+  const dir2 = {
+    x: point2.x - center.x,
+    y: point2.y - center.y,
+  };
+
+  // Normalize the direction vectors
+  const length1 = Math.sqrt(dir1.x * dir1.x + dir1.y * dir1.y);
+  const length2 = Math.sqrt(dir2.x * dir2.x + dir2.y * dir2.y);
+
+  if (length1 > 0 && length2 > 0) {
+    const normalizedDir1 = {
+      x: dir1.x / length1,
+      y: dir1.y / length1,
+    };
+
+    const normalizedDir2 = {
+      x: dir2.x / length2,
+      y: dir2.y / length2,
+    };
+
+    // Calculate start points for arrows (slightly offset from center)
+    const startOffset = 8; // Same as centerOffset in other functions
+
+    const start1 = {
+      x: center.x + normalizedDir1.x * startOffset,
+      y: center.y + normalizedDir1.y * startOffset,
+    };
+
+    const start2 = {
+      x: center.x + normalizedDir2.x * startOffset,
+      y: center.y + normalizedDir2.y * startOffset,
+    };
+
+    // Calculate end points for arrows
+    const end1 = {
+      x: start1.x + normalizedDir1.x * arrowLength,
+      y: start1.y + normalizedDir1.y * arrowLength,
+    };
+
+    const end2 = {
+      x: start2.x + normalizedDir2.x * arrowLength,
+      y: start2.y + normalizedDir2.y * arrowLength,
+    };
+
+    // Calculate arrow head points for first arrow
+    // Perpendicular to direction vector
+    const perpDir1 = {
+      x: -normalizedDir1.y,
+      y: normalizedDir1.x,
+    };
+
+    const arrow1Point1 = {
+      x: end1.x - normalizedDir1.x * arrowWidth + perpDir1.x * arrowWidth,
+      y: end1.y - normalizedDir1.y * arrowWidth + perpDir1.y * arrowWidth,
+    };
+
+    const arrow1Point2 = {
+      x: end1.x - normalizedDir1.x * arrowWidth - perpDir1.x * arrowWidth,
+      y: end1.y - normalizedDir1.y * arrowWidth - perpDir1.y * arrowWidth,
+    };
+
+    // Calculate arrow head points for second arrow
+    const perpDir2 = {
+      x: -normalizedDir2.y,
+      y: normalizedDir2.x,
+    };
+
+    const arrow2Point1 = {
+      x: end2.x - normalizedDir2.x * arrowWidth + perpDir2.x * arrowWidth,
+      y: end2.y - normalizedDir2.y * arrowWidth + perpDir2.y * arrowWidth,
+    };
+
+    const arrow2Point2 = {
+      x: end2.x - normalizedDir2.x * arrowWidth - perpDir2.x * arrowWidth,
+      y: end2.y - normalizedDir2.y * arrowWidth - perpDir2.y * arrowWidth,
+    };
+
+    // Draw first arrow
+    ctx.beginPath();
+    ctx.moveTo(start1.x, start1.y);
+    ctx.lineTo(end1.x, end1.y);
+    ctx.lineTo(arrow1Point1.x, arrow1Point1.y);
+    ctx.moveTo(end1.x, end1.y);
+    ctx.lineTo(arrow1Point2.x, arrow1Point2.y);
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw second arrow
+    ctx.beginPath();
+    ctx.moveTo(start2.x, start2.y);
+    ctx.lineTo(end2.x, end2.y);
+    ctx.lineTo(arrow2Point1.x, arrow2Point1.y);
+    ctx.moveTo(end2.x, end2.y);
+    ctx.lineTo(arrow2Point2.x, arrow2Point2.y);
+    ctx.stroke();
+  }
 }
 
 // remote handler for "one" gesture - purely visual with no event dispatching
@@ -330,10 +413,19 @@ export function handleGrabbing(
 
   // process each hand
   results.handedness.forEach((hand, index) => {
+    const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
     const gesture = results.gestures![index][0].categoryName;
+    const dwellState = remoteGrabbingDwellState[handLabel];
 
     // only process if gesture is "grabbing"
-    if (gesture !== 'grabbing') return;
+    if (gesture !== 'grabbing') {
+      // if the gesture is no longer grabbing, reset dwell state
+      if (dwellState.active) {
+        dwellState.active = false;
+        dwellState.dwellComplete = false;
+      }
+      return;
+    }
 
     const landmarks = results.landmarks![index];
 
@@ -351,25 +443,51 @@ export function handleGrabbing(
       // draw visual feedback for the hover area - this is all we do for remote
       drawGrabbingGestureFeedback(ctx, circle);
 
-      // add some sample points for visual feedback
-      const gridSize = Math.max(10, Math.floor(circle.radius / 10));
-      const step = (circle.radius * 2) / gridSize;
+      // handle dwell logic for sticky brush creation
+      if (!dwellState.active) {
+        // start dwell timer
+        dwellState.active = true;
+        dwellState.startTime = currentTime;
+        dwellState.position = { ...circle.center };
+        dwellState.radius = circle.radius;
+        dwellState.dwellComplete = false;
+      } else {
+        // check if brush is steady
+        const positionChanged =
+          Math.abs(circle.center.x - (dwellState.position?.x ?? 0)) >
+            GRABBING_POSITION_THRESHOLD ||
+          Math.abs(circle.center.y - (dwellState.position?.y ?? 0)) >
+            GRABBING_POSITION_THRESHOLD;
+        const radiusChanged =
+          Math.abs(circle.radius - dwellState.radius) >
+          GRABBING_RADIUS_THRESHOLD;
 
-      for (let x = -circle.radius; x <= circle.radius; x += step) {
-        for (let y = -circle.radius; y <= circle.radius; y += step) {
-          if (x * x + y * y <= circle.radius * circle.radius) {
-            const point: InteractionPoint = {
-              x: circle.center.x + x,
-              y: circle.center.y + y,
-              clientX: rect.left + (dimensions.width - (circle.center.x + x)),
-              clientY: rect.top + (circle.center.y + y),
-            };
-
-            // draw some hover points for visual feedback
-            if (Math.random() < 0.2) {
-              // sparse sampling for performance
-              drawGrabbingHoverPoint(ctx, point);
-            }
+        if (positionChanged || radiusChanged) {
+          // brush moved, reset timer
+          dwellState.startTime = currentTime;
+          dwellState.position = { ...circle.center };
+          dwellState.radius = circle.radius;
+          dwellState.dwellComplete = false;
+        } else if (!dwellState.dwellComplete) {
+          // brush is steady, check dwell time
+          const elapsedTime = currentTime - dwellState.startTime;
+          if (elapsedTime >= GRABBING_DWELL_TIME) {
+            // dwell complete, for remote we just mark it as complete
+            dwellState.dwellComplete = true; // prevent multiple creations
+          } else {
+            // draw dwell progress indicator
+            const progress = elapsedTime / GRABBING_DWELL_TIME;
+            ctx.beginPath();
+            ctx.arc(
+              circle.center.x,
+              circle.center.y,
+              circle.radius + 8,
+              -Math.PI / 2,
+              -Math.PI / 2 + progress * 2 * Math.PI
+            );
+            ctx.strokeStyle = 'rgba(255, 213, 128, 0.9)'; // amber color
+            ctx.lineWidth = 4;
+            ctx.stroke();
           }
         }
       }
@@ -711,7 +829,7 @@ export function handleFist(
     };
 
     // Draw the zoom tool indicator at the center point
-    drawZoomToolIndicator(ctx, zoomCenter);
+    drawZoomToolIndicator(ctx, zoomCenter, point1, point2);
 
     // Draw zoom feedback (lines connecting hands)
     drawZoomFeedback(ctx, point1, point2, center, dimensions);

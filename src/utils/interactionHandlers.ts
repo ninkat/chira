@@ -648,24 +648,25 @@ export function handleGrabbing(
 
             // do a final precise check to ensure element actually intersects the circle
             const elementRect = element.getBoundingClientRect();
-            const elementCenter = {
-              x: elementRect.left + elementRect.width / 2,
-              y: elementRect.top + elementRect.height / 2,
-            };
 
-            const distance = Math.sqrt(
-              Math.pow(elementCenter.x - clientCenter.x, 2) +
-                Math.pow(elementCenter.y - clientCenter.y, 2)
+            // find the closest point on the rectangle to the center of the circle
+            const closestX = Math.max(
+              elementRect.left,
+              Math.min(clientCenter.x, elementRect.right)
+            );
+            const closestY = Math.max(
+              elementRect.top,
+              Math.min(clientCenter.y, elementRect.bottom)
             );
 
-            // add element if its center is within the circle or if the circle intersects the element bounds
-            if (
-              distance <= circle.radius ||
-              (clientCenter.x >= elementRect.left &&
-                clientCenter.x <= elementRect.right &&
-                clientCenter.y >= elementRect.top &&
-                clientCenter.y <= elementRect.bottom)
-            ) {
+            // calculate the squared distance between the closest point and the circle's center
+            const distanceX = clientCenter.x - closestX;
+            const distanceY = clientCenter.y - closestY;
+            const distanceSquared =
+              distanceX * distanceX + distanceY * distanceY;
+
+            // if the distance is less than the circle's radius squared, they intersect
+            if (distanceSquared <= circle.radius * circle.radius) {
               elementsInCircle.add(element);
             }
           }

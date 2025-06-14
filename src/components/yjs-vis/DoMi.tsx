@@ -21,6 +21,7 @@ import {
   type Edge,
   type Point,
 } from '@/utils/d3-ForceEdgeBundling';
+import { QuadTree, QuadTreeBounds } from '@/utils/quadtree';
 
 // performance optimization: add css styles for state classes
 const addPerformanceStyles = () => {
@@ -235,6 +236,15 @@ interface MigrationLinkInfo {
   value: number;
 }
 
+// interface for sticky brush
+interface StickyBrush {
+  id: string;
+  x: number; // svg coordinate x
+  y: number; // svg coordinate y
+  radius: number;
+  type: 'left' | 'right';
+}
+
 // define a non-null version of geojsonproperties for extension
 // yjs shared value types (removed unused types)
 
@@ -372,6 +382,83 @@ const externalLabelAdjustments: Record<string, [number, number]> = {
   MARYLAND: [0, 0], // no adjustment from base position
 };
 
+// helper function to check if a point is inside a polygon using the ray-casting algorithm
+const pointInPolygon = (
+  point: [number, number],
+  polygon: [number, number][]
+): boolean => {
+  const [x, y] = point;
+  let isInside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+
+    const intersect =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) {
+      isInside = !isInside;
+    }
+  }
+
+  return isInside;
+};
+
+// helper function to check for intersection between a polygon and a circle
+const polygonIntersectsCircle = (
+  polygon: [number, number][],
+  circle: { x: number; y: number; radius: number }
+): boolean => {
+  const { x: cx, y: cy, radius } = circle;
+  const rSquared = radius * radius;
+
+  // 1. check if any vertex is inside the circle
+  for (const vertex of polygon) {
+    const [vx, vy] = vertex;
+    const dx = vx - cx;
+    const dy = vy - cy;
+    if (dx * dx + dy * dy <= rSquared) {
+      return true;
+    }
+  }
+
+  // 2. check if any edge intersects the circle
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const p1 = polygon[j];
+    const p2 = polygon[i];
+    const [x1, y1] = p1;
+    const [x2, y2] = p2;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    const dot = ((cx - x1) * dx + (cy - y1) * dy) / lenSq;
+    const closestX = x1 + dot * dx;
+    const closestY = y1 + dot * dy;
+
+    // check if the closest point is on the segment
+    const onSegment =
+      Math.min(x1, x2) <= closestX &&
+      closestX <= Math.max(x1, x2) &&
+      Math.min(y1, y2) <= closestY &&
+      closestY <= Math.max(y1, y2);
+
+    if (onSegment) {
+      const distSq = (closestX - cx) ** 2 + (closestY - cy) ** 2;
+      if (distSq <= rSquared) {
+        return true;
+      }
+    }
+  }
+
+  // 3. check if the circle's center is inside the polygon
+  if (pointInPolygon([cx, cy], polygon)) {
+    return true;
+  }
+
+  return false;
+};
+
 const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const panelSvgRef = useRef<SVGSVGElement>(null); // ref for the info panel svg
@@ -386,6 +473,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     '2020s': [],
   });
   const stateCentroidsRef = useRef<Record<string, [number, number]>>({});
+  const statePolygonsRef = useRef<Record<string, Geometry>>({});
+  const stateQuadtreeRef = useRef<QuadTree | null>(null);
   const activeLinesByPair = useRef<Map<string, SVGPathElement>>(new Map());
   const bundledPathsRef = useRef<
     Record<
@@ -411,11 +500,18 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
   const yHoveredLeftStates = doc?.getArray<string>('usTileHoveredLeftStates');
   const yHoveredRightStates = doc?.getArray<string>('usTileHoveredRightStates');
+  const yBrushHoveredLeftStates = doc?.getArray<string>(
+    'usTileBrushHoveredLeftStates'
+  );
+  const yBrushHoveredRightStates = doc?.getArray<string>(
+    'usTileBrushHoveredRightStates'
+  );
   const yPinnedLeftStates = doc?.getArray<string>('usTilePinnedLeftStates');
   const yPinnedRightStates = doc?.getArray<string>('usTilePinnedRightStates');
   const yActiveMigrationLinks = doc?.getArray<Y.Map<unknown>>(
     'usTileActiveMigrationLinks'
   );
+  const yStickyBrushes = doc?.getArray<Y.Map<unknown>>('usTileStickyBrushes');
   const yTotalMigrationValue = doc?.getMap<string | number>(
     'usTileTotalMigrationValue'
   );
@@ -425,6 +521,15 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
   const width = totalWidth;
   const height = totalHeight;
+
+  // ref for tracking dragged brush for each hand
+  const activeBrushDrag = useRef<{
+    left: { id: string; offsetX: number; offsetY: number } | null;
+    right: { id: string; offsetX: number; offsetY: number } | null;
+  }>({
+    left: null,
+    right: null,
+  });
 
   // ref to track current transform from yjs or local updates before sync
   const transformRef = useRef<{ k: number; x: number; y: number }>({
@@ -1167,6 +1272,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
       !syncStatus ||
       !yHoveredLeftStates ||
       !yHoveredRightStates ||
+      !yBrushHoveredLeftStates ||
+      !yBrushHoveredRightStates ||
       !yPinnedLeftStates ||
       !yPinnedRightStates ||
       !yActiveMigrationLinks ||
@@ -1179,16 +1286,20 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     const calculateAndStoreMigrations = () => {
       const currentLeftHovered = yHoveredLeftStates.toArray();
       const currentRightHovered = yHoveredRightStates.toArray();
+      const currentLeftBrushHovered = yBrushHoveredLeftStates.toArray();
+      const currentRightBrushHovered = yBrushHoveredRightStates.toArray();
       const currentLeftPinned = yPinnedLeftStates?.toArray() || [];
       const currentRightPinned = yPinnedRightStates?.toArray() || [];
 
       // combine hovered and pinned states
       const originStates = new Set<string>([
         ...currentLeftHovered,
+        ...currentLeftBrushHovered,
         ...currentLeftPinned,
       ]);
       const destStates = new Set<string>([
         ...currentRightHovered,
+        ...currentRightBrushHovered,
         ...currentRightPinned,
       ]);
 
@@ -1427,6 +1538,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
     yHoveredLeftStates.observeDeep(calculateAndStoreMigrations);
     yHoveredRightStates.observeDeep(calculateAndStoreMigrations);
+    yBrushHoveredLeftStates.observeDeep(calculateAndStoreMigrations);
+    yBrushHoveredRightStates.observeDeep(calculateAndStoreMigrations);
     yPinnedLeftStates.observeDeep(calculateAndStoreMigrations);
     yPinnedRightStates.observeDeep(calculateAndStoreMigrations);
     calculateAndStoreMigrations();
@@ -1434,6 +1547,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     return () => {
       yHoveredLeftStates.unobserveDeep(calculateAndStoreMigrations);
       yHoveredRightStates.unobserveDeep(calculateAndStoreMigrations);
+      yBrushHoveredLeftStates.unobserveDeep(calculateAndStoreMigrations);
+      yBrushHoveredRightStates.unobserveDeep(calculateAndStoreMigrations);
       yPinnedLeftStates.unobserveDeep(calculateAndStoreMigrations);
       yPinnedRightStates.unobserveDeep(calculateAndStoreMigrations);
     };
@@ -1442,6 +1557,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     syncStatus,
     yHoveredLeftStates,
     yHoveredRightStates,
+    yBrushHoveredLeftStates,
+    yBrushHoveredRightStates,
     yPinnedLeftStates,
     yPinnedRightStates,
     yActiveMigrationLinks,
@@ -1695,6 +1812,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
     const currentLeftHovered = yHoveredLeftStates?.toArray() || [];
     const currentRightHovered = yHoveredRightStates?.toArray() || [];
+    const currentLeftBrushHovered = yBrushHoveredLeftStates?.toArray() || [];
+    const currentRightBrushHovered = yBrushHoveredRightStates?.toArray() || [];
     const currentLeftPinned = yPinnedLeftStates?.toArray() || [];
     const currentRightPinned = yPinnedRightStates?.toArray() || [];
     const currentActiveLinks =
@@ -1710,10 +1829,12 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         const tileElement = this as SVGPathElement;
         const stateName = d3.select(tileElement).attr('data-statename');
         const isLeftHover = stateName
-          ? currentLeftHovered.includes(stateName)
+          ? currentLeftHovered.includes(stateName) ||
+            currentLeftBrushHovered.includes(stateName)
           : false;
         const isRightHover = stateName
-          ? currentRightHovered.includes(stateName)
+          ? currentRightHovered.includes(stateName) ||
+            currentRightBrushHovered.includes(stateName)
           : false;
         const isLeftPinned = stateName
           ? currentLeftPinned.includes(stateName)
@@ -1759,6 +1880,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
     // update info panel
     updateInfoPanel();
+
+    // render sticky brushes
+    renderStickyBrushes();
   };
 
   useEffect(() => {
@@ -1848,10 +1972,46 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         }
       });
 
+      // store projected polygon data for intersection checks
+      statePolygonsRef.current = {};
+      filteredFeatures.forEach((feature) => {
+        const stateName = feature.properties?.name;
+        if (stateName && feature.geometry) {
+          let projectedGeometry: Geometry | null = null;
+
+          if (feature.geometry.type === 'Polygon') {
+            projectedGeometry = {
+              type: 'Polygon',
+              coordinates: (
+                feature.geometry.coordinates as [number, number][][]
+              ).map((ring) =>
+                ring.map((point) => projection(point) as [number, number])
+              ),
+            };
+          } else if (feature.geometry.type === 'MultiPolygon') {
+            projectedGeometry = {
+              type: 'MultiPolygon',
+              coordinates: (
+                feature.geometry.coordinates as [number, number][][][]
+              ).map((polygon) =>
+                polygon.map((ring) =>
+                  ring.map((point) => projection(point) as [number, number])
+                )
+              ),
+            };
+          }
+
+          if (projectedGeometry) {
+            statePolygonsRef.current[stateName.toUpperCase()] =
+              projectedGeometry;
+          }
+        }
+      });
+
       // add performance styles to document head
       addPerformanceStyles();
 
-      mapGroup
+      const stateTiles = mapGroup
         .selectAll('path.tile')
         .data(filteredFeatures)
         .join('path')
@@ -1861,8 +2021,41 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
           (d) =>
             (d.properties as StateGeometry['properties'])?.name || 'unknown'
         )
-        .attr('d', pathGenerator);
+        .attr('d', pathGenerator)
+        .nodes()
+        .filter((node): node is SVGPathElement => node !== null);
       // css classes handle styling now for better performance
+
+      // build quadtree for efficient sticky brush hit detection
+      const quadtreeBounds: QuadTreeBounds = {
+        x: 0,
+        y: 0,
+        width: totalWidth,
+        height: totalHeight,
+      };
+      const quadtree = new QuadTree(quadtreeBounds);
+      stateTiles.forEach((tile) => {
+        const stateName = d3.select(tile).attr('data-statename');
+        const bbox = tile.getBBox();
+        if (stateName && bbox) {
+          const tileTransform = d3.select(tile).node()?.transform.baseVal[0];
+          const tileTranslate =
+            tileTransform && tileTransform.type === 2 // svgtransform.svg_transform_translate
+              ? [tileTransform.matrix.e, tileTransform.matrix.f]
+              : [0, 0];
+
+          quadtree.insert({
+            element: tile,
+            bounds: {
+              x: bbox.x + mapLeftOffset + tileTranslate[0],
+              y: bbox.y - totalHeight * 0.1 + tileTranslate[1],
+              width: bbox.width,
+              height: bbox.height,
+            },
+          });
+        }
+      });
+      stateQuadtreeRef.current = quadtree;
 
       // filter features for internal vs external labels
       const featuresWithInternalLabels = filteredFeatures.filter((feature) => {
@@ -1995,8 +2188,11 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     const visualObserver = () => renderVisuals();
     yHoveredLeftStates?.observeDeep(visualObserver);
     yHoveredRightStates?.observeDeep(visualObserver);
+    yBrushHoveredLeftStates?.observeDeep(visualObserver);
+    yBrushHoveredRightStates?.observeDeep(visualObserver);
     yActiveMigrationLinks?.observeDeep(visualObserver);
     yTotalMigrationValue?.observe(visualObserver);
+    yStickyBrushes?.observeDeep(visualObserver);
 
     doc.transact(() => {
       if (yTotalMigrationValue && !yTotalMigrationValue.has('value')) {
@@ -2013,8 +2209,11 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     return () => {
       yHoveredLeftStates?.unobserveDeep(visualObserver);
       yHoveredRightStates?.unobserveDeep(visualObserver);
+      yBrushHoveredLeftStates?.unobserveDeep(visualObserver);
+      yBrushHoveredRightStates?.unobserveDeep(visualObserver);
       yActiveMigrationLinks?.unobserveDeep(visualObserver);
       yTotalMigrationValue?.unobserve(visualObserver);
+      yStickyBrushes?.unobserveDeep(visualObserver);
       clearAllD3MigrationLines();
 
       // clean up all gradients when component unmounts to prevent memory leaks
@@ -2032,11 +2231,14 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     doc,
     yHoveredLeftStates,
     yHoveredRightStates,
+    yBrushHoveredLeftStates,
+    yBrushHoveredRightStates,
     yPinnedLeftStates,
     yPinnedRightStates,
     yActiveMigrationLinks,
     yTotalMigrationValue,
     migrationDataLoaded,
+    yStickyBrushes,
   ]);
 
   // re-render when yjs shared state changes
@@ -2088,6 +2290,8 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
       !syncStatus ||
       !yHoveredLeftStates ||
       !yHoveredRightStates ||
+      !yBrushHoveredLeftStates ||
+      !yBrushHoveredRightStates ||
       !yPinnedLeftStates ||
       !yPinnedRightStates
     )
@@ -2278,7 +2482,140 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
             // trigger immediate visual update
             renderVisuals();
+          } else if (element.classList.contains('sticky-brush-circle')) {
+            const brushId = (element.parentNode as SVGGElement)?.dataset
+              .brushId;
+            if (brushId) {
+              const brushIndex = yStickyBrushes
+                ?.toArray()
+                .findIndex((b) => b.get('id') === brushId);
+              if (
+                yStickyBrushes &&
+                brushIndex !== undefined &&
+                brushIndex > -1
+              ) {
+                doc.transact(() => {
+                  yStickyBrushes.delete(brushIndex, 1);
+                }, 'delete-sticky-brush');
+              }
+            }
           }
+          break;
+        }
+        case 'pointerdown': {
+          const element = detail.element;
+          if (element?.classList.contains('sticky-brush-circle')) {
+            const handedness = detail.handedness;
+            if (!handedness) break;
+
+            const brushId = (element.parentNode as SVGGElement)?.dataset
+              .brushId;
+            const brushData = yStickyBrushes
+              ?.toArray()
+              .find((b) => b.get('id') === brushId)
+              ?.toJSON() as StickyBrush | undefined;
+
+            if (brushData && detail.point) {
+              const svg = svgRef.current;
+              if (!svg) return;
+
+              const pt = svg.createSVGPoint();
+              pt.x = detail.point.clientX;
+              pt.y = detail.point.clientY;
+              const pointerSVGPoint = pt.matrixTransform(
+                svg.getScreenCTM()?.inverse()
+              );
+
+              const offsetX = pointerSVGPoint.x - brushData.x;
+              const offsetY = pointerSVGPoint.y - brushData.y;
+
+              if (activeBrushDrag.current) {
+                activeBrushDrag.current[handedness] = {
+                  id: brushData.id,
+                  offsetX,
+                  offsetY,
+                };
+              }
+            }
+          }
+          break;
+        }
+        case 'pointermove': {
+          const handedness = detail.handedness;
+          if (!handedness) break;
+
+          const activeDrag = activeBrushDrag.current?.[handedness];
+          if (!activeDrag || !detail.point) return;
+
+          const svg = svgRef.current;
+          if (!svg) return;
+
+          const pt = svg.createSVGPoint();
+          pt.x = detail.point.clientX;
+          pt.y = detail.point.clientY;
+          const pointerSVGPoint = pt.matrixTransform(
+            svg.getScreenCTM()?.inverse()
+          );
+
+          const brushIndex = yStickyBrushes
+            ?.toArray()
+            .findIndex((b) => b.get('id') === activeDrag.id);
+          if (yStickyBrushes && brushIndex !== undefined && brushIndex > -1) {
+            const brushMap = yStickyBrushes.get(brushIndex);
+            doc.transact(() => {
+              brushMap.set('x', pointerSVGPoint.x - activeDrag.offsetX);
+              brushMap.set('y', pointerSVGPoint.y - activeDrag.offsetY);
+            }, 'move-sticky-brush');
+          }
+
+          break;
+        }
+        case 'pointerup': {
+          const handedness = detail.handedness;
+          if (!handedness) break;
+
+          if (activeBrushDrag.current) {
+            activeBrushDrag.current[handedness] = null;
+          }
+          break;
+        }
+        case 'createStickyBrush': {
+          const { brush, handedness } = detail;
+          if (!brush || !handedness) return;
+
+          // convert client coordinates to svg coordinates
+          const svg = svgRef.current;
+          if (!svg) return;
+          const pt = svg.createSVGPoint();
+          pt.x = brush.center.x;
+          pt.y = brush.center.y;
+
+          const svgp = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+          // also transform the radius from screen space to svg space
+          const pt2 = svg.createSVGPoint();
+          pt2.x = brush.center.x + brush.radius;
+          pt2.y = brush.center.y;
+          const svgp2 = pt2.matrixTransform(svg.getScreenCTM()?.inverse());
+          const svgRadius = Math.sqrt(
+            Math.pow(svgp2.x - svgp.x, 2) + Math.pow(svgp2.y - svgp.y, 2)
+          );
+
+          const newBrush: StickyBrush = {
+            id: `brush-${Date.now()}-${Math.random()}`,
+            x: svgp.x,
+            y: svgp.y,
+            radius: svgRadius,
+            type: handedness,
+          };
+
+          doc.transact(() => {
+            const yMap = new Y.Map();
+            Object.entries(newBrush).forEach(([key, val]) => {
+              yMap.set(key, val);
+            });
+            yStickyBrushes?.push([yMap]);
+          }, 'create-sticky-brush');
           break;
         }
       }
@@ -2298,9 +2635,185 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
     syncStatus,
     yHoveredLeftStates,
     yHoveredRightStates,
+    yBrushHoveredLeftStates,
+    yBrushHoveredRightStates,
     yPinnedLeftStates,
     yPinnedRightStates,
+    yStickyBrushes,
   ]);
+
+  useEffect(() => {
+    const hoverAnimationLoop = () => {
+      if (
+        !yStickyBrushes ||
+        !doc ||
+        !yBrushHoveredLeftStates ||
+        !yBrushHoveredRightStates ||
+        !stateQuadtreeRef.current
+      ) {
+        requestAnimationFrame(hoverAnimationLoop);
+        return;
+      }
+
+      const brushes = yStickyBrushes.map((m) => m.toJSON() as StickyBrush);
+      const leftHoveredStates = new Set<string>();
+      const rightHoveredStates = new Set<string>();
+      const quadtree = stateQuadtreeRef.current;
+      const allPolygons = statePolygonsRef.current;
+
+      brushes.forEach((brush) => {
+        const brushCircle = { x: brush.x, y: brush.y, radius: brush.radius };
+        const brushCenter = { x: brush.x, y: brush.y };
+
+        // broad phase: query quadtree for states whose bounding boxes intersect brush's bounding box
+        const candidateItems = quadtree.queryCircle(brushCenter, brush.radius);
+
+        // narrow phase: check for actual intersection
+        candidateItems.forEach((tile) => {
+          if (!(tile instanceof SVGPathElement)) return;
+          const stateName = d3.select(tile).attr('data-statename');
+          if (!stateName) return;
+
+          const stateGeometry = allPolygons[stateName.toUpperCase()];
+          if (!stateGeometry) return;
+
+          let intersects = false;
+          const mapGroup = svgRef.current?.querySelector('#map-group');
+          let tx = 0,
+            ty = 0;
+          if (mapGroup) {
+            const mapTransform = d3.select(mapGroup).attr('transform');
+            if (mapTransform) {
+              const parts = /translate\(([^,]+),([^)]+)\)/.exec(mapTransform);
+              if (parts) {
+                tx = parseFloat(parts[1]);
+                ty = parseFloat(parts[2]);
+              }
+            }
+          }
+
+          if (stateGeometry.type === 'Polygon') {
+            for (const ring of stateGeometry.coordinates as [
+              number,
+              number,
+            ][][]) {
+              const transformedRing = ring.map((p) => [
+                p[0] + tx,
+                p[1] + ty,
+              ]) as [number, number][];
+              if (polygonIntersectsCircle(transformedRing, brushCircle)) {
+                intersects = true;
+                break;
+              }
+            }
+          } else if (stateGeometry.type === 'MultiPolygon') {
+            for (const polygon of stateGeometry.coordinates as [
+              number,
+              number,
+            ][][][]) {
+              for (const ring of polygon) {
+                const transformedRing = ring.map((p) => [
+                  p[0] + tx,
+                  p[1] + ty,
+                ]) as [number, number][];
+                if (polygonIntersectsCircle(transformedRing, brushCircle)) {
+                  intersects = true;
+                  break;
+                }
+              }
+              if (intersects) break;
+            }
+          }
+
+          if (intersects) {
+            if (brush.type === 'left') {
+              leftHoveredStates.add(stateName);
+            } else {
+              rightHoveredStates.add(stateName);
+            }
+          }
+        });
+      });
+
+      const currentLeft = new Set(yBrushHoveredLeftStates.toArray());
+      const newLeftArray = Array.from(leftHoveredStates);
+      const currentRight = new Set(yBrushHoveredRightStates.toArray());
+      const newRightArray = Array.from(rightHoveredStates);
+
+      const leftChanged =
+        currentLeft.size !== newLeftArray.length ||
+        !newLeftArray.every((state) => currentLeft.has(state));
+      const rightChanged =
+        currentRight.size !== newRightArray.length ||
+        !newRightArray.every((state) => currentRight.has(state));
+
+      if (leftChanged || rightChanged) {
+        doc.transact(() => {
+          if (leftChanged) {
+            yBrushHoveredLeftStates.delete(0, yBrushHoveredLeftStates.length);
+            if (newLeftArray.length > 0) {
+              yBrushHoveredLeftStates.push(newLeftArray);
+            }
+          }
+          if (rightChanged) {
+            yBrushHoveredRightStates.delete(0, yBrushHoveredRightStates.length);
+            if (newRightArray.length > 0) {
+              yBrushHoveredRightStates.push(newRightArray);
+            }
+          }
+        }, 'sticky-brush-hover');
+      }
+
+      requestAnimationFrame(hoverAnimationLoop);
+    };
+
+    const animationFrameId = requestAnimationFrame(hoverAnimationLoop);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [doc, yStickyBrushes, yBrushHoveredLeftStates, yBrushHoveredRightStates]);
+
+  const renderStickyBrushes = () => {
+    if (!svgRef.current || !yStickyBrushes) return;
+
+    const svg = d3.select(svgRef.current);
+    const brushes = yStickyBrushes.map((m) => m.toJSON() as StickyBrush);
+
+    let brushGroup = svg.select<SVGGElement>('g.sticky-brushes-group');
+    if (brushGroup.empty()) {
+      brushGroup = svg.append('g').attr('class', 'sticky-brushes-group');
+    }
+
+    const brushSelection = brushGroup
+      .selectAll<SVGGElement, StickyBrush>('g.sticky-brush')
+      .data(brushes, (d) => d.id);
+
+    // exit
+    brushSelection.exit().remove();
+
+    // enter
+    const brushEnter = brushSelection
+      .enter()
+      .append('g')
+      .attr('class', (d) => `sticky-brush interactable type-${d.type}`)
+      .attr('data-brush-id', (d) => d.id);
+
+    brushEnter
+      .append('circle')
+      .attr('class', 'sticky-brush-circle interactable')
+      .attr('r', (d) => d.radius)
+      .style('fill', (d) =>
+        d.type === 'left' ? 'rgba(232, 27, 35, 0.5)' : 'rgba(0, 174, 243, 0.5)'
+      )
+      .style('stroke', (d) =>
+        d.type === 'left' ? 'rgba(232, 27, 35, 0.9)' : 'rgba(0, 174, 243, 0.9)'
+      )
+      .style('stroke-width', 4)
+      .style('cursor', 'move');
+
+    // update
+    const brushUpdate = brushSelection.merge(brushEnter);
+    brushUpdate.attr('transform', (d) => `translate(${d.x}, ${d.y})`);
+  };
 
   if (!syncStatus) {
     return (
