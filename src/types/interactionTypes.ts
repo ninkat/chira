@@ -69,6 +69,14 @@ export type DragEvent = BaseInteractionEvent & {
   };
 };
 
+export type CreateStickyBrushEvent = BaseInteractionEvent & {
+  type: 'createStickyBrush';
+  brush: {
+    center: { x: number; y: number };
+    radius: number;
+  };
+};
+
 // union type of all possible interaction events
 export type InteractionEvent =
   | PointerOverEvent
@@ -78,7 +86,8 @@ export type InteractionEvent =
   | PointerMoveEvent
   | PointerUpEvent
   | ZoomEvent
-  | DragEvent;
+  | DragEvent
+  | CreateStickyBrushEvent;
 
 // event handler types
 export type InteractionEventHandler = (event: InteractionEvent) => void;

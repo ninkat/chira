@@ -8,6 +8,7 @@ import { CanvasDimensions } from '@/types/types';
 import {
   InteractionEventHandler,
   InteractionPoint,
+  CreateStickyBrushEvent,
 } from '@/types/interactionTypes';
 import {
   drawOneGestureFeedback,
@@ -18,206 +19,7 @@ import {
   drawFistGestureFeedback,
   drawRippleEffect,
 } from '@/utils/drawingUtils';
-
-// quadtree implementation for spatial indexing of dom elements
-interface QuadTreeBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface QuadTreeElement {
-  element: Element;
-  bounds: QuadTreeBounds;
-}
-
-class QuadTree {
-  private bounds: QuadTreeBounds;
-  private maxElements: number;
-  private maxDepth: number;
-  private depth: number;
-  private elements: QuadTreeElement[];
-  private nodes: QuadTree[];
-  private isLeaf: boolean;
-
-  constructor(
-    bounds: QuadTreeBounds,
-    maxElements = 10,
-    maxDepth = 5,
-    depth = 0
-  ) {
-    this.bounds = bounds;
-    this.maxElements = maxElements;
-    this.maxDepth = maxDepth;
-    this.depth = depth;
-    this.elements = [];
-    this.nodes = [];
-    this.isLeaf = true;
-  }
-
-  // insert an element into the quadtree
-  insert(element: QuadTreeElement): void {
-    if (!this.intersects(element.bounds)) {
-      return;
-    }
-
-    if (this.isLeaf) {
-      this.elements.push(element);
-
-      // subdivide if we exceed capacity and haven't reached max depth
-      if (
-        this.elements.length > this.maxElements &&
-        this.depth < this.maxDepth
-      ) {
-        this.subdivide();
-      }
-    } else {
-      // insert into child nodes
-      for (const node of this.nodes) {
-        node.insert(element);
-      }
-    }
-  }
-
-  // subdivide the current node into four quadrants
-  private subdivide(): void {
-    const halfWidth = this.bounds.width / 2;
-    const halfHeight = this.bounds.height / 2;
-    const x = this.bounds.x;
-    const y = this.bounds.y;
-
-    // create four child nodes
-    this.nodes = [
-      // top-left
-      new QuadTree(
-        { x, y, width: halfWidth, height: halfHeight },
-        this.maxElements,
-        this.maxDepth,
-        this.depth + 1
-      ),
-      // top-right
-      new QuadTree(
-        { x: x + halfWidth, y, width: halfWidth, height: halfHeight },
-        this.maxElements,
-        this.maxDepth,
-        this.depth + 1
-      ),
-      // bottom-left
-      new QuadTree(
-        { x, y: y + halfHeight, width: halfWidth, height: halfHeight },
-        this.maxElements,
-        this.maxDepth,
-        this.depth + 1
-      ),
-      // bottom-right
-      new QuadTree(
-        {
-          x: x + halfWidth,
-          y: y + halfHeight,
-          width: halfWidth,
-          height: halfHeight,
-        },
-        this.maxElements,
-        this.maxDepth,
-        this.depth + 1
-      ),
-    ];
-
-    // redistribute existing elements to child nodes
-    for (const element of this.elements) {
-      for (const node of this.nodes) {
-        node.insert(element);
-      }
-    }
-
-    // this node is no longer a leaf
-    this.isLeaf = false;
-    this.elements = []; // clear elements from internal node
-  }
-
-  // query elements that intersect with a circle
-  queryCircle(center: Point, radius: number): Element[] {
-    const result: Element[] = [];
-    this.queryCircleRecursive(center, radius, result);
-    return result;
-  }
-
-  private queryCircleRecursive(
-    center: Point,
-    radius: number,
-    result: Element[]
-  ): void {
-    // check if circle intersects with this node's bounds
-    if (!this.circleIntersectsBounds(center, radius, this.bounds)) {
-      return;
-    }
-
-    if (this.isLeaf) {
-      // check each element in this leaf node
-      for (const qtElement of this.elements) {
-        if (this.circleIntersectsRect(center, radius, qtElement.bounds)) {
-          result.push(qtElement.element);
-        }
-      }
-    } else {
-      // recurse into child nodes
-      for (const node of this.nodes) {
-        node.queryCircleRecursive(center, radius, result);
-      }
-    }
-  }
-
-  // check if a bounds intersects with this node's bounds
-  private intersects(bounds: QuadTreeBounds): boolean {
-    return !(
-      bounds.x > this.bounds.x + this.bounds.width ||
-      bounds.x + bounds.width < this.bounds.x ||
-      bounds.y > this.bounds.y + this.bounds.height ||
-      bounds.y + bounds.height < this.bounds.y
-    );
-  }
-
-  // check if circle intersects with bounds
-  private circleIntersectsBounds(
-    center: Point,
-    radius: number,
-    bounds: QuadTreeBounds
-  ): boolean {
-    // find the closest point on the rectangle to the circle center
-    const closestX = Math.max(
-      bounds.x,
-      Math.min(center.x, bounds.x + bounds.width)
-    );
-    const closestY = Math.max(
-      bounds.y,
-      Math.min(center.y, bounds.y + bounds.height)
-    );
-
-    // calculate distance from circle center to closest point
-    const dx = center.x - closestX;
-    const dy = center.y - closestY;
-    const distanceSquared = dx * dx + dy * dy;
-
-    return distanceSquared <= radius * radius;
-  }
-
-  // check if circle intersects with rectangle
-  private circleIntersectsRect(
-    center: Point,
-    radius: number,
-    rect: QuadTreeBounds
-  ): boolean {
-    return this.circleIntersectsBounds(center, radius, rect);
-  }
-
-  // clear all elements from the quadtree
-  clear(): void {
-    this.elements = [];
-    this.nodes = [];
-    this.isLeaf = true;
-  }
-}
+import { QuadTree, QuadTreeBounds } from '@/utils/quadtree';
 
 // quadtree state management
 const quadTreeState = {
@@ -445,6 +247,29 @@ const fistDwellState = {
 // dwell time in milliseconds before fist gesture can be used for navigation
 const FIST_DWELL_TIME = 500;
 
+// state for grabbing gesture dwell time to create sticky brushes
+const grabbingDwellState = {
+  left: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+    position: null as Point | null,
+    radius: 0,
+  },
+  right: {
+    startTime: 0,
+    active: false,
+    dwellComplete: false,
+    position: null as Point | null,
+    radius: 0,
+  },
+};
+
+// dwell time and thresholds for sticky brush creation
+const GRABBING_DWELL_TIME = 2000; // 1 second
+const GRABBING_POSITION_THRESHOLD = 30; // pixels
+const GRABBING_RADIUS_THRESHOLD = 20; // pixels
+
 // helper function to check if element is interactable
 // elements are interactable if they have the 'interactable' class
 function isInteractableElement(element: Element | null): boolean {
@@ -642,14 +467,23 @@ export function handleGrabbing(
     return;
   }
 
+  const currentTime = Date.now();
+
   // process each hand
   results.handedness.forEach((hand, index) => {
     const handLabel = hand[0].displayName.toLowerCase() as 'left' | 'right';
     const gesture = results.gestures![index][0].categoryName;
+    const dwellState = grabbingDwellState[handLabel];
 
     // only process if gesture is "grabbing"
     if (gesture !== 'grabbing') {
       // if the gesture is no longer grabbing, clear all hover states for this hand
+      // and reset dwell state
+      if (dwellState.active) {
+        dwellState.active = false;
+        dwellState.dwellComplete = false;
+      }
+
       if (!drawOnly) {
         const currentlyHovered = hoveredElementsByHand[handLabel];
         if (currentlyHovered.size > 0) {
@@ -696,6 +530,73 @@ export function handleGrabbing(
     if (circle && circle.radius > 0) {
       // draw visual feedback for the hover area
       drawGrabbingGestureFeedback(ctx, circle);
+
+      // handle dwell logic for sticky brush creation
+      if (!drawOnly) {
+        if (!dwellState.active) {
+          // start dwell timer
+          dwellState.active = true;
+          dwellState.startTime = currentTime;
+          dwellState.position = { ...circle.center };
+          dwellState.radius = circle.radius;
+          dwellState.dwellComplete = false;
+        } else {
+          // check if brush is steady
+          const positionChanged =
+            Math.abs(circle.center.x - (dwellState.position?.x ?? 0)) >
+              GRABBING_POSITION_THRESHOLD ||
+            Math.abs(circle.center.y - (dwellState.position?.y ?? 0)) >
+              GRABBING_POSITION_THRESHOLD;
+          const radiusChanged =
+            Math.abs(circle.radius - dwellState.radius) >
+            GRABBING_RADIUS_THRESHOLD;
+
+          if (positionChanged || radiusChanged) {
+            // brush moved, reset timer
+            dwellState.startTime = currentTime;
+            dwellState.position = { ...circle.center };
+            dwellState.radius = circle.radius;
+            dwellState.dwellComplete = false;
+          } else if (!dwellState.dwellComplete) {
+            // brush is steady, check dwell time
+            const elapsedTime = currentTime - dwellState.startTime;
+            if (elapsedTime >= GRABBING_DWELL_TIME) {
+              // dwell complete, create sticky brush
+              const clientCenter: Point = {
+                x: rect.left + (dimensions.width - circle.center.x),
+                y: rect.top + circle.center.y,
+              };
+
+              onInteraction({
+                type: 'createStickyBrush',
+                brush: {
+                  center: clientCenter,
+                  radius: circle.radius,
+                },
+                timestamp: currentTime,
+                sourceType: 'gesture',
+                handedness: handLabel,
+              } as CreateStickyBrushEvent);
+
+              dwellState.dwellComplete = true; // prevent multiple creations
+            } else {
+              // draw dwell progress indicator
+              const progress = elapsedTime / GRABBING_DWELL_TIME;
+              ctx.beginPath();
+              ctx.arc(
+                circle.center.x,
+                circle.center.y,
+                circle.radius + 8,
+                -Math.PI / 2,
+                -Math.PI / 2 + progress * 2 * Math.PI
+              );
+              ctx.strokeStyle = 'rgba(255, 213, 128, 0.9)'; // amber color
+              ctx.lineWidth = 4;
+              ctx.stroke();
+            }
+          }
+        }
+      }
 
       if (!drawOnly) {
         // use quadtree to efficiently find elements in the circle
@@ -1600,7 +1501,7 @@ function handleSingleHandDragInside(
   handLabel: 'left' | 'right',
   onInteraction: InteractionEventHandler
 ): void {
-  const indexTip = landmarks[8];
+  const indexTip = landmarks[4];
   const point = landmarkToInteractionPoint(indexTip, dimensions, rect);
   const dragState = fineSelectDragState[handLabel];
 

@@ -8,11 +8,11 @@ import {
 } from 'topojson-specification';
 import {
   InteractionEvent,
-  // InteractionEventHandler, // unused, remove
+  CreateStickyBrushEvent,
 } from '@/types/interactionTypes';
-// import * as Y from 'yjs'; // removing to check if unused
 import { YjsContext } from '@/context/YjsContext';
 import { GetCurrentTransformFn } from '@/utils/interactionHandlers';
+import { QuadTree, QuadTreeBounds } from '@/utils/quadtree';
 
 // define a non-null version of geojsonproperties for extension
 type definedgeojsonproperties = Exclude<GeoJsonProperties, null>;
@@ -102,6 +102,15 @@ interface ValidationResult {
   failedCriteria: string[];
 }
 
+// sticky brush data structure
+interface StickyBrush {
+  id: string;
+  x: number; // svg coordinate x
+  y: number; // svg coordinate y
+  radius: number;
+  type: 'origin' | 'destination';
+}
+
 // yjs shared value types
 type WorldMapStateValue = string | number | boolean | null; // arrays will be y.array, not directly in map value for this type
 
@@ -167,6 +176,13 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   const yPanelState = doc?.getMap<WorldMapStateValue>('worldMapPanelState'); // panel svg state
   const yHoveredFlights = doc?.getArray<number>('worldMapHoveredFlights'); // track hovered flight ids globally
   const ySelectedFlights = doc?.getArray<number>('worldMapSelectedFlights'); // track pinned/selected flight ids (global)
+  const yStickyBrushes = doc?.getArray<StickyBrush>('worldMapStickyBrushes'); // sticky brushes
+  const yHoveredByOriginBrushes = doc?.getArray<string>(
+    'worldMapHoveredByOriginBrushes'
+  ); // iatas hovered by origin sticky brushes
+  const yHoveredByDestinationBrushes = doc?.getArray<string>(
+    'worldMapHoveredByDestinationBrushes'
+  ); // iatas hovered by destination sticky brushes
 
   // ref to track current transform from yjs or local updates before sync
   const transformRef = useRef<{ k: number; x: number; y: number }>({
@@ -444,10 +460,16 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         if (isSelectedLeft || isSelectedRight) {
           return airportSelectedStrokeWidth / scale;
         }
-        const isHovered =
+
+        const isHoveredByHand =
           yHoveredAirportIATAsLeft.toArray().includes(airportIATA) ||
           yHoveredAirportIATAsRight.toArray().includes(airportIATA);
-        if (isHovered) {
+
+        const isHoveredBySticky =
+          yHoveredByOriginBrushes?.toArray().includes(airportIATA) ||
+          yHoveredByDestinationBrushes?.toArray().includes(airportIATA);
+
+        if (isHoveredByHand || isHoveredBySticky) {
           return airportHighlightStrokeWidth / scale;
         }
         return airportStrokeWidth / scale;
@@ -476,8 +498,11 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         const isHoveredRight = yHoveredAirportIATAsRight
           .toArray()
           .includes(airportIATA);
+        const isHoveredBySticky =
+          yHoveredByOriginBrushes?.toArray().includes(airportIATA) ||
+          yHoveredByDestinationBrushes?.toArray().includes(airportIATA);
 
-        if (isHoveredLeft || isHoveredRight) {
+        if (isHoveredLeft || isHoveredRight || isHoveredBySticky) {
           return airportHighlightStroke;
         }
         return airportStroke;
@@ -606,7 +631,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       !yHoveredAirportIATAsLeft ||
       !yHoveredAirportIATAsRight ||
       !ySelectedAirportIATAsLeft ||
-      !ySelectedAirportIATAsRight
+      !ySelectedAirportIATAsRight ||
+      !yHoveredByOriginBrushes ||
+      !yHoveredByDestinationBrushes
     )
       return;
     clearAllLines();
@@ -618,13 +645,23 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     const hoveredRightIATAs = yHoveredAirportIATAsRight.toArray();
     const selectedLeftIATAs = ySelectedAirportIATAsLeft.toArray();
     const selectedRightIATAs = ySelectedAirportIATAsRight.toArray();
+    const originStickyHoverIATAs = yHoveredByOriginBrushes.toArray();
+    const destinationStickyHoverIATAs = yHoveredByDestinationBrushes.toArray();
 
     // combine selected and hovered for line drawing
     const effectiveLeftIATAs = Array.from(
-      new Set([...selectedLeftIATAs, ...hoveredLeftIATAs])
+      new Set([
+        ...selectedLeftIATAs,
+        ...hoveredLeftIATAs,
+        ...originStickyHoverIATAs,
+      ])
     );
     const effectiveRightIATAs = Array.from(
-      new Set([...selectedRightIATAs, ...hoveredRightIATAs])
+      new Set([
+        ...selectedRightIATAs,
+        ...hoveredRightIATAs,
+        ...destinationStickyHoverIATAs,
+      ])
     );
 
     // get hovered flights to determine which routes should be highlighted
@@ -664,7 +701,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       !ySelectedAirportIATAsLeft ||
       !ySelectedAirportIATAsRight ||
       !panelSvgRef.current ||
-      !yPanelState
+      !yPanelState ||
+      !yHoveredByOriginBrushes ||
+      !yHoveredByDestinationBrushes
     )
       return;
 
@@ -691,14 +730,24 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     const hoveredRightIATAs = yHoveredAirportIATAsRight.toArray();
     const selectedLeftIATAs = ySelectedAirportIATAsLeft.toArray();
     const selectedRightIATAs = ySelectedAirportIATAsRight.toArray();
+    const originStickyHoverIATAs = yHoveredByOriginBrushes.toArray();
+    const destinationStickyHoverIATAs = yHoveredByDestinationBrushes.toArray();
 
     // display logic: selected items are primary. hovered items are secondary if not selected.
     // for flight filtering, combine selected and hovered items (pins are sticky hovers)
     const leftFilterIATAs = Array.from(
-      new Set([...selectedLeftIATAs, ...hoveredLeftIATAs])
+      new Set([
+        ...selectedLeftIATAs,
+        ...hoveredLeftIATAs,
+        ...originStickyHoverIATAs,
+      ])
     );
     const rightFilterIATAs = Array.from(
-      new Set([...selectedRightIATAs, ...hoveredRightIATAs])
+      new Set([
+        ...selectedRightIATAs,
+        ...hoveredRightIATAs,
+        ...destinationStickyHoverIATAs,
+      ])
     );
 
     // check if filter state has changed and reset scroll position if needed
@@ -783,7 +832,11 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     // origins content
     const uniqueLeftDisplayIATAs = Array.from(
-      new Set([...selectedLeftIATAs, ...hoveredLeftIATAs])
+      new Set([
+        ...selectedLeftIATAs,
+        ...hoveredLeftIATAs,
+        ...originStickyHoverIATAs,
+      ])
     );
     const leftAirportsToShow = uniqueLeftDisplayIATAs
       .map(getAirportByIATA)
@@ -875,7 +928,11 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
 
     // destinations content
     const uniqueRightDisplayIATAs = Array.from(
-      new Set([...selectedRightIATAs, ...hoveredRightIATAs])
+      new Set([
+        ...selectedRightIATAs,
+        ...hoveredRightIATAs,
+        ...destinationStickyHoverIATAs,
+      ])
     );
     const rightAirportsToShow = uniqueRightDisplayIATAs
       .map(getAirportByIATA)
@@ -961,10 +1018,8 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     // get current scroll position from yjs or default to 0
     const scrollOffset = (yPanelState.get('flightsScrollY') as number) || 0;
 
-    const displayOriginsSelected =
-      selectedLeftIATAs.length > 0 || hoveredLeftIATAs.length > 0;
-    const displayDestinationsSelected =
-      selectedRightIATAs.length > 0 || hoveredRightIATAs.length > 0;
+    const displayOriginsSelected = leftFilterIATAs.length > 0;
+    const displayDestinationsSelected = rightFilterIATAs.length > 0;
 
     if (!displayOriginsSelected || !displayDestinationsSelected) {
       // first line
@@ -1629,6 +1684,26 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
   // store interaction handler ref for adding/removing listener
   const interactionHandlerRef = useRef<EventListener | null>(null);
 
+  // ref for airport quadtree
+  const airportQuadtreeRef = useRef<QuadTree | null>(null);
+
+  // ref for drag state of sticky brushes
+  const dragStateRef = useRef<{
+    left: {
+      brushId: string | null;
+      startX: number;
+      startY: number;
+    };
+    right: {
+      brushId: string | null;
+      startX: number;
+      startY: number;
+    };
+  }>({
+    left: { brushId: null, startX: 0, startY: 0 },
+    right: { brushId: null, startX: 0, startY: 0 },
+  });
+
   useEffect(() => {
     if (
       !doc ||
@@ -1762,8 +1837,12 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .append('title')
           .text((d) => `${d['Airport Name']} (${d.IATA})`);
 
+        // sticky brushes group
+        g.append('g').attr('class', 'sticky-brushes');
+
         // initial application of styles based on yjs state
         adjustStylesForTransform(initialScale);
+        renderStickyBrushes(); // initial render
         redrawAllLinesFromYjs(projection);
         updateInfoPanelFromYjs();
 
@@ -1804,6 +1883,13 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
             ?.closest('.airport')
             ?.getAttribute('data-iata');
 
+          // check for sticky brush element
+          const brushElement = targetElement?.closest('.sticky-brush');
+          const brushId = brushElement?.getAttribute('data-brush-id');
+          if (brushId) {
+            console.log('interacting with brush:', brushId);
+          }
+
           // check for flight element (could be the rect itself or its parent group)
           const flightElement =
             targetElement?.closest('.flight-item') ||
@@ -1811,6 +1897,44 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
               ? targetElement
               : null);
           const flightId = flightElement?.getAttribute('data-flight-id');
+
+          // handle custom events outside the switch
+          if (event.type === 'createStickyBrush') {
+            doc.transact(() => {
+              const brushEvent = event as CreateStickyBrushEvent;
+              if (brushEvent.brush && yStickyBrushes) {
+                const { brush } = brushEvent;
+                const currentTransform = transformRef.current;
+
+                // get svg element's bounding box to correctly calculate coordinates
+                const svgRect = svgRef.current?.getBoundingClientRect();
+                if (!svgRect) return;
+
+                // convert client coordinates to svg-relative coordinates
+                const pointInSvgSpace: [number, number] = [
+                  brush.center.x - svgRect.left,
+                  brush.center.y - svgRect.top,
+                ];
+
+                // convert svg-relative coordinates to svg's internal coordinate system
+                const svgPoint = d3.zoomIdentity
+                  .translate(currentTransform.x, currentTransform.y)
+                  .scale(currentTransform.k)
+                  .invert(pointInSvgSpace);
+
+                const newBrush: StickyBrush = {
+                  id: `brush-${Date.now()}-${Math.random()}`,
+                  x: svgPoint[0],
+                  y: svgPoint[1],
+                  radius: brush.radius / currentTransform.k,
+                  type:
+                    brushEvent.handedness === 'left' ? 'origin' : 'destination',
+                };
+                yStickyBrushes.push([newBrush]);
+              }
+            });
+            return; // end here for this event type
+          }
 
           doc.transact(() => {
             switch (event.type) {
@@ -1992,6 +2116,15 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     ySelectedFlights.push([flightIdNum]);
                   }
                 }
+                // handle sticky brush deletion
+                else if (brushId && yStickyBrushes) {
+                  const brushIndex = yStickyBrushes
+                    .toArray()
+                    .findIndex((b) => b.id === brushId);
+                  if (brushIndex > -1) {
+                    yStickyBrushes.delete(brushIndex, 1);
+                  }
+                }
                 break;
 
               case 'drag':
@@ -2013,6 +2146,22 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
               case 'pointerdown': {
                 // handle start of scroll operation for flights list
                 const { point, handedness, element } = event;
+
+                // check if starting a drag on a sticky brush
+                if (
+                  brushId &&
+                  point &&
+                  handedness &&
+                  dragStateRef.current[handedness]
+                ) {
+                  dragStateRef.current[handedness] = {
+                    brushId,
+                    startX: point.clientX,
+                    startY: point.clientY,
+                  };
+                  return; // consume event
+                }
+
                 if (!handedness || !element) return;
 
                 // check if the element is within the interactable panel
@@ -2035,6 +2184,41 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
               case 'pointermove': {
                 // handle scroll movement for flights list
                 const { point, handedness } = event;
+
+                // handle sticky brush drag
+                if (handedness && dragStateRef.current[handedness]?.brushId) {
+                  const dragState = dragStateRef.current[handedness];
+                  if (dragState.brushId && point && yStickyBrushes) {
+                    const brush = yStickyBrushes
+                      .toArray()
+                      .find((b) => b.id === dragState.brushId);
+                    if (brush) {
+                      const dx = point.clientX - dragState.startX;
+                      const dy = point.clientY - dragState.startY;
+                      const scale = transformRef.current.k;
+
+                      // find brush index to update it
+                      const brushIndex = yStickyBrushes
+                        .toArray()
+                        .indexOf(brush);
+                      if (brushIndex > -1) {
+                        const updatedBrush: StickyBrush = {
+                          ...brush,
+                          x: brush.x + dx / scale,
+                          y: brush.y + dy / scale,
+                        };
+                        yStickyBrushes.delete(brushIndex, 1);
+                        yStickyBrushes.insert(brushIndex, [updatedBrush]);
+
+                        // update start position for next move event
+                        dragState.startX = point.clientX;
+                        dragState.startY = point.clientY;
+                      }
+                    }
+                    return; // consume event
+                  }
+                }
+
                 if (!handedness) return;
 
                 const scrollState = scrollDragStateRef.current[handedness];
@@ -2052,17 +2236,23 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
                     ySelectedAirportIATAsLeft?.toArray() || [];
                   const selectedRightIATAsForScroll =
                     ySelectedAirportIATAsRight?.toArray() || [];
+                  const originStickyHoverIATAsForScroll =
+                    yHoveredByOriginBrushes?.toArray() || [];
+                  const destinationStickyHoverIATAsForScroll =
+                    yHoveredByDestinationBrushes?.toArray() || [];
 
                   const leftFilterIATAsForScroll = Array.from(
                     new Set([
                       ...selectedLeftIATAsForScroll,
                       ...hoveredLeftIATAsForScroll,
+                      ...originStickyHoverIATAsForScroll,
                     ])
                   );
                   const rightFilterIATAsForScroll = Array.from(
                     new Set([
                       ...selectedRightIATAsForScroll,
                       ...hoveredRightIATAsForScroll,
+                      ...destinationStickyHoverIATAsForScroll,
                     ])
                   );
 
@@ -2130,11 +2320,19 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
               case 'pointerup': {
                 // handle end of scroll operation for flights list
                 const { handedness } = event;
-                if (!handedness) return;
 
-                const scrollState = scrollDragStateRef.current[handedness];
-                if (scrollState.active) {
-                  scrollState.active = false;
+                if (handedness) {
+                  // end sticky brush drag
+                  if (dragStateRef.current[handedness]?.brushId) {
+                    dragStateRef.current[handedness].brushId = null;
+                    return; // consume event
+                  }
+
+                  // handle end of scroll operation for flights list
+                  const scrollState = scrollDragStateRef.current[handedness];
+                  if (scrollState.active) {
+                    scrollState.active = false;
+                  }
                 }
                 break;
               }
@@ -2179,6 +2377,109 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     yPanelState.observeDeep(yjsObserver); // observe panel state changes
     yHoveredFlights?.observeDeep(yjsObserver); // observe hovered flights changes
     ySelectedFlights?.observeDeep(yjsObserver); // observe selected flights changes
+    yStickyBrushes?.observeDeep(renderStickyBrushes); // observe sticky brushes changes
+    yHoveredByOriginBrushes?.observeDeep(yjsObserver); // re-run observers when sticky hovers change
+    yHoveredByDestinationBrushes?.observeDeep(yjsObserver); // re-run observers when sticky hovers change
+
+    // animation loop for sticky brush hover detection
+    const hoverAnimationLoop = () => {
+      if (
+        !gRef.current ||
+        !yStickyBrushes ||
+        !yHoveredByOriginBrushes ||
+        !yHoveredByDestinationBrushes ||
+        !doc
+      ) {
+        animationFrameRef.current = requestAnimationFrame(hoverAnimationLoop);
+        return;
+      }
+
+      // build quadtree on each frame for simplicity, could be optimized
+      // to only rebuild on zoom/pan if performance becomes an issue.
+      // the bounds should encompass the entire possible coordinate space of airports.
+      // using a large fixed size based on projection is a safe bet.
+      const quadtreeBounds: QuadTreeBounds = {
+        x: -totalWidth * 2,
+        y: -totalHeight * 2,
+        width: totalWidth * 4,
+        height: totalHeight * 4,
+      };
+      const airportQuadtree = new QuadTree(quadtreeBounds);
+      const allAirportsElements = d3
+        .select(gRef.current)
+        .selectAll<SVGCircleElement, Airport>('circle.airport')
+        .nodes();
+
+      allAirportsElements.forEach((el) => {
+        const cx = parseFloat(el.getAttribute('cx') || '0');
+        const cy = parseFloat(el.getAttribute('cy') || '0');
+        const r = parseFloat(el.getAttribute('r') || '0');
+        airportQuadtree.insert({
+          element: el,
+          bounds: { x: cx - r, y: cy - r, width: r * 2, height: r * 2 },
+        });
+      });
+      airportQuadtreeRef.current = airportQuadtree;
+
+      const brushes = yStickyBrushes.toArray();
+      const originHoveredIATAs = new Set<string>();
+      const destinationHoveredIATAs = new Set<string>();
+
+      for (const brush of brushes) {
+        const brushCenter = { x: brush.x, y: brush.y };
+        const hoveredElements = airportQuadtreeRef.current.queryCircle(
+          brushCenter,
+          brush.radius
+        );
+
+        for (const airportElement of hoveredElements) {
+          const airportData = d3
+            .select(airportElement as SVGCircleElement)
+            .datum() as Airport;
+          if (airportData) {
+            if (brush.type === 'origin') {
+              originHoveredIATAs.add(airportData.IATA);
+            } else {
+              destinationHoveredIATAs.add(airportData.IATA);
+            }
+          }
+        }
+      }
+
+      const currentOriginHovered = new Set(yHoveredByOriginBrushes.toArray());
+      const newOriginHoveredArray = Array.from(originHoveredIATAs);
+
+      const currentDestinationHovered = new Set(
+        yHoveredByDestinationBrushes.toArray()
+      );
+      const newDestinationHoveredArray = Array.from(destinationHoveredIATAs);
+
+      // update yjs array only if there's a change
+      if (
+        JSON.stringify(Array.from(currentOriginHovered).sort()) !==
+          JSON.stringify(newOriginHoveredArray.sort()) ||
+        JSON.stringify(Array.from(currentDestinationHovered).sort()) !==
+          JSON.stringify(newDestinationHoveredArray.sort())
+      ) {
+        doc.transact(() => {
+          if (yHoveredByOriginBrushes) {
+            yHoveredByOriginBrushes.delete(0, yHoveredByOriginBrushes.length);
+            yHoveredByOriginBrushes.push(newOriginHoveredArray);
+          }
+          if (yHoveredByDestinationBrushes) {
+            yHoveredByDestinationBrushes.delete(
+              0,
+              yHoveredByDestinationBrushes.length
+            );
+            yHoveredByDestinationBrushes.push(newDestinationHoveredArray);
+          }
+        });
+      }
+
+      animationFrameRef.current = requestAnimationFrame(hoverAnimationLoop);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(hoverAnimationLoop);
 
     // main effect cleanup
     return () => {
@@ -2200,6 +2501,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
       yPanelState?.unobserveDeep(yjsObserver); // unobserve panel state changes
       yHoveredFlights?.unobserveDeep(yjsObserver); // unobserve hovered flights changes
       ySelectedFlights?.unobserveDeep(yjsObserver); // unobserve selected flights changes
+      yStickyBrushes?.unobserveDeep(renderStickyBrushes); // unobserve sticky brushes
+      yHoveredByOriginBrushes?.unobserveDeep(yjsObserver);
+      yHoveredByDestinationBrushes?.unobserveDeep(yjsObserver);
 
       // cleanup scroll drag state
       scrollDragStateRef.current.left.active = false;
@@ -2225,6 +2529,9 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     yPanelState,
     yHoveredFlights,
     ySelectedFlights,
+    yStickyBrushes,
+    yHoveredByOriginBrushes,
+    yHoveredByDestinationBrushes,
   ]);
 
   // function to draw pinned flight lines (always visible in green)
@@ -2249,6 +2556,46 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         );
       }
     });
+  };
+
+  // function to render sticky brushes
+  const renderStickyBrushes = () => {
+    if (!gRef.current || !yStickyBrushes) return;
+
+    const brushesGroup = d3.select(gRef.current).select('.sticky-brushes');
+    const brushes = yStickyBrushes.toArray();
+
+    brushesGroup
+      .selectAll<SVGCircleElement, StickyBrush>('.sticky-brush')
+      .data(brushes, (d: StickyBrush) => d.id)
+      .join(
+        (enter) =>
+          enter
+            .append('circle')
+            .attr('class', 'sticky-brush interactable')
+            .attr('data-brush-id', (d) => d.id)
+            .attr('cx', (d) => d.x)
+            .attr('cy', (d) => d.y)
+            .attr('r', (d) => d.radius)
+            .attr('fill', (d) =>
+              d.type === 'origin'
+                ? 'rgba(255, 182, 193, 0.3)'
+                : 'rgba(173, 216, 230, 0.3)'
+            )
+            .attr('stroke', (d) =>
+              d.type === 'origin'
+                ? airportSelectedLeftStroke
+                : airportSelectedRightStroke
+            )
+            .attr('stroke-width', 3 / transformRef.current.k),
+        (update) =>
+          update
+            .attr('cx', (d) => d.x)
+            .attr('cy', (d) => d.y)
+            .attr('r', (d) => d.radius)
+            .attr('stroke-width', 3 / transformRef.current.k),
+        (exit) => exit.remove()
+      );
   };
 
   if (
