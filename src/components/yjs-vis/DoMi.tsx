@@ -1778,8 +1778,9 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         `translate(${padding}, ${migrationFlowsY + 20 + titleSpacing})`
       );
 
-    // display all 10 migration flows in the info panel
-    currentActiveLinks.forEach((link, i) => {
+    // display maximum of 5 migration flows in the info panel
+    const displayLinks = currentActiveLinks.slice(0, 5);
+    displayLinks.forEach((link, i) => {
       const linkGroup = migrationLinksGroup
         .append('g')
         .attr('transform', `translate(0, ${i * itemSpacing})`);
