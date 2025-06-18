@@ -718,7 +718,7 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
     // add a background rect that absorbs all events to prevent bleeding through
     contentGroup
       .append('rect')
-      .attr('class', 'interactable') // make it interactable to absorb events
+      .attr('class', 'interactable draggable') // make it interactable to absorb events
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', panelWidth)
@@ -1103,10 +1103,10 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           .attr('class', 'flight-item')
           .attr('data-flight-id', flight.id.toString());
 
-        // flight item background (make this the interactable element)
+        // flight item background (make this the interactable and draggable element)
         flightGroup
           .append('rect')
-          .attr('class', 'interactable') // add interactable class to the rect
+          .attr('class', 'interactable draggable') // add both interactable and draggable classes to the rect
           .attr('data-flight-id', flight.id.toString()) // add flight id to the rect too
           .attr('x', padding + 4)
           .attr('y', itemY)
@@ -1886,9 +1886,6 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
           // check for sticky brush element
           const brushElement = targetElement?.closest('.sticky-brush');
           const brushId = brushElement?.getAttribute('data-brush-id');
-          if (brushId) {
-            console.log('interacting with brush:', brushId);
-          }
 
           // check for flight element (could be the rect itself or its parent group)
           const flightElement =
@@ -2572,7 +2569,7 @@ const TravelTask: React.FC<WorldMapProps> = ({ getCurrentTransformRef }) => {
         (enter) =>
           enter
             .append('circle')
-            .attr('class', 'sticky-brush interactable')
+            .attr('class', 'sticky-brush interactable draggable')
             .attr('data-brush-id', (d) => d.id)
             .attr('cx', (d) => d.x)
             .attr('cy', (d) => d.y)

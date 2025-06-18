@@ -279,6 +279,18 @@ function isInteractableElement(element: Element | null): boolean {
   return element.classList.contains('interactable');
 }
 
+// helper function to check if element is draggable
+// elements are draggable if they have both 'interactable' and 'draggable' classes
+function isDraggableElement(element: Element | null): boolean {
+  if (!element) return false;
+
+  // element must be both interactable and draggable
+  return (
+    element.classList.contains('interactable') &&
+    element.classList.contains('draggable')
+  );
+}
+
 // handles "one" gesture (replaces neutral mode)
 // uses index finger (landmark 8) as pointer for hover interactions
 export function handleOne(
@@ -1511,7 +1523,8 @@ function handleSingleHandDragInside(
     ? dragState.element
     : document.elementFromPoint(point.clientX, point.clientY);
 
-  if (element && isInteractableElement(element)) {
+  if (element && isDraggableElement(element)) {
+    console.log('draggable element', element);
     // start drag if not already dragging
     if (!dragState.active) {
       dragState.active = true;

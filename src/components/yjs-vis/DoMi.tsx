@@ -2800,7 +2800,7 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
 
     brushEnter
       .append('circle')
-      .attr('class', 'sticky-brush-circle interactable')
+      .attr('class', 'sticky-brush-circle interactable draggable')
       .attr('r', (d) => d.radius)
       .style('fill', (d) =>
         d.type === 'left' ? 'rgba(232, 27, 35, 0.5)' : 'rgba(0, 174, 243, 0.5)'

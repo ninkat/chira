@@ -6,7 +6,7 @@ function getWebsocketUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   // use port 8080 by default
   const port = '8080';
-
+  console.log(`${protocol}://${host}:${port}`);
   return `${protocol}://${host}:${port}`;
 }
 
