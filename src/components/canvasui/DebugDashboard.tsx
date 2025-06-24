@@ -13,9 +13,6 @@ interface DebugDashboardProps {
   // gesture props
   leftGestureData: GestureData | null;
   rightGestureData: GestureData | null;
-  // remote gesture props
-  remoteLeftGestureData?: GestureData | null;
-  remoteRightGestureData?: GestureData | null;
   // connection props
   isConnected: boolean;
   connectionError: string | null;
@@ -213,8 +210,6 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
   memoryUsage,
   leftGestureData,
   rightGestureData,
-  remoteLeftGestureData,
-  remoteRightGestureData,
   isConnected,
   connectionError,
   currentUser,
@@ -488,39 +483,6 @@ const DebugDashboard: React.FC<DebugDashboardProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* remote gesture section - only show when rtc is connected */}
-            {rtcConnected && (
-              <div
-                style={{
-                  marginBottom: '8px',
-                  padding: '4px 6px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-                  minHeight: '45px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '4px',
-                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
-                }}
-              >
-                <h3
-                  style={{
-                    margin: '0 0 3px 0',
-                    fontSize: '12px',
-                    color: '#888',
-                  }}
-                >
-                  gesture detection (remote)
-                </h3>
-                <div style={{ display: 'flex', minHeight: '30px' }}>
-                  <div style={{ width: '50%', paddingRight: '3px' }}>
-                    {renderGestureSection(remoteLeftGestureData, 'left hand')}
-                  </div>
-                  <div style={{ width: '50%', paddingLeft: '3px' }}>
-                    {renderGestureSection(remoteRightGestureData, 'right hand')}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* connection section */}
             <div

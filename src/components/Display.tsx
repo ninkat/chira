@@ -37,6 +37,8 @@ import AusPol from '@/components/yjs-vis/AusPol';
 import Tutorial from '@/components/yjs-vis/Tutorial';
 import { YjsProvider } from '@/context/YjsContext';
 import getWebsocketUrl from '@/utils/websocketUtils';
+import { drawHandLandmarks } from '@/utils/drawingUtils';
+import { RemoteGestureData } from '@/hooks/useWebSocket';
 
 // get the dynamic websocket url with connection type parameter
 const baseUrl = getWebsocketUrl();
@@ -72,6 +74,8 @@ const Display: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const rtcConnectedRef = useRef<boolean>(false);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const gestureBuffer = useRef<RemoteGestureData[]>([]);
+  const lastRenderTime = useRef<number>(0);
 
   // ref for getting current transform from active visualization
   const getCurrentTransformRef = useRef<GetCurrentTransformFn | null>(null);
@@ -94,12 +98,6 @@ const Display: React.FC = () => {
     null
   );
 
-  // remote gesture state management
-  const [remoteLeftGestureData, setRemoteLeftGestureData] =
-    useState<GestureData | null>(null);
-  const [remoteRightGestureData, setRemoteRightGestureData] =
-    useState<GestureData | null>(null);
-
   // canvas dimensions
   const canvasWidth = 1280;
   const canvasHeight = 720;
@@ -109,7 +107,6 @@ const Display: React.FC = () => {
 
   // get gesture recognizer instances. one is for the local hands and the other is for the remote hands
   const gestureRecognizer = useGestureRecognizer();
-  const gestureRecognizer2 = useGestureRecognizer();
 
   // start webcam feed
   const { isVideoFeedStarted, startWebcam } = useWebcamFeed(
@@ -128,6 +125,8 @@ const Display: React.FC = () => {
     remoteStream,
     currentPing,
     pingHistory,
+    sendRtcData,
+    remoteGestureData,
   } = useWebSocket(WS_URL, selectedDeviceId);
 
   // get memory usage data
@@ -190,141 +189,94 @@ const Display: React.FC = () => {
               }
             );
 
-            if (results?.landmarks && results.handedness) {
-              // get overlay rect for coordinate conversion
-              const rect =
-                overlayRef.current?.getBoundingClientRect() || new DOMRect();
+            if (results) {
+              // send gesture data over webrtc with a timestamp
+              sendRtcData({
+                type: 'gesture',
+                data: { gesture: results, timestamp: Date.now() },
+              });
 
-              // this function sends events to the overlay
-              const handleInteraction: InteractionEventHandler = (event) => {
-                // dispatch custom event that bubbles up through the overlay
-                if (overlayRef.current) {
-                  const customEvent = new CustomEvent('interaction', {
-                    bubbles: true,
-                    composed: true,
-                    detail: event,
-                  });
-                  // find the current visualization element
-                  const visElement = overlayRef.current.firstElementChild;
-                  if (visElement) {
-                    visElement.dispatchEvent(customEvent);
+              if (results.landmarks && results.handedness) {
+                // get overlay rect for coordinate conversion
+                const rect =
+                  overlayRef.current?.getBoundingClientRect() || new DOMRect();
+
+                // this function sends events to the overlay
+                const handleInteraction: InteractionEventHandler = (event) => {
+                  // dispatch custom event that bubbles up through the overlay
+                  if (overlayRef.current) {
+                    const customEvent = new CustomEvent('interaction', {
+                      bubbles: true,
+                      composed: true,
+                      detail: event,
+                    });
+                    // find the current visualization element
+                    const visElement = overlayRef.current.firstElementChild;
+                    if (visElement) {
+                      visElement.dispatchEvent(customEvent);
+                    }
                   }
-                }
-              };
+                };
 
-              // process "one" gesture for hovering
-              handleSvgOne(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+                // process "one" gesture for hovering
+                handleSvgOne(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction
+                );
 
-              // process "grabbing" gesture for area hovering
-              handleSvgGrabbing(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+                // process "grabbing" gesture for area hovering
+                handleSvgGrabbing(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction
+                );
 
-              // process "thumb_index" gesture for selection
-              handleSvgThumbIndex(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+                // process "thumb_index" gesture for selection
+                handleSvgThumbIndex(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction
+                );
 
-              // process "ok" gesture for dragging elements
-              handleSvgOk(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+                // process "ok" gesture for dragging elements
+                handleSvgOk(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction
+                );
 
-              // process "fist" gesture for zooming and panning
-              handleSvgFist(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction,
-                false, // drawOnly
-                getCurrentTransformRef.current || undefined // pass current transform function
-              );
+                // process "fist" gesture for zooming and panning
+                handleSvgFist(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction,
+                  false, // drawOnly
+                  getCurrentTransformRef.current || undefined // pass current transform function
+                );
 
-              // process "none" gesture for cleanup
-              handleSvgNone(
-                canvasCtx,
-                results,
-                rect,
-                dimensions,
-                handleInteraction
-              );
+                // process "none" gesture for cleanup
+                handleSvgNone(
+                  canvasCtx,
+                  results,
+                  rect,
+                  dimensions,
+                  handleInteraction
+                );
+              }
             }
-
             canvasCtx.restore();
           }
-        }
-      }
-
-      // process remote webcam feed after local
-      if (
-        remoteVideoRef.current &&
-        gestureRecognizer2 &&
-        remoteCanvasRef.current &&
-        remoteStreamRef.current &&
-        rtcConnectedRef.current
-      ) {
-        // get canvas context for remote feed
-        const canvasElement = remoteCanvasRef.current;
-        const canvasCtx = canvasElement.getContext('2d');
-
-        if (canvasCtx) {
-          // setup canvas and process frame
-          const dimensions = { width: canvasWidth, height: canvasHeight };
-          setupCanvas(canvasCtx, canvasElement, dimensions);
-
-          // process remote video frame and get results - pass isRemote=true
-          const results = processVideoFrame(
-            canvasCtx,
-            remoteVideoRef.current,
-            gestureRecognizer2,
-            dimensions,
-            {
-              setLeftGestureData: setRemoteLeftGestureData,
-              setRightGestureData: setRemoteRightGestureData,
-            },
-            true // mark as remote hands
-          );
-
-          if (results?.landmarks && results.handedness) {
-            // get overlay rect for coordinate conversion
-            const rect =
-              overlayRef.current?.getBoundingClientRect() || new DOMRect();
-
-            // process "one" gesture for hovering
-            handleSvgOneRemote(canvasCtx, results, rect, dimensions);
-
-            // process "grabbing" gesture for area hovering
-            handleSvgGrabbingRemote(canvasCtx, results, rect, dimensions);
-
-            // process "thumb_index" gesture for selection
-            handleSvgThumbIndexRemote(canvasCtx, results, rect, dimensions);
-
-            // process "ok" gesture for element dragging
-            handleSvgOkRemote(canvasCtx, results, rect, dimensions);
-
-            // process "fist" gesture for zooming and panning
-            handleSvgFistRemote(canvasCtx, results, rect, dimensions);
-          }
-          canvasCtx.restore();
         }
       }
 
@@ -334,7 +286,105 @@ const Display: React.FC = () => {
 
     // start the combined processing loop
     processWebcams();
-  }, [gestureRecognizer, gestureRecognizer2]);
+  }, [gestureRecognizer, sendRtcData]);
+
+  // effect to draw remote hands from webrtc data
+  useEffect(() => {
+    // add incoming gesture data to the buffer
+    if (remoteGestureData) {
+      gestureBuffer.current.push(remoteGestureData);
+    }
+
+    const renderLoop = () => {
+      if (
+        !remoteCanvasRef.current ||
+        gestureBuffer.current.length === 0 ||
+        !rtcConnected
+      ) {
+        requestAnimationFrame(renderLoop);
+        return;
+      }
+
+      const canvasElement = remoteCanvasRef.current;
+      const canvasCtx = canvasElement.getContext('2d');
+      if (!canvasCtx) {
+        requestAnimationFrame(renderLoop);
+        return;
+      }
+
+      // latency adjustment (e.g., 50ms) to sync with video stream
+      const renderDelay = 50;
+      const now = Date.now();
+
+      // find the gesture data that is closest to the delayed time
+      let dataToRender: RemoteGestureData | null = null;
+      let bestMatchIndex = -1;
+
+      for (let i = gestureBuffer.current.length - 1; i >= 0; i--) {
+        const data = gestureBuffer.current[i];
+        if (now - data.timestamp >= renderDelay) {
+          dataToRender = data;
+          bestMatchIndex = i;
+          break;
+        }
+      }
+
+      // clear buffer of old data
+      if (bestMatchIndex > -1) {
+        gestureBuffer.current.splice(0, bestMatchIndex + 1);
+      }
+
+      if (dataToRender) {
+        lastRenderTime.current = now;
+
+        // setup canvas and process frame
+        const dimensions = { width: canvasWidth, height: canvasHeight };
+        setupCanvas(canvasCtx, canvasElement, dimensions);
+
+        // draw the landmarks
+        drawHandLandmarks(canvasCtx, dataToRender.gesture, true);
+
+        // get overlay rect for coordinate conversion
+        const rect =
+          overlayRef.current?.getBoundingClientRect() || new DOMRect();
+
+        // process "one" gesture for hovering
+        handleSvgOneRemote(canvasCtx, dataToRender.gesture, rect, dimensions);
+
+        // process "grabbing" gesture for area hovering
+        handleSvgGrabbingRemote(
+          canvasCtx,
+          dataToRender.gesture,
+          rect,
+          dimensions
+        );
+
+        // process "thumb_index" gesture for selection
+        handleSvgThumbIndexRemote(
+          canvasCtx,
+          dataToRender.gesture,
+          rect,
+          dimensions
+        );
+
+        // process "ok" gesture for element dragging
+        handleSvgOkRemote(canvasCtx, dataToRender.gesture, rect, dimensions);
+
+        // process "fist" gesture for zooming and panning
+        handleSvgFistRemote(canvasCtx, dataToRender.gesture, rect, dimensions);
+
+        canvasCtx.restore();
+      }
+
+      requestAnimationFrame(renderLoop);
+    };
+
+    const animationFrameId = requestAnimationFrame(renderLoop);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [remoteGestureData, rtcConnected]);
 
   return (
     <div
@@ -424,6 +474,7 @@ const Display: React.FC = () => {
           zIndex: 3,
           width: '100%',
           height: '100%',
+          pointerEvents: 'none',
         }}
       />
 
@@ -503,8 +554,6 @@ const Display: React.FC = () => {
         onCameraSelect={handleCameraSelect}
         showLocalFeed={showLocalFeed}
         onToggleFeed={() => setShowLocalFeed(!showLocalFeed)}
-        remoteLeftGestureData={remoteLeftGestureData}
-        remoteRightGestureData={remoteRightGestureData}
         currentPing={currentPing}
         pingHistory={pingHistory}
         selectedVisualization={currentVisualization}

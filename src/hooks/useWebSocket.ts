@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageType, Message, User } from '@/types/webTypes';
+import { GestureRecognizerResult } from '@mediapipe/tasks-vision';
+
+// gesture data with timestamp
+export type RemoteGestureData = {
+  gesture: GestureRecognizerResult;
+  timestamp: number;
+};
 
 // ice servers configuration for webrtc
 const ICE_SERVERS = {
@@ -23,6 +30,8 @@ export const useWebSocket = (
   rtcConnectionState: RTCPeerConnectionState | null;
   rtcDataChannel: RTCDataChannel | null;
   remoteStream: MediaStream | null;
+  remoteGestureData: RemoteGestureData | null;
+  sendRtcData: (data: unknown) => void;
   replaceVideoTrack: (track: MediaStreamTrack) => Promise<void>;
   currentPing: number | null;
   pingHistory: number[];
@@ -43,6 +52,8 @@ export const useWebSocket = (
     null
   );
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [remoteGestureData, setRemoteGestureData] =
+    useState<RemoteGestureData | null>(null);
 
   // websocket reference
   const socketRef = useRef<WebSocket | null>(null);
@@ -65,6 +76,13 @@ export const useWebSocket = (
   // add ping state
   const [currentPing, setCurrentPing] = useState<number | null>(null);
   const [pingHistory, setPingHistory] = useState<number[]>([]);
+
+  // send rtc data
+  const sendRtcData = useCallback((data: unknown) => {
+    if (dataChannelRef.current?.readyState === 'open') {
+      dataChannelRef.current.send(JSON.stringify(data));
+    }
+  }, []);
 
   // send message to server
   const sendMessage = useCallback((message: Message): void => {
@@ -123,8 +141,19 @@ export const useWebSocket = (
     };
 
     channel.onmessage = (event) => {
-      console.log('data channel message:', event.data);
-      // handle data channel messages here
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'gesture') {
+          setRemoteGestureData(
+            message.data as {
+              gesture: GestureRecognizerResult;
+              timestamp: number;
+            }
+          );
+        }
+      } catch (error) {
+        console.error('error parsing data channel message', error);
+      }
     };
   }, []);
 
@@ -545,6 +574,8 @@ export const useWebSocket = (
     rtcConnectionState,
     rtcDataChannel,
     remoteStream,
+    remoteGestureData,
+    sendRtcData,
     replaceVideoTrack,
     currentPing,
     pingHistory,
