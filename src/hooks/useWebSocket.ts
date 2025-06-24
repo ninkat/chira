@@ -67,6 +67,9 @@ export const useWebSocket = (
   const localStreamRef = useRef<MediaStream | null>(null);
   const senderRef = useRef<RTCRtpSender | null>(null);
 
+  // queue for ice candidates received before remote description is set
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+
   // reconnection settings
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttempts = useRef<number>(0);
@@ -76,6 +79,29 @@ export const useWebSocket = (
   // add ping state
   const [currentPing, setCurrentPing] = useState<number | null>(null);
   const [pingHistory, setPingHistory] = useState<number[]>([]);
+
+  // process queued ice candidates after remote description is set
+  const processQueuedIceCandidates = useCallback(async () => {
+    if (
+      !peerConnectionRef.current ||
+      !peerConnectionRef.current.remoteDescription
+    ) {
+      return;
+    }
+
+    const queuedCandidates = pendingIceCandidatesRef.current;
+    pendingIceCandidatesRef.current = [];
+
+    for (const candidate of queuedCandidates) {
+      try {
+        await peerConnectionRef.current.addIceCandidate(
+          new RTCIceCandidate(candidate)
+        );
+      } catch (error) {
+        console.error('error adding queued ice candidate:', error);
+      }
+    }
+  }, []);
 
   // send rtc data
   const sendRtcData = useCallback((data: unknown) => {
@@ -163,6 +189,9 @@ export const useWebSocket = (
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
     }
+
+    // clear any pending ice candidates
+    pendingIceCandidatesRef.current = [];
 
     // create new peer connection
     const peerConnection = new RTCPeerConnection(ICE_SERVERS);
@@ -358,6 +387,8 @@ export const useWebSocket = (
                   await peerConnectionRef.current?.setRemoteDescription(
                     new RTCSessionDescription(message.data.offer)
                   );
+                  // process any queued ice candidates now that remote description is set
+                  await processQueuedIceCandidates();
                 }
 
                 // create and set local description
@@ -386,6 +417,8 @@ export const useWebSocket = (
                   await peerConnectionRef.current?.setRemoteDescription(
                     new RTCSessionDescription(message.data.answer)
                   );
+                  // process any queued ice candidates now that remote description is set
+                  await processQueuedIceCandidates();
                 }
               } catch (error) {
                 console.error('error handling answer:', error);
@@ -399,10 +432,19 @@ export const useWebSocket = (
           if (message.data?.candidate) {
             (async () => {
               try {
-                if (message.data?.candidate) {
-                  await peerConnectionRef.current?.addIceCandidate(
-                    new RTCIceCandidate(message.data.candidate)
-                  );
+                if (message.data?.candidate && peerConnectionRef.current) {
+                  // check if remote description is set
+                  if (peerConnectionRef.current.remoteDescription) {
+                    // remote description is set, add candidate immediately
+                    await peerConnectionRef.current.addIceCandidate(
+                      new RTCIceCandidate(message.data.candidate)
+                    );
+                  } else {
+                    // remote description not set yet, queue the candidate
+                    pendingIceCandidatesRef.current.push(
+                      message.data.candidate
+                    );
+                  }
                 }
               } catch (error) {
                 console.error('error adding ice candidate:', error);
@@ -413,7 +455,10 @@ export const useWebSocket = (
 
         case MessageType.DISCONNECT:
           // if the disconnected client was our rtc peer, close the connection
-          if (message.clientId === targetClientIdRef.current) {
+          if (
+            message.clientId !== undefined &&
+            message.clientId === targetClientIdRef.current
+          ) {
             if (peerConnectionRef.current) {
               peerConnectionRef.current.close();
               peerConnectionRef.current = null;
