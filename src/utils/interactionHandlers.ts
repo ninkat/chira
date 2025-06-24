@@ -1524,7 +1524,6 @@ function handleSingleHandDragInside(
     : document.elementFromPoint(point.clientX, point.clientY);
 
   if (element && isDraggableElement(element)) {
-    console.log('draggable element', element);
     // start drag if not already dragging
     if (!dragState.active) {
       dragState.active = true;

@@ -1011,19 +1011,24 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         currentViewTypeRef.current
       ];
 
-    // calculate global min/max values including both bundled paths AND active links for proper scaling
+    // calculate min/max values ONLY from bundled paths for background line scaling (keep consistent)
     const bundledValues = Array.from(currentEraBundledPaths.values()).map(
       (data) => data.value
     );
+    const bundledMaxValue = Math.max(...bundledValues);
+    const bundledMinValue = Math.min(...bundledValues);
+
+    // calculate global min/max values including both bundled paths AND active links for highlighted line scaling
     const activeLinkValues = activeMigrationLinks.map((link) => link.value);
     const allScalingValues = [...bundledValues, ...activeLinkValues];
-
     const globalMaxValue = Math.max(...allScalingValues);
     const globalMinValue = Math.min(...allScalingValues);
+
     const minStrokeWidth = 2;
     const maxStrokeWidth = 12;
 
     // performance optimization: use css classes for line state changes
+    // keep background lines at their original sizes (calculated only from bundled data)
     bundledLinesGroup
       .selectAll('path.bundled-migration-line')
       .each(function () {
@@ -1031,18 +1036,16 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
         const value = Number(element.attr('data-value'));
         const originalGradientId = element.attr('data-gradient-id');
 
-        // recalculate linear stroke width for reset using global values with proper bounds
+        // use BUNDLED-only values for background line stroke width (consistent sizing)
         let strokeWidth: number;
-        let normalizedValue: number;
-        if (globalMaxValue === globalMinValue) {
+        if (bundledMaxValue === bundledMinValue) {
           strokeWidth = maxStrokeWidth;
-          normalizedValue = 1;
         } else {
-          normalizedValue = Math.max(
+          const normalizedValue = Math.max(
             0,
             Math.min(
               1,
-              (value - globalMinValue) / (globalMaxValue - globalMinValue)
+              (value - bundledMinValue) / (bundledMaxValue - bundledMinValue)
             )
           );
           strokeWidth =
@@ -1050,11 +1053,11 @@ const DoMi: React.FC<DoMiProps> = ({ getCurrentTransformRef }) => {
             normalizedValue * (maxStrokeWidth - minStrokeWidth);
         }
 
-        // use css classes for performance - remove dimming class
+        // use css classes for performance - remove dimming class and reset to original styling
         element
           .classed('line-dimmed', false)
           .attr('stroke', `url(#${originalGradientId})`)
-          .attr('stroke-width', strokeWidth)
+          .attr('stroke-width', strokeWidth) // use consistent bundled-only scaling
           .style('filter', 'none');
       });
 

@@ -405,8 +405,8 @@ const Tutorial: React.FC<TutorialProps> = ({ getCurrentTransformRef }) => {
         'coarse-hover':
           "Make the 'grabbing' gesture to hover over elements enclosed in a circle.",
         click:
-          "Clicking can be done by forming a 'thumb index' gesture, followed by a 'one' gesture.",
-        drag: "Make and maintain an 'ok' gesture (seen left) to drag an element. To release, make a 'grip' (seen right) gesture.",
+          "Clicking can be done by extending your thumb, then making a 'one' gesture.",
+        drag: "Make an 'ok' gesture to drag an element.",
         pan: 'Make a fist with one hand to pan across the visualization.',
         zoom: 'Make a fist with both hands to zoom on a specific point of the visualization.',
       };
@@ -537,81 +537,16 @@ const Tutorial: React.FC<TutorialProps> = ({ getCurrentTransformRef }) => {
           .attr('href', '/src/assets/tutorial/palm.svg');
       } else if (currentTutorialSection === 'click') {
         // standardized gesture image dimensions for sequence
-        const gestureImageSize = 140; // smaller size for 3-image sequence
-        const gestureStartY = 180; // moved lower from 140
-        const arrowGap = -15; // gap between image and arrow
-        const arrowWidth = 15; // width of arrow
-
-        // center the three gesture sequence group in the panel
-        const totalWidth = gestureImageSize * 3 + arrowWidth * 2 + arrowGap * 4;
-        const startX = (tutorialPanelWidth - 40 - totalWidth) / 2; // account for padding
-
-        // first image: one.svg
-        tutorialPanel
-          .append('image')
-          .attr('class', 'tutorial-image')
-          .attr('x', 20 + startX)
-          .attr('y', gestureStartY)
-          .attr('width', gestureImageSize)
-          .attr('height', gestureImageSize)
-          .attr('href', '/src/assets/tutorial/one.svg');
-
-        // first arrow: triangle pointing right
-        const firstArrowX = 20 + startX + gestureImageSize + arrowGap;
-        const arrowY = gestureStartY + gestureImageSize / 2;
-        tutorialPanel
-          .append('polygon')
-          .attr('class', 'tutorial-arrow')
-          .attr(
-            'points',
-            `${firstArrowX},${arrowY - 8} ${firstArrowX + arrowWidth},${arrowY} ${firstArrowX},${arrowY + 8}`
-          )
-          .attr('fill', '#ffffff');
-
-        // second image: thumb_index.svg
-        const secondImageX = firstArrowX + arrowWidth + arrowGap;
-        tutorialPanel
-          .append('image')
-          .attr('class', 'tutorial-image')
-          .attr('x', secondImageX)
-          .attr('y', gestureStartY)
-          .attr('width', gestureImageSize)
-          .attr('height', gestureImageSize)
-          .attr('href', '/src/assets/tutorial/thumb_index.svg');
-
-        // second arrow: triangle pointing right
-        const secondArrowX = secondImageX + gestureImageSize + arrowGap;
-        tutorialPanel
-          .append('polygon')
-          .attr('class', 'tutorial-arrow')
-          .attr(
-            'points',
-            `${secondArrowX},${arrowY - 8} ${secondArrowX + arrowWidth},${arrowY} ${secondArrowX},${arrowY + 8}`
-          )
-          .attr('fill', '#ffffff');
-
-        // third image: one.svg
-        const thirdImageX = secondArrowX + arrowWidth + arrowGap;
-        tutorialPanel
-          .append('image')
-          .attr('class', 'tutorial-image')
-          .attr('x', thirdImageX)
-          .attr('y', gestureStartY)
-          .attr('width', gestureImageSize)
-          .attr('height', gestureImageSize)
-          .attr('href', '/src/assets/tutorial/one.svg');
-      } else if (currentTutorialSection === 'drag') {
-        // standardized gesture image dimensions for dual sequence
         const gestureImageSize = 150; // increased size for 2-image sequence
         const gestureStartY = 180; // moved lower from 140
         const arrowGap = 15; // gap between image and arrow
         const arrowWidth = 15; // width of arrow
 
-        // center the dual gesture sequence group in the panel
+        // center the two gesture sequence group in the panel
         const totalWidth = gestureImageSize * 2 + arrowWidth + arrowGap * 2;
         const startX = (tutorialPanelWidth - 40 - totalWidth) / 2; // account for padding
 
-        // first image: ok.svg
+        // first image: thumb_index.svg
         tutorialPanel
           .append('image')
           .attr('class', 'tutorial-image')
@@ -619,7 +554,7 @@ const Tutorial: React.FC<TutorialProps> = ({ getCurrentTransformRef }) => {
           .attr('y', gestureStartY)
           .attr('width', gestureImageSize)
           .attr('height', gestureImageSize)
-          .attr('href', '/src/assets/tutorial/ok.svg');
+          .attr('href', '/src/assets/tutorial/thumb_index.svg');
 
         // arrow: triangle pointing right
         const firstArrowX = 20 + startX + gestureImageSize + arrowGap;
@@ -633,7 +568,7 @@ const Tutorial: React.FC<TutorialProps> = ({ getCurrentTransformRef }) => {
           )
           .attr('fill', '#ffffff');
 
-        // second image: grip.svg
+        // second image: one.svg
         const secondImageX = firstArrowX + arrowWidth + arrowGap;
         tutorialPanel
           .append('image')
@@ -642,7 +577,24 @@ const Tutorial: React.FC<TutorialProps> = ({ getCurrentTransformRef }) => {
           .attr('y', gestureStartY)
           .attr('width', gestureImageSize)
           .attr('height', gestureImageSize)
-          .attr('href', '/src/assets/tutorial/grip.svg');
+          .attr('href', '/src/assets/tutorial/one.svg');
+      } else if (currentTutorialSection === 'drag') {
+        // standardized gesture image dimensions for single gesture
+        const gestureImageSize = 200; // increased size for single gestures
+        const gestureStartY = 180; // moved lower from 140
+
+        // center the single gesture in the panel
+        const centerX = (tutorialPanelWidth - 40 - gestureImageSize) / 2; // account for padding
+
+        // ok image: ok.svg
+        tutorialPanel
+          .append('image')
+          .attr('class', 'tutorial-image')
+          .attr('x', 20 + centerX)
+          .attr('y', gestureStartY)
+          .attr('width', gestureImageSize)
+          .attr('height', gestureImageSize)
+          .attr('href', '/src/assets/tutorial/ok.svg');
       } else if (currentTutorialSection === 'pan') {
         // standardized gesture image dimensions for single gesture
         const gestureImageSize = 200; // increased size for single gestures

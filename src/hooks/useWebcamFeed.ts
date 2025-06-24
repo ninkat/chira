@@ -25,6 +25,8 @@ export const useWebcamFeed = (
             ? { deviceId: { exact: selectedDeviceId } }
             : {}),
           frameRate: { max: 30 }, // limit to 30fps
+          width: { ideal: 1280 }, // Request ideal width of 1280 (for 720p)
+          height: { ideal: 720 }, // Request ideal height of 720 (for 720p)
         },
       });
 
