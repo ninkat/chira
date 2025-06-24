@@ -101,6 +101,7 @@ const Display: React.FC = () => {
   // canvas dimensions
   const canvasWidth = 1280;
   const canvasHeight = 720;
+  const MAX_GESTURE_BUFFER_SIZE = 300; // approx 5 seconds of data at 60fps
 
   // debug visibility state
   const [showDebug, setShowDebug] = useState<boolean>(false);
@@ -288,27 +289,52 @@ const Display: React.FC = () => {
     processWebcams();
   }, [gestureRecognizer, sendRtcData]);
 
-  // effect to draw remote hands from webrtc data
+  // effect to add remote gestures to buffer and manage its size
   useEffect(() => {
-    // add incoming gesture data to the buffer
     if (remoteGestureData) {
       gestureBuffer.current.push(remoteGestureData);
+
+      // enforce a max buffer size to prevent memory leaks if rendering stalls
+      if (gestureBuffer.current.length > MAX_GESTURE_BUFFER_SIZE) {
+        gestureBuffer.current.splice(
+          0,
+          gestureBuffer.current.length - MAX_GESTURE_BUFFER_SIZE
+        );
+      }
+    }
+  }, [remoteGestureData]);
+
+  // effect to draw remote hands from webrtc data
+  useEffect(() => {
+    // if not connected, clear the buffer and canvas, then stop.
+    if (!rtcConnected) {
+      gestureBuffer.current = [];
+      if (remoteCanvasRef.current) {
+        const canvasCtx = remoteCanvasRef.current.getContext('2d');
+        if (canvasCtx) {
+          canvasCtx.clearRect(
+            0,
+            0,
+            remoteCanvasRef.current.width,
+            remoteCanvasRef.current.height
+          );
+        }
+      }
+      return;
     }
 
+    let animationFrameId: number;
+
     const renderLoop = () => {
-      if (
-        !remoteCanvasRef.current ||
-        gestureBuffer.current.length === 0 ||
-        !rtcConnected
-      ) {
-        requestAnimationFrame(renderLoop);
+      if (!remoteCanvasRef.current || gestureBuffer.current.length === 0) {
+        animationFrameId = requestAnimationFrame(renderLoop);
         return;
       }
 
       const canvasElement = remoteCanvasRef.current;
       const canvasCtx = canvasElement.getContext('2d');
       if (!canvasCtx) {
-        requestAnimationFrame(renderLoop);
+        animationFrameId = requestAnimationFrame(renderLoop);
         return;
       }
 
@@ -329,7 +355,7 @@ const Display: React.FC = () => {
         }
       }
 
-      // clear buffer of old data
+      // clear buffer of old data that has been processed.
       if (bestMatchIndex > -1) {
         gestureBuffer.current.splice(0, bestMatchIndex + 1);
       }
@@ -376,15 +402,15 @@ const Display: React.FC = () => {
         canvasCtx.restore();
       }
 
-      requestAnimationFrame(renderLoop);
+      animationFrameId = requestAnimationFrame(renderLoop);
     };
 
-    const animationFrameId = requestAnimationFrame(renderLoop);
+    animationFrameId = requestAnimationFrame(renderLoop);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [remoteGestureData, rtcConnected]);
+  }, [rtcConnected]);
 
   return (
     <div
